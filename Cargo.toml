@@ -6,9 +6,17 @@ edition = "2021"
 [dependencies]
 bevy = "0.13.0"
 bevy-inspector-egui = "0.23.2"
+bevy_entitiles = "0.6.1"
 
 [profile.dev]
 opt-level = 1
 
 [profile.dev.packages."*"]
 opt-level = 3
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
