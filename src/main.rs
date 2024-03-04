@@ -44,15 +44,7 @@ fn main() {
     )
     .add_plugins((CameraControllerPlugin, GameUI))
     .add_plugins(PlayerPlugin)
-    .add_systems(Startup, setup)
     .run();
-}
-
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    // commands.spawn(SpriteBundle {
-    //     texture: asset_server.load("mob.png"),
-    //     ..default()
-    // });
 }
 
 #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
