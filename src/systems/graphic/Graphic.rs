@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use bevy::{asset::LoadedFolder, prelude::*, render::texture::ImageSampler};
 use crate::core::AppState;
 

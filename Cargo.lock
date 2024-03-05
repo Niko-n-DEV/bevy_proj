@@ -588,9 +588,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_entitiles"
-version = "0.6.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e758d4b605572b119827de44327492dd67bbd7b3116fff3b1ec3d83f708b30b"
+checksum = "3506e0e409b3fd85c4b1f5e167ebac6adc9f869cacb8c417d87a0aeb11d0ec75"
 dependencies = [
  "bevy",
  "bitflags 2.4.2",
@@ -825,6 +825,8 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_entitiles",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
