@@ -1,6 +1,7 @@
+use bevy::prelude::*;
 use bevy::app::AppExit;
 
-use crate::core::{*, Styles::*};
+use crate::core::{AppState, Styles::*};
 
 // Main menu components =====
 #[derive(Component)]
@@ -12,6 +13,7 @@ pub struct PlayButton {}
 #[derive(Component)]
 pub struct QuitButton {}
 // ==============================
+
 // Game UI components =====
 #[derive(Component)]
 pub struct GameUI;
@@ -23,11 +25,15 @@ impl Plugin for UI {
     fn build(&self, app: &mut App) {
         app
         .add_systems(OnEnter(AppState::MainMenu), spawn_main_menu)
-        .add_systems(Update, (transition_to_game_state, translation_to_main_menu))
+        .add_systems(Update, (
+            transition_to_game_state, 
+            translation_to_main_menu
+        ))
         .add_systems(Update, (
             interact_with_play_button.run_if(in_state(AppState::MainMenu)), 
-            interact_with_quit_button.run_if(in_state(AppState::MainMenu)))
-        )
+            interact_with_quit_button.run_if(in_state(AppState::MainMenu))
+        ))
+        .add_systems(Update, exit_game)
         .add_systems(OnExit(AppState::MainMenu), despawn_main_menu)
         .add_systems(OnEnter(AppState::Game), spawn_game_ui)
         .add_systems(OnExit(AppState::Game), despawn_game_ui);
@@ -42,7 +48,7 @@ fn spawn_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
 /// Функция для создания элементов Главного меню.
 fn build_main_menu(commands: &mut Commands, _asset_server: &Res<AssetServer>) -> Entity {
     let main_menu_entity = commands
-        .spawn(NodeBundle {
+        .spawn((NodeBundle {
                 style: Style {
                     height: Val::Percent(100.0),
                     width: Val::Percent(100.0),
@@ -51,9 +57,11 @@ fn build_main_menu(commands: &mut Commands, _asset_server: &Res<AssetServer>) ->
                     align_items: AlignItems::Center,
                     ..default()
                 },
-                background_color: Color::DARK_GRAY.into(),
+                background_color: Color::rgb(50.0, 50.0, 50.0).into(),
                 ..default()
-            })
+            },
+            MainMenu {}
+        ))
 
             .with_children(|parent| {
                 // === Title ===
@@ -132,7 +140,7 @@ fn build_game_ui(commands: &mut Commands, _asset_server: &Res<AssetServer>) -> E
 /// Функция для выгрузки игрового интерфейса и его дочерних элементов.
 fn despawn_game_ui(mut commands: Commands, game_ui_query: Query<Entity, With<GameUI>>) {
     if let Ok(game_ui_entity) = game_ui_query.get_single() {
-        commands.entity(game_ui_entity).despawn_recursive()
+        commands.entity(game_ui_entity).despawn_recursive();
     }
 }
 
@@ -166,6 +174,16 @@ pub fn translation_to_main_menu(
     }
 }
 
+/// Фунция выхода
+pub fn exit_game(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut app_exit_event_writer: EventWriter<AppExit>,
+) {
+    if keyboard_input.just_pressed(KeyCode::F4) {
+        app_exit_event_writer.send(AppExit);
+    }
+}
+
 // === Для кнопок PlayButton и QuitButton
 pub fn interact_with_play_button(
     mut button_query: Query<
@@ -179,6 +197,7 @@ pub fn interact_with_play_button(
             Interaction::Pressed => {
                 *background_color = PRESSED_BUTTON_COLOR.into();
                 app_state_next_state.set(AppState::Game);
+                println!("Entered AppState::Game");
             }
             Interaction::Hovered => {
                 *background_color = HOVERED_BUTTON_COLOR.into();

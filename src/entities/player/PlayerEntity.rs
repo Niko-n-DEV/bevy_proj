@@ -1,5 +1,6 @@
 #[allow(unused_imports)]
-use crate::core::{*, AppState};
+use bevy::prelude::*;
+use crate::core::AppState;
 
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
@@ -27,8 +28,8 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
-        .add_systems(OnEnter(AppState::Setup), spawn_player)
-        .add_systems(Update, player_movement);
+        .add_systems(OnEnter(AppState::Game), spawn_player)
+        .add_systems(Update, player_movement.run_if(in_state(AppState::Game)));
     }
 }
 

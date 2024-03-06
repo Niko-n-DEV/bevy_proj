@@ -1,3 +1,5 @@
+use bevy::prelude::*;
+
 mod components;
 mod entities;
 mod systems;
@@ -5,12 +7,14 @@ mod util;
 
 mod core {
     #![allow(non_snake_case)]
-    pub use bevy::prelude::*;
 
     pub use crate::AppState;
 
     pub use crate::entities::player::PlayerEntity::*;
     pub use crate::components::Camera::*;
+
+    #[allow(unused_imports)]
+    pub use crate::systems::*;
 
     //pub use crate::systems::graphic::*;
 
@@ -57,7 +61,7 @@ fn main() {
         .build()
     )
     .add_plugins(WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F3)))
-    .add_plugins((CameraControllerPlugin, UI))
+    .add_plugins((CameraController, UI))
     .add_plugins(PlayerPlugin)
     .run();
 }
