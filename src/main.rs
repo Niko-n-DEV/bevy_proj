@@ -62,7 +62,7 @@ fn main() {
     )
     .add_plugins(WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F3)))
     .add_plugins((CameraController, UI))
-    .add_plugins(PlayerPlugin)
+    .add_plugins(Player)
     .run();
 }
 
