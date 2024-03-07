@@ -7,9 +7,8 @@ pub struct Settings {
     pub test1: String,
     pub test2: i32,
     pub rendering_distance: i32,
-    pub chunk_size: i32
+    pub chunk_size: i32,
 }
-
 
 impl Settings {
     // Функция для чтения настроек из файла
@@ -41,8 +40,7 @@ impl Default for Settings {
             test1: "default_value".to_string(),
             test2: 42,
             rendering_distance: 3,
-            chunk_size: 16
-            // Установите значения по умолчанию для других полей
+            chunk_size: 16, // Установите значения по умолчанию для других полей
         }
     }
 }

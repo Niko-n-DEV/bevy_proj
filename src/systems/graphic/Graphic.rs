@@ -1,15 +1,12 @@
 #![allow(unused)]
 
-use bevy::{asset::LoadedFolder, prelude::*, render::texture::ImageSampler};
 use crate::core::AppState;
+use bevy::{asset::LoadedFolder, prelude::*, render::texture::ImageSampler};
 
 #[derive(Resource, Default)]
 struct ResourceFolder(Handle<LoadedFolder>);
 
-fn load_resource_folder(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>
-) {
+fn load_resource_folder(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(ResourceFolder(asset_server.load_folder("assets")));
 }
 
@@ -31,7 +28,7 @@ fn setup(
     asser_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     loaded_folders: Res<Assets<LoadedFolder>>,
-    mut textures: ResMut<Assets<Image>>
+    mut textures: ResMut<Assets<Image>>,
 ) {
     let loaded_folder = loaded_folders.get(&resource_handle.0).unwrap();
     // // Создание атлосов с различной выборкой
@@ -81,7 +78,6 @@ fn setup(
         },
         ..default()
     });
-
 }
 
 /// Создание атласа текстур с заданными настройками заполнения и выборки из отдельных спрайтов в данной папке

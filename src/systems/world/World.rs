@@ -19,7 +19,6 @@ pub struct WorldSystem;
 
 impl Plugin for WorldSystem {
     fn build(&self, app: &mut App) {
-        app
-            .add_plugins(TileMapPlugin);
+        app.add_plugins(TileMapPlugin);
     }
 }

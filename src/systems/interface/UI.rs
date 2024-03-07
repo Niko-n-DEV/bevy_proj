@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use bevy::app::AppExit;
+use bevy::prelude::*;
 
 use crate::core::{AppState, Styles::*};
 
@@ -23,20 +23,19 @@ pub struct UI;
 
 impl Plugin for UI {
     fn build(&self, app: &mut App) {
-        app
-        .add_systems(OnEnter(AppState::MainMenu), Self::spawn_main_menu)
-        .add_systems(Update, (
-            transition_to_game_state, 
-            translation_to_main_menu
-        ))
-        .add_systems(Update, (
-            Self::interact_with_play_button.run_if(in_state(AppState::MainMenu)), 
-            Self::interact_with_quit_button.run_if(in_state(AppState::MainMenu))
-        ))
-        .add_systems(Update, exit_game)
-        .add_systems(OnExit(AppState::MainMenu), Self::despawn_main_menu)
-        .add_systems(OnEnter(AppState::Game), Self::spawn_game_ui)
-        .add_systems(OnExit(AppState::Game), Self::despawn_game_ui);
+        app.add_systems(OnEnter(AppState::MainMenu), Self::spawn_main_menu)
+            .add_systems(Update, (transition_to_game_state, translation_to_main_menu))
+            .add_systems(
+                Update,
+                (
+                    Self::interact_with_play_button.run_if(in_state(AppState::MainMenu)),
+                    Self::interact_with_quit_button.run_if(in_state(AppState::MainMenu)),
+                ),
+            )
+            .add_systems(Update, exit_game)
+            .add_systems(OnExit(AppState::MainMenu), Self::despawn_main_menu)
+            .add_systems(OnEnter(AppState::Game), Self::spawn_game_ui)
+            .add_systems(OnExit(AppState::Game), Self::despawn_game_ui);
     }
 }
 
@@ -49,60 +48,56 @@ impl UI {
     /// Функция для создания элементов Главного меню.
     fn build_main_menu(commands: &mut Commands, _asset_server: &Res<AssetServer>) -> Entity {
         let main_menu_entity = commands
-            .spawn((NodeBundle {
+            .spawn((
+                NodeBundle {
                     style: Style {
                         height: Val::Percent(100.0),
-                        width: Val::Percent(100.0),
+                        width: Val::Px(290.0),
                         flex_direction: FlexDirection::Column,
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         ..default()
                     },
-                    background_color: Color::rgb(50.0, 50.0, 50.0).into(),
+                    background_color: Color::rgb(31.0, 31.0, 31.0).into(),
                     ..default()
                 },
-                MainMenu {}
+                MainMenu {},
             ))
+            .with_children(|parent| {
+                // === Title ===
 
-                .with_children(|parent| {
-                    // === Title ===
-
-                    // === Play Button ===
-                    parent
-                        .spawn(
-                            (
-                                ButtonBundle {
-                                    style: Style {
-                                        height: Val::Px(25.0),
-                                        width: Val::Px(40.0),
-                                        justify_content: JustifyContent::Center,
-                                        align_items: AlignItems::Center,
-                                        ..default()
-                                    },
-                                    background_color: NORMAL_BUTTON_COLOR.into(),
-                                    ..default()
-                                },
-                                PlayButton {}
-                        ));
-                    // === Quit Button ===
-                    parent
-                        .spawn((
-                            ButtonBundle {
-                                style: Style {
-                                    height: Val::Px(25.0),
-                                    width: Val::Px(40.0),
-                                    justify_content: JustifyContent::Center,
-                                    align_items: AlignItems::Center,
-                                    ..default()
-                                },
-                                background_color: NORMAL_BUTTON_COLOR.into(),
-                                ..default()
-                            },
-                            QuitButton {},
-                        ));
-                })
-
-                .id();
+                // === Play Button ===
+                parent.spawn((
+                    ButtonBundle {
+                        style: Style {
+                            height: Val::Px(25.0),
+                            width: Val::Px(40.0),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        background_color: NORMAL_BUTTON_COLOR.into(),
+                        ..default()
+                    },
+                    PlayButton {},
+                ));
+                // === Quit Button ===
+                parent.spawn((
+                    ButtonBundle {
+                        style: Style {
+                            height: Val::Px(25.0),
+                            width: Val::Px(40.0),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        background_color: NORMAL_BUTTON_COLOR.into(),
+                        ..default()
+                    },
+                    QuitButton {},
+                ));
+            })
+            .id();
         main_menu_entity
     }
 
@@ -134,7 +129,8 @@ impl UI {
                     ..default()
                 },
                 GameUI {},
-            )).id();
+            ))
+            .id();
         game_ui_entity
     }
 
@@ -194,8 +190,6 @@ impl UI {
     }
 }
 
-
-
 /// Функция для перехода на главную игровую сцену |
 /// Функция для смения набора компонентов, меняя состояние приложение на `AppState::Game`
 pub fn transition_to_game_state(
@@ -216,7 +210,7 @@ pub fn transition_to_game_state(
 pub fn translation_to_main_menu(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     app_state: Res<State<AppState>>,
-    mut app_state_reverse: ResMut<NextState<AppState>>
+    mut app_state_reverse: ResMut<NextState<AppState>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Escape) {
         if app_state.get() != &AppState::MainMenu {
