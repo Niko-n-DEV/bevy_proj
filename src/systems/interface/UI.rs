@@ -53,15 +53,17 @@ impl UI {
                     style: Style {
                         height: Val::Percent(100.0),
                         width: Val::Px(290.0),
+                        justify_self: JustifySelf::End,
                         flex_direction: FlexDirection::Column,
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         ..default()
                     },
-                    background_color: Color::rgb(31.0, 31.0, 31.0).into(),
+                    background_color: Color::rgb_u8(40, 40, 40).into(),
                     ..default()
                 },
                 MainMenu {},
+                Name::new("Main Menu UI")
             ))
             .with_children(|parent| {
                 // === Title ===
@@ -69,33 +71,53 @@ impl UI {
                 // === Play Button ===
                 parent.spawn((
                     ButtonBundle {
-                        style: Style {
-                            height: Val::Px(25.0),
-                            width: Val::Px(40.0),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
+                        style: button_container_style(75.0, 200.0),
+                        border_color: Color::BLACK.into(),
                         background_color: NORMAL_BUTTON_COLOR.into(),
                         ..default()
                     },
                     PlayButton {},
-                ));
+                ))
+                .with_children(|parent| {
+                    parent.spawn(TextBundle {
+                        text: Text {
+                            sections: vec![TextSection::new(
+                                "Play",
+                                TextStyle {
+                                    font_size: 28.0,
+                                    ..default()
+                                }
+                            )],
+                            ..default()
+                        },
+                        ..default()
+                    });
+                });
                 // === Quit Button ===
                 parent.spawn((
                     ButtonBundle {
-                        style: Style {
-                            height: Val::Px(25.0),
-                            width: Val::Px(40.0),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
+                        style: button_container_style(75.0, 200.0),
+                        border_color: Color::BLACK.into(),
                         background_color: NORMAL_BUTTON_COLOR.into(),
                         ..default()
                     },
                     QuitButton {},
-                ));
+                ))
+                .with_children(|parent| {
+                    parent.spawn(TextBundle {
+                        text: Text {
+                            sections: vec![TextSection::new(
+                                "Quit",
+                                TextStyle {
+                                    font_size: 28.0,
+                                    ..default()
+                                }
+                            )],
+                            ..default()
+                        },
+                        ..default()
+                    });
+                });
             })
             .id();
         main_menu_entity
@@ -120,15 +142,17 @@ impl UI {
                 NodeBundle {
                     style: Style {
                         width: Val::Percent(100.0),
-                        height: Val::Percent(10.0),
+                        height: Val::Percent(5.0),
                         align_items: AlignItems::Center,
+                        align_self: AlignSelf::End,
                         padding: UiRect::all(Val::Px(10.0)),
                         ..default()
                     },
-                    background_color: Color::BLUE.into(),
+                    background_color: Color::GRAY.into(),
                     ..default()
                 },
                 GameUI {},
+                Name::new("Game UI")
             ))
             .id();
         game_ui_entity

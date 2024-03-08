@@ -1,4 +1,6 @@
 use bevy::prelude::*;
+use bevy::{input::common_conditions::input_toggle_active, window::WindowResolution};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 mod components;
 mod entities;
@@ -20,6 +22,8 @@ mod core {
 
     pub use crate::systems::interface::*;
 
+    //pub use crate::util::*;
+
     #[allow(unused_imports)]
     pub use crate::util::*;
     pub use serde::{Deserialize, Serialize};
@@ -37,17 +41,12 @@ mod core {
     pub use std::path::Path;
 }
 
-use core::UI::UI;
-
-use bevy::{input::common_conditions::input_toggle_active, window::WindowResolution};
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
-
-use crate::core::*;
+use crate::core::{*, UI::UI};
 
 fn main() {
     App::new()
         .init_state::<AppState>()
-        .insert_resource(ClearColor(Color::rgb_u8(50, 50, 50)))
+        .insert_resource(ClearColor(Color::rgb_u8(31, 31, 31)))
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {

@@ -4,27 +4,24 @@ use bevy::prelude::*;
 use crate::{entities::player::PlayerEntity::PlayerEntity, AppState};
 
 #[derive(Component)]
-pub struct CameraX {}
-
+pub struct CameraX;
 pub struct CameraController;
 
 impl Plugin for CameraController {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, Self::setup_camera).add_systems(
-            Update,
-            // Self::camera_follor.run_if(in_state(AppState::Game))
-            // .after(Self::camera_follow_player).run_if(in_state(AppState::Game))
-            Self::camera_follow_player.run_if(in_state(AppState::Game)),
-        );
+        app
+            .add_systems(Startup, Self::setup_camera)
+        //    .add_systems(Update, Self::camera_follow_player.run_if(in_state(AppState::Game)))
+        ;
     }
 }
 
 impl CameraController {
     fn setup_camera(mut commands: Commands) {
-        commands.spawn(Camera2dBundle::default());
+        commands.spawn((Camera2dBundle::default(), CameraX)).id();
     }
 
-    fn camera_follor(
+    fn camera_follow(
         mut follower_query: Query<(&mut Transform, &CameraX)>,
         camera_query: Query<&Transform, (With<Camera2d>, Without<CameraX>)>,
     ) {
