@@ -111,7 +111,7 @@ impl UI {
                                 TextStyle {
                                     font_size: 28.0,
                                     ..default()
-                                }
+                                },
                             )],
                             ..default()
                         },
@@ -157,6 +157,8 @@ impl UI {
             .id();
         game_ui_entity
     }
+
+    
 
     /// Функция для выгрузки игрового интерфейса и его дочерних элементов.
     fn despawn_game_ui(mut commands: Commands, game_ui_query: Query<Entity, With<GameUI>>) {

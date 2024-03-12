@@ -1,17 +1,18 @@
-
 #[allow(unused_imports)]
 use bevy::prelude::*;
 
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
-use crate::core::AppState;
+use crate::core::{AppState, world::World::World};
 
 #[derive(Component, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
 pub struct PlayerEntity {
     pub speed: f32,
     pub sprint: f32,
+    pub position: Vec3,
+    pub velocity: Vec3,
     pub movable: bool,
 }
 
@@ -20,9 +21,15 @@ impl Default for PlayerEntity {
         Self {
             speed: 25.0,
             sprint: 50.0,
+            position: Vec3::ZERO,
+            velocity: Vec3::ZERO,
             movable: true,
         }
     }
+}
+
+impl PlayerEntity {
+
 }
 
 pub struct Player;
@@ -54,11 +61,13 @@ impl Player {
     }
 
     fn player_movement(
-        mut player_entity: Query<(&mut Transform, &PlayerEntity)>,
+        // mut commands: Commands,
+        // asset_server: Res<AssetServer>,
+        mut player_entity: Query<(&mut Transform, &mut PlayerEntity)>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
         time: Res<Time>,
     ) {
-        for (mut transform, player) in &mut player_entity {
+        for (mut transform, mut player) in &mut player_entity {
             if player.movable {
                 let mut direction = Vec3::ZERO;
                 let mut speed_var: f32 = player.speed;
@@ -81,10 +90,24 @@ impl Player {
                 }
 
                 if direction != Vec3::ZERO {
-                    transform.translation +=
-                        time.delta_seconds() * speed_var * direction.normalize();
+                    let new_pos = transform.translation + time.delta_seconds() * speed_var * direction.normalize();
+                    transform.translation = new_pos;
+                    player.position = new_pos;
+                    // World::get_current_chunk(
+                    //     &mut commands, 
+                    //     &asset_server, 
+                    //     IVec2::new(transform.translation.x as i32, transform.translation.y as i32)
+                    // )
+                } else {
+                    let pos = player.position;
+                    transform.translation = pos
                 }
             }
         }
     }
+}
+
+#[derive(Component, InspectorOptions)]
+pub struct Inventory {
+    
 }
