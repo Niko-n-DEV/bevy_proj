@@ -63,61 +63,63 @@ impl UI {
                     ..default()
                 },
                 MainMenu {},
-                Name::new("Main Menu UI")
+                Name::new("Main Menu UI"),
             ))
             .with_children(|parent| {
                 // === Title ===
 
                 // === Play Button ===
-                parent.spawn((
-                    ButtonBundle {
-                        style: button_container_style(75.0, 200.0),
-                        border_color: Color::BLACK.into(),
-                        background_color: NORMAL_BUTTON_COLOR.into(),
-                        ..default()
-                    },
-                    PlayButton {},
-                ))
-                .with_children(|parent| {
-                    parent.spawn(TextBundle {
-                        text: Text {
-                            sections: vec![TextSection::new(
-                                "Play",
-                                TextStyle {
-                                    font_size: 28.0,
-                                    ..default()
-                                }
-                            )],
+                parent
+                    .spawn((
+                        ButtonBundle {
+                            style: button_container_style(75.0, 200.0),
+                            border_color: Color::BLACK.into(),
+                            background_color: NORMAL_BUTTON_COLOR.into(),
                             ..default()
                         },
-                        ..default()
+                        PlayButton {},
+                    ))
+                    .with_children(|parent| {
+                        parent.spawn(TextBundle {
+                            text: Text {
+                                sections: vec![TextSection::new(
+                                    "Play",
+                                    TextStyle {
+                                        font_size: 28.0,
+                                        ..default()
+                                    },
+                                )],
+                                ..default()
+                            },
+                            ..default()
+                        });
                     });
-                });
                 // === Quit Button ===
-                parent.spawn((
-                    ButtonBundle {
-                        style: button_container_style(75.0, 200.0),
-                        border_color: Color::BLACK.into(),
-                        background_color: NORMAL_BUTTON_COLOR.into(),
-                        ..default()
-                    },
-                    QuitButton {},
-                ))
-                .with_children(|parent| {
-                    parent.spawn(TextBundle {
-                        text: Text {
-                            sections: vec![TextSection::new(
-                                "Quit",
-                                TextStyle {
-                                    font_size: 28.0,
-                                    ..default()
-                                },
-                            )],
+                parent
+                    .spawn((
+                        ButtonBundle {
+                            style: button_container_style(75.0, 200.0),
+                            border_color: Color::BLACK.into(),
+                            background_color: NORMAL_BUTTON_COLOR.into(),
                             ..default()
                         },
-                        ..default()
+                        QuitButton {},
+                    ))
+                    .with_children(|parent| {
+                        parent.spawn(TextBundle {
+                            text: Text {
+                                sections: vec![TextSection::new(
+                                    "Quit",
+                                    TextStyle {
+                                        font_size: 28.0,
+                                        ..default()
+                                    },
+                                )],
+                                ..default()
+                            },
+                            ..default()
+                        });
                     });
-                });
             })
             .id();
         main_menu_entity
@@ -152,13 +154,11 @@ impl UI {
                     ..default()
                 },
                 GameUI {},
-                Name::new("Game UI")
+                Name::new("Game UI"),
             ))
             .id();
         game_ui_entity
     }
-
-    
 
     /// Функция для выгрузки игрового интерфейса и его дочерних элементов.
     fn despawn_game_ui(mut commands: Commands, game_ui_query: Query<Entity, With<GameUI>>) {

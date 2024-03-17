@@ -1,88 +1,181 @@
 #![allow(unused)] // Удалить потом
-use bevy::{prelude::*, transform::commands};
+use bevy::{log::tracing_subscriber::fmt::format, prelude::*, transform::commands};
 use std::collections::HashMap;
 
-use crate::{core::{player::PlayerEntity::PlayerEntity, world::TileMap::TileMapPlugin}, AppState};
+use crate::{
+    core::{player::PlayerEntity::PlayerEntity, world::TileMap::TileMapPlugin, Settings::Settings},
+    AppState,
+};
 
 pub struct WorldSystem;
 
 impl Plugin for WorldSystem {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(OnEnter(AppState::Game), Self::setup)
+        app.add_systems(OnEnter(AppState::Game), Self::setup)
+            .init_resource::<World>()
             .add_systems(Update, Self::load.run_if(in_state(AppState::Game)));
     }
 }
 
 impl WorldSystem {
-    fn setup(
-        mut commands: Commands,
-        asset_server: Res<AssetServer>
-    ) {
-        let mut world = World::new();
-        commands.insert_resource(world);
+    fn setup(mut commands: Commands, asset_server: Res<AssetServer>, mut world: ResMut<World>) {
+        let settings = Settings::load();
+        world.player_render_distance = settings.rendering_distance;
+        settings.save();
     }
 
     /// Функция для инициализации загрузки чанков вокруг игрока в пределах установленной прогрузки.
     fn load(
         mut commands: Commands,
-        player_pos: Query<(&mut Transform, &mut PlayerEntity)>
+        asset_server: Res<AssetServer>,
+        mut world: ResMut<World>,
+        player_query: Query<(&mut Transform, &mut PlayerEntity)>,
     ) {
         /*
-        По сути потоковая функция, которая будет прогружать территорию
-        Небольшой черновик работы функции.
-        Отправляется от сущности "Игрок", вычисляется где он находиться и прогружает во круг чанки, если они находяться в зоне прогрузки.
+                По сути потоковая функция, которая будет прогружать территорию
+                Небольшой черновик работы функции.
+                Отправляется от сущности "Игрок", вычисляется где он находиться и прогружает во круг чанки, если они находяться в зоне прогрузки.
 
-        Изберательная прогрузка: У игрока есть некая зона, в пределах которой не прогружается далее территория, если зайти за предел радиуса допуска, то происходит загрузка.
-        Та некая зона появляется, если стоять на месте некоторое время (зона афк))
-d
-        При процессе загрузки чанков, сначала происходит проверка [check_exists_chunk], есть ли чанк, если нету происходит генерация [generate_chunk], если же чанк был найден, происходит загрузка чанка [load_chunk], создавая экземпляр
-        сцены в res//, с именем, который является его номером по координатной сетке (0_0 | 0_1 | 1_0 и т.д.). Сам чанк, сохраняется и выгружается из файла, который представляет собой своеобразный сжатый "архив",
-        хронящий информацию о 32x32 чанках по координатной сетке, т.е. есть "архив" в нём 32x32 чанка, он занимает положение в мире 0_0 и т.д.
-        */
+                Изберательная прогрузка: У игрока есть некая зона, в пределах которой не прогружается далее территория, если зайти за предел радиуса допуска, то происходит загрузка.
+                Та некая зона появляется, если стоять на месте некоторое время (зона афк))
+        d
+                При процессе загрузки чанков, сначала происходит проверка [check_exists_chunk], есть ли чанк, если нету происходит генерация [generate_chunk], если же чанк был найден, происходит загрузка чанка [load_chunk], создавая экземпляр
+                сцены в res//, с именем, который является его номером по координатной сетке (0_0 | 0_1 | 1_0 и т.д.). Сам чанк, сохраняется и выгружается из файла, который представляет собой своеобразный сжатый "архив",
+                хронящий информацию о 32x32 чанках по координатной сетке, т.е. есть "архив" в нём 32x32 чанка, он занимает положение в мире 0_0 и т.д.
+                */
 
-        for (transform, player) in &player_pos {
-            let player_pos = transform.translation.truncate().as_ivec2();
-            Self::get_current_chunk(player_pos)
+        for (transform, _player) in &player_query {
+            let player_translation = transform.translation.truncate().as_ivec2();
+            world.player_chunk_position = Self::get_current_chunk(player_translation)
         }
 
-        //let player_pos = player_pos.single().translation.truncate().as_ivec2();
+        if world.player_chunk_position == world.player_chunk_last_position && world.first_launch {
+            world.player_chunk_last_position = IVec2::ZERO;
+            world.first_launch = false
+        }
 
-        
+        if world.player_chunk_position != world.player_chunk_last_position {
+            world.player_chunk_last_position = world.player_chunk_position;
+
+            let (player_chunk_x, player_chunk_y) =
+                (world.player_chunk_position.x, world.player_chunk_position.y);
+
+            // Нужна более чательная проработка
+            let mut loaded_chunks_new: Vec<IVec2> = Vec::new();
+            for x in (player_chunk_x - world.player_render_distance)
+                ..=(player_chunk_x + world.player_render_distance)
+            {
+                for y in (player_chunk_y - world.player_render_distance)
+                    ..=(player_chunk_y + world.player_render_distance)
+                {
+                    //let distance = ((player_chunk_x - x).abs() + (player_chunk_y - y).abs()).max(1);
+                    // if distance <= world.player_render_distance {
+                    //     let chunk_pos = IVec2::new(x, y);
+                    //     loaded_chunks_new.push(chunk_pos);
+                    // }
+                    let chunk_pos = IVec2::new(x, y);
+                    loaded_chunks_new.push(chunk_pos);
+                }
+            }
+
+            let mut chunks_to_discharge: Vec<IVec2> = Vec::new();
+            // Проверяет в chunk, есть ли чанки, которые не входят в радиус прогрузки, чтобы их выгрузить
+            for (pos, _) in &world.chunks {
+                if !loaded_chunks_new.contains(pos) {
+                    chunks_to_discharge.push(*pos);
+                }
+            }
+            // Проверяет, есть ли чанки в списке на прогрузку, которые ещё не загружены, чтобы их загрузить.
+            let mut chunks_to_upload: Vec<IVec2> = Vec::new();
+            for chunk in &loaded_chunks_new {
+                if !world.chunks.contains_key(chunk) {
+                    chunks_to_upload.push(*chunk);
+                }
+            }
+
+            for chunk in chunks_to_upload {
+                Self::create_chunk(&mut commands, &asset_server, &mut world, chunk);
+            }
+
+            for chunk in chunks_to_discharge {
+                Self::despawn_chunk(&mut commands, &mut world, chunk);
+            }
+        }
+    }
+
+    //временно
+    fn create_chunk(
+        commands: &mut Commands,
+        asset_server: &Res<AssetServer>,
+        world: &mut ResMut<World>,
+        pos: IVec2,
+    ) -> Entity {
+        let chunk = commands
+            .spawn(SpriteBundle {
+                sprite: Sprite {
+                    anchor: bevy::sprite::Anchor::BottomLeft,
+                    ..default()
+                },
+                texture: asset_server.load("dirt.png"),
+                transform: Transform {
+                    translation: Vec3::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0, -1.0),
+                    scale: Vec3::new(16.0, 16.0, 0.0),
+                    ..default()
+                },
+                ..default()
+            })
+            .insert(Name::new(format!("{pos}_chunk")))
+            .id();
+        world.chunks.insert(pos, chunk);
+        chunk
+    }
+    fn despawn_chunk(
+        commands: &mut Commands,
+        world: &mut ResMut<World>,
+        //chunk: &Chunk,
+        pos: IVec2,
+    ) {
+        if let Some(entity) = world.chunks.remove(&pos) {
+            commands.entity(entity).despawn();
+        } else {
+            println!("despawn failed")
+        }
     }
 
     /// Функция для определения точных координат чанка
-    /// 
+    ///
     /// Определяется по данной позиции и делением на общий размер чанка
-    pub fn get_current_chunk(
-        input_var: IVec2
-    ) {
-        let result: IVec2 = IVec2::new(input_var.x / 256, input_var.y / 256);
-        let current_result = Self::get_format_current_chunk(input_var);
-        //place_image_chunk(commands, asset_server, current_result.x as f32, current_result.y as f32);
-        println!("{} | {} | {}", result, current_result, input_var)
+    pub fn get_current_chunk(input_var: IVec2) -> IVec2 {
+        //let result: IVec2 = IVec2::new(input_var.x / 256, input_var.y / 256);
+        let result = Self::get_format_current_chunk(input_var);
+        println!("{} | {}", result, input_var);
+        result
     }
 
     /// Функция для форматирования значения чанков по координатной системе
     fn get_format_current_chunk(input_var: IVec2) -> IVec2 {
-        IVec2::new(input_var.x / 256 + if input_var.x % 256 < 0 { -1 } else { 0 }, input_var.y / 256 + if input_var.y % 256 < 0 { -1 } else { 0 })
+        //IVec2::new(input_var.x / 256 + if input_var.x % 256 < 0 { -1 } else { 0 }, input_var.y / 256 + if input_var.y % 256 < 0 { -1 } else { 0 }) // Godot version, incurrent
+        let mut chunk_x = input_var.x / 256;
+        let mut chunk_y = input_var.y / 256;
+        if input_var.x < 0 {
+            chunk_x -= 1;
+        }
+        if input_var.y < 0 {
+            chunk_y -= 1;
+        }
+        IVec2::new(chunk_x, chunk_y)
     }
 
     /// Функция для определения точных координат тайла в чанке
-    /// 
+    ///
     /// Определяется по данной позиции и позиции чанка, делением на общий размер одного тайла
-    pub fn get_currect_chunk_tile(input_var: IVec2) {
-
-    }
+    pub fn get_currect_chunk_tile(input_var: IVec2) {}
 
     /// Функция для определения координат тайла в пределах чанка
-    /// 
+    ///
     /// Определяется по данной позиции и определением координат в пределах одного чанка, где отсчёт координат начинается с верхнего левого угла чанка.
-    pub fn get_local_tile_chunk(input_var: IVec2) {
-
-    }
+    pub fn get_local_tile_chunk(input_var: IVec2) {}
 }
-
 
 #[derive(Component, Resource)]
 pub struct World {
@@ -92,12 +185,7 @@ pub struct World {
     first_launch: bool,
     chunk_size_t: i32,
 
-    chunks_list: Vec<Chunk>
-}
-
-struct Chunk {
-    x: i32,
-    y: i32
+    chunks: HashMap<IVec2, Entity>,
 }
 
 impl Default for World {
@@ -109,87 +197,25 @@ impl Default for World {
             first_launch: true,
             chunk_size_t: 256,
 
-            chunks_list: Vec::new()
+            chunks: HashMap::new(),
         }
     }
 }
 
 impl World {
     pub fn new() -> Self {
-        World {
-            chunks_list: Vec::new(),
-            ..default()
-        }
+        World { ..default() }
     }
-
-    /// Функция для инициализации загрузки чанков вокруг игрока в пределах установленной прогрузки.
-    pub fn load(
-        commands: &mut Commands,
-        player_pos: Query<&Transform, With<PlayerEntity>>
-    ) {
-        /*
-        По сути потоковая функция, которая будет прогружать территорию
-        Небольшой черновик работы функции.
-        Отправляется от сущности "Игрок", вычисляется где он находиться и прогружает во круг чанки, если они находяться в зоне прогрузки.
-
-        Изберательная прогрузка: У игрока есть некая зона, в пределах которой не прогружается далее территория, если зайти за предел радиуса допуска, то происходит загрузка.
-        Та некая зона появляется, если стоять на месте некоторое время (зона афк))
-d
-        При процессе загрузки чанков, сначала происходит проверка [check_exists_chunk], есть ли чанк, если нету происходит генерация [generate_chunk], если же чанк был найден, происходит загрузка чанка [load_chunk], создавая экземпляр
-        сцены в res//, с именем, который является его номером по координатной сетке (0_0 | 0_1 | 1_0 и т.д.). Сам чанк, сохраняется и выгружается из файла, который представляет собой своеобразный сжатый "архив",
-        хронящий информацию о 32x32 чанках по координатной сетке, т.е. есть "архив" в нём 32x32 чанка, он занимает положение в мире 0_0 и т.д.
-        */
-
-        let player_pos = player_pos.single().translation.truncate().as_ivec2();
-
-        Self::get_current_chunk(player_pos)
-    }
-
-    /// Функция для определения точных координат чанка
-    /// 
-    /// Определяется по данной позиции и делением на общий размер чанка
-    pub fn get_current_chunk(
-        input_var: IVec2
-    ) {
-        let result: IVec2 = IVec2::new(input_var.x / 256, input_var.y / 256);
-        let current_result = Self::get_format_current_chunk(input_var);
-        //place_image_chunk(commands, asset_server, current_result.x as f32, current_result.y as f32);
-        println!("{} | {} | {}", result, current_result, input_var)
-    }
-
-    fn get_format_current_chunk(input_var: IVec2) -> IVec2 {
-        IVec2::new(input_var.x / 256 + if input_var.x % 256 < 0 { -1 } else { 0 }, input_var.y / 256 + if input_var.y % 256 < 0 { -1 } else { 0 })
-    }
-
-    /// Функция для определения точных координат тайла в чанке
-    /// 
-    /// Определяется по данной позиции и позиции чанка, делением на общий размер одного тайла
-    pub fn get_currect_chunk_tile(input_var: IVec2) {}
-
-    /// Функция для определения координат тайла в пределах чанка
-    /// 
-    /// Определяется по данной позиции и определением координат в пределах одного чанка, где отсчёт координат начинается с верхнего левого угла чанка.
-    pub fn get_local_tile_chunk(input_var: IVec2) {}
 }
 
-// fn place_image_chunk(
-//     commands: &mut Commands,
-//     asset_server: &Res<AssetServer>,
-//     x: f32,
-//     y: f32
-// ) {
-//     commands.spawn(
-//         SpriteBundle {
-//             sprite: Sprite {
-//                 anchor: bevy::sprite::Anchor::TopLeft,
-//                 ..default()
-//             },
-//             texture: asset_server.load("dirt.png"),
-//             transform: Transform {
-//                 translation: Vec3::new(x * 256.0, y * 256.0, 0.0),
-//                 scale: Vec3::new(16.0, 16.0, 0.0),
-//                 ..default()
-//             },
-//             ..default()
-//         });
-// }
+#[derive(Component, Resource)]
+struct Chunk {
+    pub chunk_pos: IVec2,
+    pub entity: Entity,
+}
+
+impl Chunk {
+    pub fn new(chunk_pos: IVec2, entity: Entity) -> Self {
+        Self { chunk_pos, entity }
+    }
+}

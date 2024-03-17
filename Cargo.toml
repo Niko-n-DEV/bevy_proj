@@ -1,18 +1,27 @@
 [package]
-name = "bevy_proj"
-version = "0.1.0"
+name = "sint-et"
+version = "0.0.1"
 edition = "2021"
 
 [dependencies]
 bevy = "0.13.0"
 bevy_egui = "0.25.0"
-bevy-inspector-egui = "0.23.2"
-bevy_entitiles = "0.7.0"
+bevy-inspector-egui = "0.23.4"
+#bevy_entitiles = "0.7.0"
+#bevy_entitiles_derive = "0.4"
+bevy_xpbd_2d = { version = "0.4.2"}
+rand = { version = "0.8.5" }
+#ron = { version = "0.8.1", optional = true }
+#quick-xml = { version = "0.31", optional = true, features = [ "serialize", "overlapped-lists", ] }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
 
 [profile.dev]
 opt-level = 1
+
+[features]
+#physics = ["dep:bevy_xpbd_2d"]
+#serializing = ["dep:ron", "dep:serde"]
 
 #[profile.dev.packages."*"]
 #opt-level = 3

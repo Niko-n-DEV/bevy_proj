@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+
 use bevy::{input::common_conditions::input_toggle_active, window::WindowResolution};
 use bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
@@ -15,34 +16,18 @@ mod core {
 
     pub use crate::components::*;
     pub use crate::entities::*;
-
-    #[allow(unused_imports)]
     pub use crate::systems::*;
 
     //pub use crate::systems::graphic::*;
 
     pub use crate::systems::interface::*;
 
-    //pub use crate::util::*;
-
-    #[allow(unused_imports)]
     pub use crate::util::*;
-    pub use serde::{Deserialize, Serialize};
-    #[allow(unused_imports)]
-    pub use serde_json::*;
-    #[allow(unused_imports)]
-    pub use std::fs;
-    #[allow(unused_imports)]
-    pub use std::fs::File;
-    #[allow(unused_imports)]
-    pub use std::fs::Metadata;
-    #[allow(unused_imports)]
-    pub use std::io::{Read, Write};
-    #[allow(unused_imports)]
-    pub use std::path::Path;
 }
 
-use crate::core::{Camera::CameraController, player::PlayerEntity::Player, UI::UI, world::World::WorldSystem};
+use crate::core::{
+    player::PlayerEntity::Player, world::World::WorldSystem, Camera::CameraController, UI::UI,
+};
 
 fn main() {
     App::new()
@@ -59,11 +44,10 @@ fn main() {
                         ..default()
                     }),
                     ..default()
-                }
-                )
+                })
                 .set(ImagePlugin::default_nearest())
                 .build(),
-            EguiPlugin
+            EguiPlugin,
         ))
         .add_plugins(
             WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F3)),
@@ -74,25 +58,7 @@ fn main() {
         .run();
 }
 
-fn setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>
-) {
-    commands.spawn(
-        SpriteBundle {
-            sprite: Sprite {
-                anchor: bevy::sprite::Anchor::TopLeft,
-                ..default()
-            },
-            texture: asset_server.load("dirt.png"),
-            transform: Transform {
-                translation: Vec3::new(0.0, 0.0, -1.0),
-                scale: Vec3::new(16.0, 16.0, 0.0),
-                ..default()
-            },
-            ..default()
-        });
-}
+fn setup(mut _commands: Commands, _asset_server: Res<AssetServer>) {}
 
 #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
 pub enum AppState {

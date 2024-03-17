@@ -13,14 +13,12 @@ fn load_resource_folder(mut commands: Commands, asset_server: Res<AssetServer>) 
 
 #[derive(Resource)]
 pub struct Atlas {
-    texture_id: HashMap<String, AssetId<Image>>
+    texture_id: HashMap<String, AssetId<Image>>,
 }
 
 impl Atlas {
     pub fn new(texture_id: HashMap<String, AssetId<Image>>) -> Self {
-        Atlas { 
-            texture_id,
-        }
+        Atlas { texture_id }
     }
 
     // pub fn get_texture(
@@ -43,14 +41,14 @@ pub struct Graphic;
 
 impl Plugin for Graphic {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(OnEnter(AppState::ResourceLoading), load_resource_folder)
-            .add_systems(Update, check_textures.run_if(in_state(AppState::ResourceLoading)))
+        app.add_systems(OnEnter(AppState::ResourceLoading), load_resource_folder)
+            .add_systems(
+                Update,
+                check_textures.run_if(in_state(AppState::ResourceLoading)),
+            )
             .add_systems(OnExit(AppState::ResourceLoading), setup_ex);
     }
 }
-
-
 
 fn check_textures(
     mut next_state: ResMut<NextState<AppState>>,
@@ -74,7 +72,7 @@ fn setup_ex(
 ) {
     let loaded_folder = loaded_folders.get(&resource_handle.0).unwrap();
     // Создание атлосов с различной выборкой
-    let (texture_atlas, texture, ids ) = create_texture_atlas(
+    let (texture_atlas, texture, ids) = create_texture_atlas(
         loaded_folder,
         None,
         Some(ImageSampler::linear()),
@@ -126,10 +124,14 @@ fn create_texture_atlas(
     padding: Option<UVec2>,
     sampling: Option<ImageSampler>,
     textures: &mut ResMut<Assets<Image>>,
-) -> (TextureAtlasLayout, Handle<Image>, HashMap<String, AssetId<Image>>) {
-
+) -> (
+    TextureAtlasLayout,
+    Handle<Image>,
+    HashMap<String, AssetId<Image>>,
+) {
     let mut textures_ids: HashMap<String, AssetId<Image>> = HashMap::new();
-    let mut texture_atlas_builder = TextureAtlasBuilder::default().padding(padding.unwrap_or_default());
+    let mut texture_atlas_builder =
+        TextureAtlasBuilder::default().padding(padding.unwrap_or_default());
 
     for handle in folder.handles.iter() {
         let id = handle.id().typed_unchecked::<Image>();
@@ -151,7 +153,6 @@ fn create_texture_atlas(
     let image = textures.get_mut(&texture).unwrap();
     image.sampler = sampling.unwrap_or_default();
 
-    
     (texture_atlas_layout, texture, textures_ids)
 }
 
@@ -164,9 +165,7 @@ fn sprite_from_atlas(
 ) {
     commands.spawn((
         SpriteBundle {
-            transform: Transform {
-                ..default()
-            },
+            transform: Transform { ..default() },
             texture,
             ..default()
         },
@@ -176,7 +175,6 @@ fn sprite_from_atlas(
         },
     ));
 }
-
 
 /*
     Наброски заполнения текстур в атлас и сохранение их id
