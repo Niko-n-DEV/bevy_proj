@@ -1,6 +1,6 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 
-use crate::core::{bullet::{Bullet, BULLET_LIFETIME, BULLET_SPEED}, Input::OffsetedCursorPosition};
+use crate::core::{Bullet::{Bullet, BULLET_LIFETIME, BULLET_SPEED}, Input::{OffsetedCursorPosition, CursorPosition}};
 
 #[derive(Component)]
 pub struct GunController {
@@ -11,7 +11,7 @@ pub struct GunController {
 pub fn gun_controls(
     mut cursor_res: ResMut<OffsetedCursorPosition>,
     mut gun_query : Query<(&mut GunController, &mut Transform)>,
-    mut cursor: EventReader<CursorMoved>, primary_query: Query<&Window, With<PrimaryWindow>>,
+    mut cursor: Res<CursorPosition>,
     time : Res<Time>,
     buttons: Res<ButtonInput<MouseButton>>,
     asset_server : Res<AssetServer>,
@@ -22,25 +22,27 @@ pub fn gun_controls(
         
         gun_controller.shoot_timer -= time.delta_seconds();
         
-        let Ok(primary) = primary_query.get_single() else
-        {
-            return;
-        };
-        let mut cursor_position = cursor.read().last().map(|event| event.position).unwrap_or_else(|| Vec2::new(cursor_res.x + primary.width() / 2., cursor_res.y + primary.height() / 2.));
+        //let Ok(primary) = primary_query.get_single() else
+        //{
+        //    return;
+        //};
+        //let mut cursor_position = cursor.read().last().map(|event| event.position).unwrap_or_else(|| Vec2::new(cursor_res.x + primary.width() / 2., cursor_res.y + primary.height() / 2.));
         
-        cursor_position.x -= primary.width()/2.;
-        cursor_position.y -= primary.height()/2.;
+        // cursor_position.x -= primary.width()/2.;
+        // cursor_position.y -= primary.height()/2.;
 
-        cursor_res.x = cursor_position.x;
-        cursor_res.y = cursor_position.y;
+        // cursor_res.x = cursor_position.x;
+        // cursor_res.y = cursor_position.y;
 
-        let diff = Vec2::new(cursor_position.x - transform.translation.x, transform.translation.y - cursor_position.y);
-        let angle = (-diff.y).atan2(diff.x);
+        let cursor_pos = cursor.0;
+
+        let diff = Vec2::new(cursor_pos.x - transform.translation.x, transform.translation.y - cursor_pos.y);
+        let angle = diff.y.atan2(diff.x);
         transform.rotation = Quat::from_axis_angle(Vec3::new(0.,0.,1.), angle);
 
         if gun_controller.shoot_timer <= 0.
         {
-            if buttons.pressed(MouseButton::Left)
+            if buttons.pressed(MouseButton::Right)
             {
                 let mut spawn_transform = Transform::from_scale(Vec3::splat(3.0));
                 spawn_transform.translation = transform.translation;

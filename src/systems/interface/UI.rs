@@ -17,6 +17,25 @@ pub struct QuitButton {}
 // Game UI components =====
 #[derive(Component)]
 pub struct GameUI;
+
+#[derive(Component, Resource)]
+pub struct GameUIRes {
+    pub debug_toggle: bool
+}
+
+impl Default for GameUIRes {
+    fn default() -> Self {
+        Self {
+            debug_toggle: false
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct DebugInfoPanel;
+
+#[derive(Component)]
+pub struct BackToMenuButton;
 // ==============================
 
 pub struct UI;
@@ -25,11 +44,14 @@ impl Plugin for UI {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(AppState::MainMenu), Self::spawn_main_menu)
             .add_systems(Update, (transition_to_game_state, translation_to_main_menu))
+            .init_resource::<GameUIRes>()
             .add_systems(
                 Update,
                 (
                     Self::interact_with_play_button.run_if(in_state(AppState::MainMenu)),
                     Self::interact_with_quit_button.run_if(in_state(AppState::MainMenu)),
+                    Self::interact_with_to_menu_button.run_if(in_state(AppState::Game)),
+                    Self::debug_toggle.run_if(in_state(AppState::Game))
                 ),
             )
             .add_systems(Update, exit_game)
@@ -139,25 +161,106 @@ impl UI {
 
     /// Функция для размещения игрового интерфейса.
     fn build_game_ui(commands: &mut Commands, _asset_server: &Res<AssetServer>) -> Entity {
-        let game_ui_entity = commands
-            .spawn((
-                NodeBundle {
-                    style: Style {
-                        width: Val::Percent(100.0),
-                        height: Val::Percent(5.0),
-                        align_items: AlignItems::Center,
-                        align_self: AlignSelf::End,
-                        padding: UiRect::all(Val::Px(10.0)),
-                        ..default()
-                    },
-                    background_color: Color::GRAY.into(),
-                    ..default()
+        let gameui_entity = commands
+            .spawn(( 
+                NodeBundle { 
+                    ..default() 
                 },
-                GameUI {},
-                Name::new("Game UI"),
+                GameUI,
+                Name::new("Game UI")
             ))
+            .with_children(|parent| {
+                parent.spawn(NodeBundle {
+                        style: Style {
+                            width: Val::Percent(100.0),
+                            height: Val::Percent(5.0),
+                            align_items: AlignItems::Center,
+                            align_self: AlignSelf::Center,
+                            padding: UiRect::all(Val::Px(10.0)),
+                            ..default()
+                        },
+                        background_color: Color::GRAY.into(),
+                        ..default()
+                    })
+                .with_children(|parent| {
+                    // === Back To Menu Button ===
+                    parent
+                        .spawn((
+                            ButtonBundle {
+                                style: button_container_style(25.0, 45.0),
+                                border_color: Color::BLACK.into(),
+                                background_color: NORMAL_BUTTON_COLOR.into(),
+                                ..default()
+                            },
+                            BackToMenuButton {},
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn(TextBundle {
+                                text: Text {
+                                    sections: vec![TextSection::new(
+                                        "Menu",
+                                        TextStyle {
+                                            font_size: 11.0,
+                                            ..default()
+                                        },
+                                    )],
+                                    ..default()
+                                },
+                                ..default()
+                            });
+                        });
+                });
+            })
             .id();
-        game_ui_entity
+
+        // let game_ui_entity = commands
+        //     .spawn((
+        //         NodeBundle {
+        //             style: Style {
+        //                 width: Val::Percent(100.0),
+        //                 height: Val::Percent(5.0),
+        //                 align_items: AlignItems::Center,
+        //                 align_self: AlignSelf::End,
+        //                 padding: UiRect::all(Val::Px(10.0)),
+        //                 ..default()
+        //             },
+        //             background_color: Color::GRAY.into(),
+        //             ..default()
+        //         },
+        //         GameUI,
+        //         Name::new("Game UI"),
+        //     ))
+        //     .with_children(|parent| {
+        //         // === Back To Menu Button ===
+        //         parent
+        //             .spawn((
+        //                 ButtonBundle {
+        //                     style: button_container_style(25.0, 45.0),
+        //                     border_color: Color::BLACK.into(),
+        //                     background_color: NORMAL_BUTTON_COLOR.into(),
+        //                     ..default()
+        //                 },
+        //                 BackToMenuButton {},
+        //             ))
+        //             .with_children(|parent| {
+        //                 parent.spawn(TextBundle {
+        //                     text: Text {
+        //                         sections: vec![TextSection::new(
+        //                             "Menu",
+        //                             TextStyle {
+        //                                 font_size: 11.0,
+        //                                 ..default()
+        //                             },
+        //                         )],
+        //                         ..default()
+        //                     },
+        //                     ..default()
+        //                 });
+        //             });
+        //     })
+        //     .id();
+
+        gameui_entity
     }
 
     /// Функция для выгрузки игрового интерфейса и его дочерних элементов.
@@ -167,7 +270,7 @@ impl UI {
         }
     }
 
-    // === Для кнопок PlayButton и QuitButton
+    // === Для кнопок PlayButton и QuitButton в MainMenu
     pub fn interact_with_play_button(
         mut button_query: Query<
             (&Interaction, &mut BackgroundColor),
@@ -210,6 +313,63 @@ impl UI {
                 }
                 Interaction::None => {
                     *background_color = NORMAL_BUTTON_COLOR.into();
+                }
+            }
+        }
+    }
+
+    // === Для кнопок ... в GameUI
+    pub fn interact_with_to_menu_button(
+        mut button_query: Query<
+            (&Interaction, &mut BackgroundColor),
+            (Changed<Interaction>, With<BackToMenuButton>),
+        >,
+        mut app_state_next_state: ResMut<NextState<AppState>>,
+    ) {
+        if let Ok((interaction, mut background_color)) = button_query.get_single_mut() {
+            match *interaction {
+                Interaction::Pressed => {
+                    *background_color = PRESSED_BUTTON_COLOR.into();
+                    app_state_next_state.set(AppState::MainMenu);
+                    println!("Entered AppState::MainMenu");
+                }
+                Interaction::Hovered => {
+                    *background_color = HOVERED_BUTTON_COLOR.into();
+                }
+                Interaction::None => {
+                    *background_color = NORMAL_BUTTON_COLOR.into();
+                }
+            }
+        }
+    }
+
+    /// Функция для включения режим откладки
+    pub fn debug_toggle(
+        mut commands: Commands,
+        parent_query: Query<Entity, With<GameUI>>,
+        child_query: Query<Entity, With<DebugInfoPanel>>,
+        mut parent_state: ResMut<GameUIRes>,
+        keyboard_input: Res<ButtonInput<KeyCode>>
+    ) {
+        if keyboard_input.just_released(KeyCode::F5) {
+            if !parent_state.debug_toggle {
+                if let Ok(parent) = parent_query.get_single() {
+
+                    commands.entity(parent).with_children(|parent| {
+                        parent.spawn((
+                            NodeBundle {
+                                ..default()
+                            },
+                            DebugInfoPanel
+                        )).insert(Name::new("Debug"));
+                    });
+
+                    parent_state.debug_toggle = true;
+                }
+            } else {
+                if let Ok(child) = child_query.get_single() {
+                    commands.entity(child).despawn_recursive();
+                    parent_state.debug_toggle = false;
                 }
             }
         }

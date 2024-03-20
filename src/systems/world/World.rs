@@ -12,13 +12,13 @@ pub struct WorldSystem;
 impl Plugin for WorldSystem {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(AppState::Game), Self::setup)
-            .init_resource::<World>()
+            .init_resource::<WorldRes>()
             .add_systems(Update, Self::load.run_if(in_state(AppState::Game)));
     }
 }
 
 impl WorldSystem {
-    fn setup(mut commands: Commands, asset_server: Res<AssetServer>, mut world: ResMut<World>) {
+    fn setup(mut commands: Commands, asset_server: Res<AssetServer>, mut world: ResMut<WorldRes>) {
         let settings = Settings::load();
         world.player_render_distance = settings.rendering_distance;
         settings.save();
@@ -28,7 +28,7 @@ impl WorldSystem {
     fn load(
         mut commands: Commands,
         asset_server: Res<AssetServer>,
-        mut world: ResMut<World>,
+        mut worldres: ResMut<WorldRes>,
         player_query: Query<(&mut Transform, &mut PlayerEntity)>,
     ) {
         /*
@@ -46,27 +46,27 @@ impl WorldSystem {
 
         for (transform, _player) in &player_query {
             let player_translation = transform.translation.truncate().as_ivec2();
-            world.player_chunk_position = Self::get_current_chunk(player_translation)
+            worldres.player_chunk_position = Self::get_current_chunk(player_translation)
         }
 
-        if world.player_chunk_position == world.player_chunk_last_position && world.first_launch {
-            world.player_chunk_last_position = IVec2::ZERO;
-            world.first_launch = false
+        if worldres.player_chunk_position == worldres.player_chunk_last_position && worldres.first_launch {
+            worldres.player_chunk_last_position = IVec2::ZERO;
+            worldres.first_launch = false
         }
 
-        if world.player_chunk_position != world.player_chunk_last_position {
-            world.player_chunk_last_position = world.player_chunk_position;
+        if worldres.player_chunk_position != worldres.player_chunk_last_position {
+            worldres.player_chunk_last_position = worldres.player_chunk_position;
 
             let (player_chunk_x, player_chunk_y) =
-                (world.player_chunk_position.x, world.player_chunk_position.y);
+                (worldres.player_chunk_position.x, worldres.player_chunk_position.y);
 
             // Нужна более чательная проработка
             let mut loaded_chunks_new: Vec<IVec2> = Vec::new();
-            for x in (player_chunk_x - world.player_render_distance)
-                ..=(player_chunk_x + world.player_render_distance)
+            for x in (player_chunk_x - worldres.player_render_distance)
+                ..=(player_chunk_x + worldres.player_render_distance)
             {
-                for y in (player_chunk_y - world.player_render_distance)
-                    ..=(player_chunk_y + world.player_render_distance)
+                for y in (player_chunk_y - worldres.player_render_distance)
+                    ..=(player_chunk_y + worldres.player_render_distance)
                 {
                     //let distance = ((player_chunk_x - x).abs() + (player_chunk_y - y).abs()).max(1);
                     // if distance <= world.player_render_distance {
@@ -80,7 +80,7 @@ impl WorldSystem {
 
             let mut chunks_to_discharge: Vec<IVec2> = Vec::new();
             // Проверяет в chunk, есть ли чанки, которые не входят в радиус прогрузки, чтобы их выгрузить
-            for (pos, _) in &world.chunks {
+            for (pos, _) in &worldres.chunks {
                 if !loaded_chunks_new.contains(pos) {
                     chunks_to_discharge.push(*pos);
                 }
@@ -88,17 +88,17 @@ impl WorldSystem {
             // Проверяет, есть ли чанки в списке на прогрузку, которые ещё не загружены, чтобы их загрузить.
             let mut chunks_to_upload: Vec<IVec2> = Vec::new();
             for chunk in &loaded_chunks_new {
-                if !world.chunks.contains_key(chunk) {
+                if !worldres.chunks.contains_key(chunk) {
                     chunks_to_upload.push(*chunk);
                 }
             }
 
             for chunk in chunks_to_upload {
-                Self::create_chunk(&mut commands, &asset_server, &mut world, chunk);
+                Self::create_chunk(&mut commands, &asset_server, &mut worldres, chunk);
             }
 
             for chunk in chunks_to_discharge {
-                Self::despawn_chunk(&mut commands, &mut world, chunk);
+                Self::despawn_chunk(&mut commands, &mut worldres, chunk);
             }
         }
     }
@@ -107,7 +107,7 @@ impl WorldSystem {
     fn create_chunk(
         commands: &mut Commands,
         asset_server: &Res<AssetServer>,
-        world: &mut ResMut<World>,
+        world_res: &mut ResMut<WorldRes>,
         pos: IVec2,
     ) -> Entity {
         let chunk = commands
@@ -126,12 +126,12 @@ impl WorldSystem {
             })
             .insert(Name::new(format!("{pos}_chunk")))
             .id();
-        world.chunks.insert(pos, chunk);
+        world_res.chunks.insert(pos, chunk);
         chunk
     }
     fn despawn_chunk(
         commands: &mut Commands,
-        world: &mut ResMut<World>,
+        world: &mut ResMut<WorldRes>,
         //chunk: &Chunk,
         pos: IVec2,
     ) {
@@ -148,7 +148,7 @@ impl WorldSystem {
     pub fn get_current_chunk(input_var: IVec2) -> IVec2 {
         //let result: IVec2 = IVec2::new(input_var.x / 256, input_var.y / 256);
         let result = Self::get_format_current_chunk(input_var);
-        println!("{} | {}", result, input_var);
+        //println!("{} | {}", result, input_var);
         result
     }
 
@@ -178,7 +178,7 @@ impl WorldSystem {
 }
 
 #[derive(Component, Resource)]
-pub struct World {
+pub struct WorldRes {
     player_render_distance: i32,
     player_chunk_position: IVec2,
     player_chunk_last_position: IVec2,
@@ -188,7 +188,7 @@ pub struct World {
     chunks: HashMap<IVec2, Entity>,
 }
 
-impl Default for World {
+impl Default for WorldRes {
     fn default() -> Self {
         Self {
             player_render_distance: 3,
@@ -202,9 +202,9 @@ impl Default for World {
     }
 }
 
-impl World {
+impl WorldRes {
     pub fn new() -> Self {
-        World { ..default() }
+        WorldRes { ..default() }
     }
 }
 

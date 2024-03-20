@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 
 use bevy::{input::common_conditions::input_toggle_active, window::WindowResolution};
-use bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+
+use iyes_perf_ui::prelude::*;
 
 mod components;
 mod entities;
@@ -47,18 +48,38 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest())
                 .build(),
-            EguiPlugin,
         ))
+
         .add_plugins(
             WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F3)),
         )
+
+        .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin)
+        .add_plugins(bevy::diagnostic::EntityCountDiagnosticsPlugin)
+        .add_plugins(bevy::diagnostic::SystemInformationDiagnosticsPlugin)
+        .add_plugins(PerfUiPlugin)
+
         .add_plugins((CameraController, UI))
         .add_plugins((Player, WorldSystem))
         .add_systems(OnEnter(AppState::Game), setup)
         .run();
 }
 
-fn setup(mut _commands: Commands, _asset_server: Res<AssetServer>) {}
+fn setup(mut _commands: Commands, _asset_server: Res<AssetServer>) {
+    _commands.spawn((
+        PerfUiRoot::default(),
+        PerfUiEntryFPS::default(),
+        PerfUiEntryFPSWorst::default(),
+        PerfUiEntryFrameTime::default(),
+        PerfUiEntryFrameTimeWorst::default(),
+        PerfUiEntryFrameCount::default(),
+        PerfUiEntryEntityCount::default(),
+        PerfUiEntryCpuUsage::default(),
+        PerfUiEntryMemUsage::default(),
+        PerfUiEntryRunningTime::default(),
+        PerfUiEntryClock::default(),
+    ));
+}
 
 #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
 pub enum AppState {

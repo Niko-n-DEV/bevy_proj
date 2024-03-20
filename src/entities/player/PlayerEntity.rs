@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
-use crate::core::{items::Weapon::*, AppState, Input::OffsetedCursorPosition, bullet::*, Entity::update_enemies, entities::EntitySys::{update_spawning, EnemySpawner}};
+#[allow(unused_imports)]
+use crate::core::{items::Weapon::*, AppState, Input::OffsetedCursorPosition, Bullet::*, Entity::update_enemies, entities::EntitySys::{update_spawning, EnemySpawner}, Input::{CursorPosition, cursor_track}};
 
 #[derive(Component, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
@@ -36,8 +37,14 @@ impl Plugin for Player {
         app
             .add_systems(OnEnter(AppState::Game), Self::spawn_player)
             .register_type::<PlayerEntity>()
+            .init_resource::<CursorPosition>()
             .insert_resource(OffsetedCursorPosition {x: 0., y: 0.})
-            .add_systems(Update, Self::player_movement.run_if(in_state(AppState::Game)))
+            .add_systems(Update, 
+                (
+                            Self::player_movement.run_if(in_state(AppState::Game)),
+                            cursor_track.run_if(in_state(AppState::Game)),
+                        )
+                    )
             .add_systems(Update, gun_controls.run_if(in_state(AppState::Game)))
             .add_systems(Update, attach_objects.run_if(in_state(AppState::Game)))
             .add_systems(Update, 
@@ -58,6 +65,7 @@ impl Plugin for Player {
 
 impl Player {
     fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
+        
         commands.spawn((
             SpriteBundle {
                 texture: asset_server.load("mob.png"),
@@ -65,19 +73,19 @@ impl Player {
             },
             PlayerEntity::default(),
             Name::new("Player"),
-        ))
-        .with_children(|parent| {
-            parent.spawn(SpriteBundle {
-                texture: asset_server.load("gun.png"),
-                transform: Transform {
-                    translation: Vec3::splat(0.),
-                    ..default()
-                },
-                ..default()
-            }).insert(PlayerAttach{ offset: Vec2::new(0.,0.)}).insert(GunController{ shoot_cooldown: 0.3,shoot_timer: 0.});
-        });
+        ));
 
-        //commands.spawn(TransformBundle{..default()}).insert(EnemySpawner{cooldown: 1., timer: 1.});
+        commands.spawn(SpriteBundle {
+            texture: asset_server.load("gun.png"),
+            transform: Transform {
+                translation: Vec3::splat(0.),
+                ..default()
+            },
+            ..default()
+        }).insert(PlayerAttach{ offset: Vec2::new(0.,0.)}).insert(GunController{ shoot_cooldown: 0.3,shoot_timer: 0.});
+
+        //commands.spawn(TransformBundle { ..default() } ).insert(EnemySpawner{cooldown: 1., timer: 1.});
+        //commands.spawn(TransformBundle { ..default() } ).insert(Name::new("Node"));
     }
 
     fn despawn_player(mut commands: Commands, player: Query<Entity, With<PlayerEntity>>) {

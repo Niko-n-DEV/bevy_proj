@@ -1,7 +1,4 @@
-#![allow(unused)] // Удалить потом
-                  /*
-                      Перенести данную систему в systems, ибо этому не место тут
-                  */
+#![allow(unused)]
 use bevy::prelude::*;
 
 use crate::{entities::player::PlayerEntity::PlayerEntity, AppState};
