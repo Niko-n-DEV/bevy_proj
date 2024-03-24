@@ -93,8 +93,8 @@ impl Plugin for TileMapPlugin {
     }
 }
 
-#[derive(Event, Debug, Clone, Copy)]
-struct GenerateChunk(IVec2);
+// #[derive(Event, Debug, Clone, Copy)]
+// struct GenerateChunk(IVec2);
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 

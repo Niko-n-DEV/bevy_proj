@@ -69,26 +69,59 @@ pub fn create_anim_hashmap() -> HashMap<String, Animation> {
 }
 
 
-// Чисто тестовое
+pub struct AnimationPlugin;
 
-/// Создание ключа анимации для игрока (но зачем?)
-pub fn create_player_anim_hashmap() -> HashMap<String, Animation> {
-    let mut hash_map = HashMap::new();
+#[derive(Component, Deref, DerefMut)]
+pub struct AnimationTimer(pub Timer);
 
-    hash_map.insert("Walk".to_string(), Animation{start: 1, end: 3, looping: true, cooldown: 0.1});
-
-    hash_map.insert("Idle".to_string(), Animation{start: 1, end: 1, looping: true, cooldown: 0.1});
-
-    hash_map
-} 
-
-/// Создание ключа анимации для пистолета
-pub fn create_gun_anim_hashmap() -> HashMap<String, Animation> {
-    let mut hash_map = HashMap::new();
-
-    hash_map.insert("Shoot".to_string(), Animation{start: 1, end: 5, looping: false, cooldown: 0.1});
-
-    hash_map.insert("Idle".to_string(), Animation{start: 1, end: 1, looping: true, cooldown: 0.1});
-
-    hash_map
+impl Plugin for AnimationPlugin {
+    fn build(&self, app: &mut App) {
+        // app.add_systems(
+        //     Update,
+        //     (
+        //         animation_timer_tick,
+        //         animate_player,
+        //         animate_enemy,
+        //         flip_gun_sprite_y,
+        //         flip_player_sprite_x,
+        //         flip_enemy_sprite_x,
+        //     )
+        //         .run_if(in_state(GameState::InGame)),
+        // );
+    }
 }
+
+#[derive(Component)]
+pub struct DiractionModel;
+
+impl AnimationPlugin {
+    pub fn direction_update(
+
+    ) {
+
+    }
+}
+
+
+// // Чисто тестовое
+// /// Создание ключа анимации для игрока (но зачем?)
+// pub fn create_player_anim_hashmap() -> HashMap<String, Animation> {
+//     let mut hash_map = HashMap::new();
+
+//     hash_map.insert("Walk".to_string(), Animation{start: 1, end: 3, looping: true, cooldown: 0.1});
+
+//     hash_map.insert("Idle".to_string(), Animation{start: 1, end: 1, looping: true, cooldown: 0.1});
+
+//     hash_map
+// } 
+
+// /// Создание ключа анимации для пистолета
+// pub fn create_gun_anim_hashmap() -> HashMap<String, Animation> {
+//     let mut hash_map = HashMap::new();
+
+//     hash_map.insert("Shoot".to_string(), Animation{start: 1, end: 5, looping: false, cooldown: 0.1});
+
+//     hash_map.insert("Idle".to_string(), Animation{start: 1, end: 1, looping: true, cooldown: 0.1});
+
+//     hash_map
+// }

@@ -1,7 +1,10 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 use rand::Rng;
 
-use crate::core::Entity::EntityBase;
+use crate::core::{
+    Entity::{EntityBase, Health},
+    Movement::DirectionState
+};
 
 #[derive(Component)]
 pub struct EnemySpawner {
@@ -67,8 +70,22 @@ pub fn update_spawning(
                 })
                 .insert(EntityBase {
                     speed: 100.,
-                    health: 1.,
+                    health: Health(1.0),
+                    direction: DirectionState::South
                 });
         }
     }
+}
+
+#[allow(unused)]
+// скорее будет работать по ивенту, по типу if direction_entity_is_change -> изменение текстуры на другое направление
+/// Обновляет текстуру моба в зависимости от его направления
+pub fn update_direction_texture(
+    entity_query: Query<&Transform, With<EntityBase>>
+) {
+    if entity_query.is_empty() {
+        return;
+    }
+
+    
 }

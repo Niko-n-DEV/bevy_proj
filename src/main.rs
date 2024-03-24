@@ -45,7 +45,7 @@ fn main() {
         // Имя окна - SINT-et
         // [Test] Стартовое разрешение окна - 1280 на 720
         // Есть возможность изменения размера окна
-        // [Test] Включена Вертикальная синхронизация (у меня 144 герц)
+        // [Test] Включена Вертикальная синхронизация (у меня 144 герц) [AutoVsync]
         // Установлен nearest фильтр, чтобы спрайты были несглаженные.
         .add_plugins((
             DefaultPlugins
@@ -54,7 +54,7 @@ fn main() {
                         title: "SINT-et".to_string(),
                         resolution: WindowResolution::new(1280.0, 720.0),
                         resizable: true,
-                        present_mode: bevy::window::PresentMode::AutoVsync,
+                        present_mode: bevy::window::PresentMode::AutoNoVsync,
                         ..default()
                     }),
                     ..default()
@@ -108,8 +108,8 @@ fn setup(mut _commands: Commands) {
 pub enum AppState {
     Start,
     #[default]
+    ResourceCheck,
     ResourceLoading,
-    ResourceCorrect,
     MainMenu,
     Game,
     Pause,

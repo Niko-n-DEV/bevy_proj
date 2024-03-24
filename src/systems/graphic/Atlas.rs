@@ -1,4 +1,5 @@
 #![allow(unused)]
+use std::collections::HashMap;
 use bevy::prelude::*;
 
 #[derive(Component, Resource)]
@@ -20,17 +21,59 @@ pub struct ObjectAtlas;
 
 // [Test]
 #[derive(Resource)]
-pub struct TestAtlas {
+pub struct TestTextureAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
     pub image: Option<Handle<Image>>,
+    pub ids: Option<HashMap<String, usize>>
 }
 
-impl Default for TestAtlas {
+impl Default for TestTextureAtlas {
     fn default() -> Self {
         Self {
             layout: None,
             image: None,
+            ids: None
         }
+    }
+}
+
+impl TestTextureAtlas {
+    pub fn get_index(name: &str, atlas: &Self) -> usize {
+        if let Some(ids) = &atlas.ids {
+            if let Some(index) = ids.get(name) {
+                return *index;
+            }
+        }
+        0
+    }
+}
+
+// для сторонозависимых атласов
+#[derive(Resource)]
+pub struct DirectionAtlas {
+    pub layout: Option<Handle<TextureAtlasLayout>>,
+    pub image: Option<Handle<Image>>,
+    pub ids: Option<HashMap<String, usize>>
+}
+
+impl Default for DirectionAtlas {
+    fn default() -> Self {
+        Self {
+            layout: None,
+            image: None,
+            ids: None
+        }
+    }
+}
+
+impl DirectionAtlas {
+    pub fn get_index(name: &str, atlas: &Self) -> usize {
+        if let Some(ids) = &atlas.ids {
+            if let Some(index) = ids.get(name) {
+                return *index;
+            }
+        }
+        0
     }
 }
 

@@ -1,13 +1,24 @@
+#![allow(unused)]
 use bevy::prelude::*;
 
-use crate::core::player::PlayerEntity::*;
+use crate::core::{
+    player::PlayerEntity::PlayerEntity,
+    Movement::DirectionState
+};
 
+/// Компонент отвечающий за [Здоровье]
 #[derive(Component)]
 pub struct Health(pub f32);
 
+/// Компонент отвечающий за [Скорость]
+#[derive(Component)]
+pub struct Speed(f32);
+
+/// Базовый компонент отвечающий за основу [Entity]
 #[derive(Component)]
 pub struct EntityBase {
-    pub health: f32,
+    pub health: Health,
+    pub direction: DirectionState,
     pub speed: f32,
 }
 
@@ -15,13 +26,15 @@ pub struct EntityBase {
 pub enum EntityState {
     #[default]
     Idle,
-    Run,
+    Move,
 }
 
 #[derive(Event)]
 pub struct EntityCollisionEvent;
 
+// ==================================================
 // Test
+// ==================================================
 pub fn update_enemies(
     time: Res<Time>,
     mut enemy_query: Query<(&EntityBase, &mut Transform, Entity), Without<PlayerEntity>>,
@@ -35,7 +48,7 @@ pub fn update_enemies(
                 * time.delta_seconds();
             transform.translation += moving;
 
-            if enemy.health <= 0. {
+            if enemy.health.0 <= 0. {
                 commands.entity(entity).despawn();
             }
         }

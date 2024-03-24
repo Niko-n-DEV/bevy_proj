@@ -1,5 +1,5 @@
-use bevy::app::AppExit;
-use bevy::prelude::*;
+#![allow(unused)]
+use bevy::{prelude::*, window::PrimaryWindow, app::AppExit};
 
 use bevy_simple_text_input::{TextInputBundle, TextInputInactive, TextInputPlugin};
 

@@ -52,7 +52,7 @@ pub fn update_bullet_hits(
                 bullet_list[i as usize].translation,
                 Vec2::new(transform.translation.x, transform.translation.y),
             ) <= 36. {
-                enemy.health -= 1.;
+                enemy.health.0 -= 1.;
 
                 commands.entity(bullet_list[i as usize].entity).despawn();
 
