@@ -15,7 +15,7 @@ pub struct EntityBase {
 pub enum EntityState {
     #[default]
     Idle,
-    Run,
+    Move,
 }
 
 #[derive(Event)]

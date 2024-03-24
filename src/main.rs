@@ -108,8 +108,8 @@ fn setup(mut _commands: Commands) {
 pub enum AppState {
     Start,
     #[default]
+    ResourceCheck,
     ResourceLoading,
-    ResourceCorrect,
     MainMenu,
     Game,
     Pause,

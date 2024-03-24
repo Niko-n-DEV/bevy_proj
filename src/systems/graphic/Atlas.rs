@@ -20,12 +20,12 @@ pub struct ObjectAtlas;
 
 // [Test]
 #[derive(Resource)]
-pub struct TestAtlas {
+pub struct TestTextureAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
     pub image: Option<Handle<Image>>,
 }
 
-impl Default for TestAtlas {
+impl Default for TestTextureAtlas {
     fn default() -> Self {
         Self {
             layout: None,
