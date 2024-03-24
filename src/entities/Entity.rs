@@ -3,10 +3,23 @@ use bevy::prelude::*;
 use crate::core::player::PlayerEntity::*;
 
 #[derive(Component)]
+pub struct Health(pub f32);
+
+#[derive(Component)]
 pub struct EntityBase {
     pub health: f32,
     pub speed: f32,
 }
+
+#[derive(Component, Default)]
+pub enum EntityState {
+    #[default]
+    Idle,
+    Run,
+}
+
+#[derive(Event)]
+pub struct EntityCollisionEvent;
 
 // Test
 pub fn update_enemies(

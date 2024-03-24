@@ -1,9 +1,9 @@
 use bevy::prelude::*;
-
+/* Потом переделаю под снаряды */
 use crate::core::Entity::EntityBase;
 
 pub const BULLET_LIFETIME: f32 = 10.0;
-pub const BULLET_SPEED: f32 = 1000.;
+pub const BULLET_SPEED: f32 = 3000.;
 
 #[derive(Component)]
 pub struct Bullet {

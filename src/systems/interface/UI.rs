@@ -1,6 +1,8 @@
 use bevy::app::AppExit;
 use bevy::prelude::*;
 
+use bevy_simple_text_input::{TextInputBundle, TextInputInactive, TextInputPlugin};
+
 use crate::core::{AppState, Styles::*};
 
 // Main menu components =====
@@ -35,6 +37,14 @@ impl Default for GameUIRes {
 pub struct DebugInfoPanel;
 
 #[derive(Component)]
+pub struct CMDline;
+
+const BORDER_COLOR_ACTIVE: Color = Color::rgb(0.75, 0.52, 0.99);
+const BORDER_COLOR_INACTIVE: Color = Color::rgb(0.25, 0.25, 0.25);
+//const TEXT_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
+const BACKGROUND_COLOR: Color = Color::rgb(0.15, 0.15, 0.15);
+
+#[derive(Component)]
 pub struct BackToMenuButton;
 // ==============================
 
@@ -45,13 +55,17 @@ impl Plugin for UI {
         app.add_systems(OnEnter(AppState::MainMenu), Self::spawn_main_menu)
             .add_systems(Update, (transition_to_game_state, translation_to_main_menu))
             .init_resource::<GameUIRes>()
+
+            .add_plugins(TextInputPlugin)
+
             .add_systems(
                 Update,
                 (
                     Self::interact_with_play_button.run_if(in_state(AppState::MainMenu)),
                     Self::interact_with_quit_button.run_if(in_state(AppState::MainMenu)),
                     Self::interact_with_to_menu_button.run_if(in_state(AppState::Game)),
-                    Self::debug_toggle.run_if(in_state(AppState::Game))
+                    Self::debug_toggle.run_if(in_state(AppState::Game)),
+                    focus.run_if(in_state(AppState::Game))
                 ),
             )
             .add_systems(Update, exit_game)
@@ -163,19 +177,26 @@ impl UI {
     fn build_game_ui(commands: &mut Commands, _asset_server: &Res<AssetServer>) -> Entity {
         let gameui_entity = commands
             .spawn(( 
-                NodeBundle { 
+                NodeBundle {
+                    style: Style {
+                        height: Val::Percent(100.),
+                        width: Val::Percent(100.),
+                        ..default()
+                    },
                     ..default() 
                 },
                 GameUI,
+                Interaction::None,
                 Name::new("Game UI")
             ))
             .with_children(|parent| {
+                // === Base Node* ===
                 parent.spawn(NodeBundle {
                         style: Style {
                             width: Val::Percent(100.0),
                             height: Val::Percent(5.0),
                             align_items: AlignItems::Center,
-                            align_self: AlignSelf::Center,
+                            align_self: AlignSelf::End,
                             padding: UiRect::all(Val::Px(10.0)),
                             ..default()
                         },
@@ -209,57 +230,27 @@ impl UI {
                                 ..default()
                             });
                         });
+                        // === CMDline ===
+                        parent.spawn((
+                            NodeBundle {
+                                style: Style {
+                                    width: Val::Px(200.0),
+                                    border: UiRect::all(Val::Px(5.0)),
+                                    padding: UiRect::all(Val::Px(5.0)),
+                                    ..default()
+                                },
+                                border_color: BORDER_COLOR_ACTIVE.into(),
+                                background_color: BACKGROUND_COLOR.into(),
+                                ..default()
+                            },
+                            Name::new("CMDline"),
+                            TextInputBundle::default()
+                                .with_inactive(true),
+                            CMDline
+                        ));
                 });
             })
             .id();
-
-        // let game_ui_entity = commands
-        //     .spawn((
-        //         NodeBundle {
-        //             style: Style {
-        //                 width: Val::Percent(100.0),
-        //                 height: Val::Percent(5.0),
-        //                 align_items: AlignItems::Center,
-        //                 align_self: AlignSelf::End,
-        //                 padding: UiRect::all(Val::Px(10.0)),
-        //                 ..default()
-        //             },
-        //             background_color: Color::GRAY.into(),
-        //             ..default()
-        //         },
-        //         GameUI,
-        //         Name::new("Game UI"),
-        //     ))
-        //     .with_children(|parent| {
-        //         // === Back To Menu Button ===
-        //         parent
-        //             .spawn((
-        //                 ButtonBundle {
-        //                     style: button_container_style(25.0, 45.0),
-        //                     border_color: Color::BLACK.into(),
-        //                     background_color: NORMAL_BUTTON_COLOR.into(),
-        //                     ..default()
-        //                 },
-        //                 BackToMenuButton {},
-        //             ))
-        //             .with_children(|parent| {
-        //                 parent.spawn(TextBundle {
-        //                     text: Text {
-        //                         sections: vec![TextSection::new(
-        //                             "Menu",
-        //                             TextStyle {
-        //                                 font_size: 11.0,
-        //                                 ..default()
-        //                             },
-        //                         )],
-        //                         ..default()
-        //                     },
-        //                     ..default()
-        //                 });
-        //             });
-        //     })
-        //     .id();
-
         gameui_entity
     }
 
@@ -402,6 +393,26 @@ pub fn translation_to_main_menu(
         if app_state.get() != &AppState::MainMenu {
             app_state_reverse.set(AppState::MainMenu);
             println!("Entered AppState::MainMenu")
+        }
+    }
+}
+
+/// focus для CMDline 
+fn focus(
+    query: Query<(Entity, &Interaction), Changed<Interaction>>,
+    mut text_input_query: Query<(Entity, &mut TextInputInactive, &mut BorderColor)>,
+) {
+    for (interaction_entity, interaction) in &query {
+        if *interaction == Interaction::Pressed {
+            for (entity, mut inactive, mut border_color) in &mut text_input_query {
+                if entity == interaction_entity {
+                    inactive.0 = false;
+                    *border_color = BORDER_COLOR_ACTIVE.into();
+                } else {
+                    inactive.0 = true;
+                    *border_color = BORDER_COLOR_INACTIVE.into();
+                }
+            }
         }
     }
 }

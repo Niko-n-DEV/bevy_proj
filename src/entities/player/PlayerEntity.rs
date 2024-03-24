@@ -4,7 +4,7 @@ use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
 #[allow(unused_imports)]
-use crate::core::{items::Weapon::*, AppState, Input::OffsetedCursorPosition, Bullet::*, Entity::update_enemies, entities::EntitySys::{update_spawning, EnemySpawner}, Input::{CursorPosition, cursor_track}};
+use crate::core::{items::Weapon::*, AppState, Input::OffsetedCursorPosition, Bullet::*, Entity::{update_enemies, EntityBase}, entities::EntitySys::{update_spawning, EnemySpawner}, Input::{CursorPosition, cursor_track}};
 
 #[derive(Component, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
@@ -19,9 +19,9 @@ pub struct PlayerEntity {
 impl Default for PlayerEntity {
     fn default() -> Self {
         Self {
-            speed: 25.0,
-            sprint: 50.0,
-            position: Vec3::new(126.0, -126.0, 0.0),
+            speed: 50.0,
+            sprint: 125.0,
+            position: Vec3::new(0.0, 0.0, 0.0),
             velocity: Vec3::ZERO,
             movable: true,
         }
@@ -35,37 +35,44 @@ pub struct Player;
 impl Plugin for Player {
     fn build(&self, app: &mut App) {
         app
+            // Установка игрока при переходе в стостояние "игра"
             .add_systems(OnEnter(AppState::Game), Self::spawn_player)
+            // Регистрация типа "PlayerEntity" для индексации параметров в Инспекторе
             .register_type::<PlayerEntity>()
+            // Использование данных о позиции курсора из CursorPosition
             .init_resource::<CursorPosition>()
+            // Инициализация чего-то (я сам до конца не понял)
             .insert_resource(OffsetedCursorPosition {x: 0., y: 0.})
-            .add_systems(Update, 
-                (
-                            Self::player_movement.run_if(in_state(AppState::Game)),
-                            cursor_track.run_if(in_state(AppState::Game)),
-                        )
-                    )
+            // Передвижение игрока
+            .add_systems(Update, Self::player_movement.run_if(in_state(AppState::Game)))
+            // Обновление информации о позиции курсора
+            .add_systems(PreUpdate, cursor_track.run_if(in_state(AppState::Game)))
+            // [Test] Обновление системы управления оружием
             .add_systems(Update, gun_controls.run_if(in_state(AppState::Game)))
+            // [Test] Соединение оружия и игрока
             .add_systems(Update, attach_objects.run_if(in_state(AppState::Game)))
+            // [Test] Обновление системы просчёта пуль и попадений
             .add_systems(Update, 
                 (
                             update_bullets.run_if(in_state(AppState::Game)), 
                             update_bullet_hits.run_if(in_state(AppState::Game))
                         )
                     )
+            // [Test] Обновление системы просчёта врагов и их спавна 
             .add_systems(Update, 
                 (
                             update_enemies.run_if(in_state(AppState::Game)), 
                             update_spawning.run_if(in_state(AppState::Game))
                         )
                     )
+            // Инициализация "удаления" игрока при переходе из состояния "игра"
             .add_systems(OnExit(AppState::Game), Self::despawn_player);
     }
 }
 
 impl Player {
     fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
-        
+        // Спавн спрайта, являющийся игроком
         commands.spawn((
             SpriteBundle {
                 texture: asset_server.load("mob.png"),
@@ -75,6 +82,7 @@ impl Player {
             Name::new("Player"),
         ));
 
+        // Спавн оружия и соединение с игроком
         commands.spawn(SpriteBundle {
             texture: asset_server.load("gun.png"),
             transform: Transform {
@@ -82,21 +90,24 @@ impl Player {
                 ..default()
             },
             ..default()
-        }).insert(PlayerAttach{ offset: Vec2::new(0.,0.)}).insert(GunController{ shoot_cooldown: 0.3,shoot_timer: 0.});
+        }).insert(PlayerAttach{ offset: Vec2::new(0.,0.)}).insert(GunController{ shoot_cooldown: 0.3, shoot_timer: 0. }); // 0.3
 
-        //commands.spawn(TransformBundle { ..default() } ).insert(EnemySpawner{cooldown: 1., timer: 1.});
-        //commands.spawn(TransformBundle { ..default() } ).insert(Name::new("Node"));
+        // не переходить часто с главного меню в игру и на оборот, дублируются!
+        //commands.spawn(TransformBundle { ..default() } ).insert(EnemySpawner{ cooldown: 1., timer: 1. });
     }
 
-    fn despawn_player(mut commands: Commands, player: Query<Entity, With<PlayerEntity>>) {
+    /// "Удаление" игрока
+    fn despawn_player(
+        mut commands: Commands,
+        player: Query<Entity, With<PlayerEntity>>,
+    ) {
         if let Ok(player) = player.get_single() {
             commands.entity(player).despawn_recursive()
         }
     }
 
+    /// Передвижение игрока
     fn player_movement(
-        // mut commands: Commands,
-        // asset_server: Res<AssetServer>,
         mut player_entity: Query<(&mut Transform, &mut PlayerEntity)>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
         _mouse_input: Res<OffsetedCursorPosition>,
@@ -138,6 +149,7 @@ impl Player {
     }
 }
 
+// По идее это внутренний компонент инвентаря игрока, но пока что он не реализован
 #[derive(Component, InspectorOptions)]
 pub struct Inventory {}
 
@@ -145,6 +157,9 @@ pub struct Inventory {}
 pub struct PlayerAttach {
     pub offset: Vec2,
 }
+
+// Просто хранение информации о том, где игрок.
+// Используется для применение этих данных объектам, для их привязки к игроку.
 
 pub fn attach_objects(
     player_query: Query<(&PlayerEntity, &mut Transform), Without<PlayerAttach>>,

@@ -3,7 +3,7 @@ use bevy::{log::tracing_subscriber::fmt::format, prelude::*, transform::commands
 use std::collections::HashMap;
 
 use crate::{
-    core::{player::PlayerEntity::PlayerEntity, world::TileMap::TileMapPlugin, Settings::Settings},
+    core::{player::PlayerEntity::PlayerEntity, Settings::Settings},
     AppState,
 };
 

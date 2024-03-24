@@ -1,6 +1,6 @@
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::prelude::*;
 
-use crate::core::{Bullet::{Bullet, BULLET_LIFETIME, BULLET_SPEED}, Input::{OffsetedCursorPosition, CursorPosition}};
+use crate::core::{Bullet::{Bullet, BULLET_LIFETIME, BULLET_SPEED}, Input::CursorPosition};
 
 #[derive(Component)]
 pub struct GunController {
@@ -9,9 +9,8 @@ pub struct GunController {
 }
 
 pub fn gun_controls(
-    mut cursor_res: ResMut<OffsetedCursorPosition>,
     mut gun_query : Query<(&mut GunController, &mut Transform)>,
-    mut cursor: Res<CursorPosition>,
+    cursor: Res<CursorPosition>,
     time : Res<Time>,
     buttons: Res<ButtonInput<MouseButton>>,
     asset_server : Res<AssetServer>,
@@ -19,24 +18,11 @@ pub fn gun_controls(
 ) {
     for(mut gun_controller, mut transform) in gun_query.iter_mut()
     {
-        
         gun_controller.shoot_timer -= time.delta_seconds();
-        
-        //let Ok(primary) = primary_query.get_single() else
-        //{
-        //    return;
-        //};
-        //let mut cursor_position = cursor.read().last().map(|event| event.position).unwrap_or_else(|| Vec2::new(cursor_res.x + primary.width() / 2., cursor_res.y + primary.height() / 2.));
-        
-        // cursor_position.x -= primary.width()/2.;
-        // cursor_position.y -= primary.height()/2.;
-
-        // cursor_res.x = cursor_position.x;
-        // cursor_res.y = cursor_position.y;
 
         let cursor_pos = cursor.0;
 
-        let diff = Vec2::new(cursor_pos.x - transform.translation.x, transform.translation.y - cursor_pos.y);
+        let diff = Vec2::new(cursor_pos.x - transform.translation.x, cursor_pos.y - transform.translation.y);
         let angle = diff.y.atan2(diff.x);
         transform.rotation = Quat::from_axis_angle(Vec3::new(0.,0.,1.), angle);
 

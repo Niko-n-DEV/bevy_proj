@@ -586,6 +586,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_entitiles"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3506e0e409b3fd85c4b1f5e167ebac6adc9f869cacb8c417d87a0aeb11d0ec75"
+dependencies = [
+ "bevy",
+ "bevy_xpbd_2d",
+ "bitflags 2.5.0",
+ "radsort",
+ "ron",
+ "serde",
+]
+
+[[package]]
 name = "bevy_gilrs"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -918,6 +932,15 @@ dependencies = [
  "serde",
  "thiserror",
  "uuid",
+]
+
+[[package]]
+name = "bevy_simple_text_input"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "176d4ccc0da7d574b0bf565c64476fe9ccb8a712c76d6db5bf7922634745b576"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]
@@ -2320,9 +2343,9 @@ checksum = "b1a46d1a171d865aa5f83f92695765caa047a9b4cbae2cbf37dbd613a793fd4c"
 
 [[package]]
 name = "iyes_perf_ui"
-version = "0.1.0"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34406339c06fc0377ce3d387f266210a4c8d0732e8caa872f97f6f6d91b74067"
+checksum = "a49f5aa5866dadfdd274c45eddc0a94c84ad1ce0c02c27bcb33c34a20b961f9e"
 dependencies = [
  "bevy",
 ]
@@ -3476,6 +3499,8 @@ version = "0.0.1"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
+ "bevy_entitiles",
+ "bevy_simple_text_input",
  "bevy_xpbd_2d",
  "iyes_perf_ui",
  "rand",

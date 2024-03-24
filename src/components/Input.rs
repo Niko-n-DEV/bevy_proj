@@ -8,10 +8,11 @@ pub struct OffsetedCursorPosition {
     pub y: f32,
 }
 
-
+/// Позиция курсора на глобальной координатной сетке
 #[derive(Resource, Default)]
 pub struct CursorPosition(pub Vec2);
 
+/// Получение координат чанка по глобальной координатной системе
 pub fn cursor_track(
     mut cursor_pos: ResMut<CursorPosition>,
     window: Query<&Window, With<PrimaryWindow>>,
@@ -25,6 +26,6 @@ pub fn cursor_track(
         .map(|ray| ray.origin.truncate())
     {
         cursor_pos.0 = world_position;
-        eprintln!("World coords: {}/{}", world_position.x, world_position.y);
+        //eprintln!("World coords: {}/{}", world_position.x, world_position.y);
     }
 }
