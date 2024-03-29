@@ -1,9 +1,9 @@
-//#![allow(unused)]
-use std::{collections::HashMap, path::Path};
+#![allow(unused)]
+use std::collections::HashMap;
 
 use bevy::{asset::LoadedFolder, prelude::*, render::texture::ImageSampler};
 
-use crate::core::{AppState, graphic::Atlas::{TestTextureAtlas, DirectionAtlas}};
+use crate::core::{AppState, graphic::Atlas::TestAtlas};
 
 /// Ресурс хранящий в себе загружаемую папку ресурсов
 #[derive(Resource, Default)]
@@ -15,10 +15,7 @@ impl Plugin for Graphic {
     fn build(&self, app: &mut App) {
         app
             // Взятие ресурсов из assets
-            .add_systems(OnEnter(AppState::ResourceCheck), load_resource_folder)
-            // Ну, атлас, да
-            .insert_resource(TestTextureAtlas::default())
-            .insert_resource(DirectionAtlas::default())
+            .add_systems(OnEnter(AppState::ResourceLoading), load_resource_folder)
             // Проверка ресурсов на зависимости (Непонятно как оно точно работает)
             .add_systems(Update,check_textures.run_if(in_state(AppState::ResourceCheck)))
             .add_systems(OnEnter(AppState::ResourceLoading), setup_ex)
@@ -40,8 +37,8 @@ fn check_textures(
     mut events: EventReader<AssetEvent<LoadedFolder>>,
 ) {
     for event in events.read() {
-        if event.is_loaded_with_dependencies(&resource_folder.0) { 
-            next_state.set(AppState::ResourceLoading);
+        if event.is_loaded_with_dependencies(&resource_folder.0) {
+            next_state.set(AppState::MainMenu);
         }
     }
 }
@@ -50,45 +47,12 @@ fn setup_ex(
     // mut commands: Commands,
     // asset_server: Res<AssetServer>,
     resource_handle: Res<ResourceFolder>,
-    mut handle_cust_atlas: ResMut<TestTextureAtlas>,
-    mut handle_dir_atlas: ResMut<DirectionAtlas>,
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     loaded_folders: Res<Assets<LoadedFolder>>,
     mut textures: ResMut<Assets<Image>>,
     mut next_state: ResMut<NextState<AppState>>
 ) {
-    // Сборка текстур в единый атлас
-    let loaded_folder = loaded_folders.get(&resource_handle.0).unwrap();
-
-    let (texture_atlas_nearest, nearest_texture, _hash) = create_texture_atlas(
-        &loaded_folder,
-        None,
-        Some(ImageSampler::nearest()),
-        &mut textures,
-    );
-    let atlas_nearest_handle = texture_atlases.add(texture_atlas_nearest);
-
-    handle_cust_atlas.layout = Some(atlas_nearest_handle);
-    handle_cust_atlas.image = Some(nearest_texture);
-    handle_cust_atlas.ids = Some(_hash);
-
-    // Сборка атласов в единый атлас
-    let loaded_folder = loaded_folders.get(&resource_handle.1).unwrap();
-    let (texture_atlas_dir_atlases, nearest_texture_atlases, _hash) = load_and_index_atlas(
-        &loaded_folder,
-        None,
-        Some(ImageSampler::nearest()),
-        &mut textures,
-    );
-
-    let atlas_dir_nearest_handle = texture_atlases.add(texture_atlas_dir_atlases);
-
-    handle_dir_atlas.layout = Some(atlas_dir_nearest_handle);
-    handle_dir_atlas.image = Some(nearest_texture_atlases);
-    handle_dir_atlas.ids = Some(_hash);
-
-    next_state.set(AppState::MainMenu);
-    info!("State: MainMenu")
+    
 }
 
 /// Создание атласа текстур с заданными настройками заполнения и выборки из отдельных спрайтов в данной папке
