@@ -1,9 +1,9 @@
-#![allow(unused)]
+//#![allow(unused)]
 use std::collections::HashMap;
 
 use bevy::{asset::LoadedFolder, prelude::*, render::texture::ImageSampler};
 
-use crate::core::{AppState, graphic::Atlas::TestAtlas};
+use crate::core::{AppState, graphic::Atlas::TestTextureAtlas};
 
 /// Ресурс хранящий в себе загружаемую папку ресурсов
 #[derive(Resource, Default)]
@@ -15,7 +15,9 @@ impl Plugin for Graphic {
     fn build(&self, app: &mut App) {
         app
             // Взятие ресурсов из assets
-            .add_systems(OnEnter(AppState::ResourceLoading), load_resource_folder)
+            .add_systems(OnEnter(AppState::ResourceCheck), load_resource_folder)
+            // Ну, атлас, да
+            .insert_resource(TestTextureAtlas::default())
             // Проверка ресурсов на зависимости (Непонятно как оно точно работает)
             .add_systems(Update,check_textures.run_if(in_state(AppState::ResourceCheck)))
             .add_systems(OnEnter(AppState::ResourceLoading), setup_ex)
@@ -38,7 +40,7 @@ fn check_textures(
 ) {
     for event in events.read() {
         if event.is_loaded_with_dependencies(&resource_folder.0) {
-            next_state.set(AppState::MainMenu);
+            next_state.set(AppState::ResourceLoading);
         }
     }
 }
@@ -47,12 +49,26 @@ fn setup_ex(
     // mut commands: Commands,
     // asset_server: Res<AssetServer>,
     resource_handle: Res<ResourceFolder>,
+    mut handle: ResMut<TestTextureAtlas>,
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     loaded_folders: Res<Assets<LoadedFolder>>,
     mut textures: ResMut<Assets<Image>>,
     mut next_state: ResMut<NextState<AppState>>
 ) {
-    
+    let loaded_folder = loaded_folders.get(&resource_handle.0).unwrap();
+
+    let (texture_atlas_nearest, nearest_texture, _hash) = create_texture_atlas(
+        &loaded_folder,
+        None,
+        Some(ImageSampler::nearest()),
+        &mut textures,
+    );
+    let atlas_nearest_handle = texture_atlases.add(texture_atlas_nearest);
+
+    handle.layout = Some(atlas_nearest_handle);
+    handle.image = Some(nearest_texture);
+
+    next_state.set(AppState::MainMenu);
 }
 
 /// Создание атласа текстур с заданными настройками заполнения и выборки из отдельных спрайтов в данной папке

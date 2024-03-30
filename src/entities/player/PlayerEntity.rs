@@ -4,7 +4,16 @@ use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
 #[allow(unused_imports)]
-use crate::core::{items::Weapon::*, AppState, Input::OffsetedCursorPosition, Bullet::*, Entity::{update_enemies, EntityBase}, entities::EntitySys::{update_spawning, EnemySpawner}, Input::{CursorPosition, cursor_track}};
+use crate::core::{
+    items::Weapon::*, 
+    AppState, 
+    Input::OffsetedCursorPosition, 
+    Bullet::*, 
+    Entity::{update_enemies, EntityBase}, 
+    entities::EntitySys::{update_spawning, EnemySpawner}, 
+    Input::{CursorPosition, cursor_track},
+    graphic::Atlas::TestTextureAtlas
+};
 
 #[derive(Component, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
@@ -73,11 +82,19 @@ impl Plugin for Player {
 }
 
 impl Player {
-    fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
+    fn spawn_player(
+        mut commands: Commands, 
+        asset_server: Res<AssetServer>,
+        handle: Res<TestTextureAtlas>
+    ) {
         // Спавн спрайта, являющийся игроком
         commands.spawn((
-            SpriteBundle {
-                texture: asset_server.load("mob.png"),
+            SpriteSheetBundle {
+                texture: handle.image.clone().unwrap(),
+                atlas: TextureAtlas {
+                    layout: handle.layout.clone().unwrap(),
+                    index: 3
+                },
                 ..default()
             },
             PlayerEntity::default(),
