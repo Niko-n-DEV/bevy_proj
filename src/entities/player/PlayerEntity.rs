@@ -12,7 +12,8 @@ use crate::core::{
     Entity::{update_enemies, EntityBase}, 
     entities::EntitySys::{update_spawning, EnemySpawner}, 
     Input::{CursorPosition, cursor_track},
-    graphic::Atlas::TestTextureAtlas
+    graphic::Atlas::TestTextureAtlas,
+    Movement::DirectionState
 };
 
 #[derive(Component, InspectorOptions, Reflect)]
@@ -84,7 +85,7 @@ impl Plugin for Player {
 impl Player {
     fn spawn_player(
         mut commands: Commands, 
-        asset_server: Res<AssetServer>,
+        _asset_server: Res<AssetServer>,
         handle: Res<TestTextureAtlas>
     ) {
         // Спавн спрайта, являющийся игроком
@@ -93,7 +94,7 @@ impl Player {
                 texture: handle.image.clone().unwrap(),
                 atlas: TextureAtlas {
                     layout: handle.layout.clone().unwrap(),
-                    index: 3
+                    index: TestTextureAtlas::get_index("body_south", &handle)
                 },
                 ..default()
             },

@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 
-use crate::core::{Bullet::{Bullet, BULLET_LIFETIME, BULLET_SPEED}, Input::CursorPosition};
+use crate::core::{
+    Bullet::{Bullet, BULLET_LIFETIME, BULLET_SPEED}, 
+    Input::CursorPosition,
+    graphic::Atlas::TestTextureAtlas
+};
 
 #[derive(Component)]
 pub struct GunController {
@@ -14,6 +18,7 @@ pub fn gun_controls(
     time : Res<Time>,
     buttons: Res<ButtonInput<MouseButton>>,
     asset_server : Res<AssetServer>,
+    handle: Res<TestTextureAtlas>,
     mut commands: Commands
 ) {
     for(mut gun_controller, mut transform) in gun_query.iter_mut()
@@ -35,9 +40,13 @@ pub fn gun_controls(
                 spawn_transform.rotation = Quat::from_axis_angle(Vec3::new(0.,0.,1.), angle);
                 gun_controller.shoot_timer = gun_controller.shoot_cooldown;
 
-                commands.spawn(SpriteBundle{
+                commands.spawn(SpriteSheetBundle{
                     transform: spawn_transform,
-                    texture: asset_server.load("bullet.png"),
+                    texture: handle.image.clone().unwrap(),
+                    atlas: TextureAtlas {
+                        layout: handle.layout.clone().unwrap(),
+                        index: TestTextureAtlas::get_index("bullet", &handle)
+                    },
                     ..default()
                 }).insert(Bullet {lifetime: BULLET_LIFETIME, speed: BULLET_SPEED, direction: diff.normalize()});
             }

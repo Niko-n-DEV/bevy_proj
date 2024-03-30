@@ -2,9 +2,11 @@
 use bevy::{log::tracing_subscriber::fmt::format, prelude::*, transform::commands};
 use std::collections::HashMap;
 
-use crate::{
-    core::{player::PlayerEntity::PlayerEntity, Settings::Settings},
+use crate::core::{
     AppState,
+    player::PlayerEntity::PlayerEntity,
+    graphic::Atlas::TestTextureAtlas,
+    Settings::Settings
 };
 
 pub struct WorldSystem;
@@ -29,6 +31,7 @@ impl WorldSystem {
         mut commands: Commands,
         asset_server: Res<AssetServer>,
         mut worldres: ResMut<WorldRes>,
+        handle: Res<TestTextureAtlas>,
         player_query: Query<(&mut Transform, &mut PlayerEntity)>,
     ) {
         /*
@@ -94,7 +97,7 @@ impl WorldSystem {
             }
 
             for chunk in chunks_to_upload {
-                Self::create_chunk(&mut commands, &asset_server, &mut worldres, chunk);
+                Self::create_chunk(&mut commands, &asset_server, &mut worldres, &handle, chunk);
             }
 
             for chunk in chunks_to_discharge {
@@ -108,15 +111,20 @@ impl WorldSystem {
         commands: &mut Commands,
         asset_server: &Res<AssetServer>,
         world_res: &mut ResMut<WorldRes>,
+        handle: &Res<TestTextureAtlas>,
         pos: IVec2,
     ) -> Entity {
         let chunk = commands
-            .spawn(SpriteBundle {
+            .spawn(SpriteSheetBundle {
                 sprite: Sprite {
                     anchor: bevy::sprite::Anchor::BottomLeft,
                     ..default()
                 },
-                texture: asset_server.load("dirt.png"),
+                texture: handle.image.clone().unwrap(),
+                atlas: TextureAtlas {
+                    layout: handle.layout.clone().unwrap(),
+                    index: TestTextureAtlas::get_index("dirt", &handle)
+                },
                 transform: Transform {
                     translation: Vec3::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0, -1.0),
                     scale: Vec3::new(16.0, 16.0, 0.0),
