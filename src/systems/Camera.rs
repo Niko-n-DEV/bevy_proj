@@ -1,13 +1,16 @@
 #![allow(unused)]
 use bevy::{
     // Для тестирования
-    input::mouse::{MouseMotion, MouseWheel},
-    prelude::*,
+    ecs::entity, input::mouse::{MouseMotion, MouseWheel}, prelude::*
 };
 
 // test
 // Для тестирования EntitiTiles
-use crate::{entities::player::PlayerEntity::PlayerEntity, AppState};
+use crate::{
+    entities::player::PlayerEntity::PlayerEntity,
+    entities::Entity::EntityBase,
+    AppState
+};
 use bevy_entitiles::{
     tilemap::chunking::camera::CameraChunkUpdater,
 };
@@ -128,14 +131,15 @@ impl CameraController {
     }
 
     fn camera_follow_player(
-        player_query: Query<&Transform, With<PlayerEntity>>,
+        mut player_query: Query<(&Transform, &mut EntityBase), With<PlayerEntity>>,
         mut camera_query: Query<&mut Transform, (With<Camera2d>, Without<PlayerEntity>)>,
     ) {
-        let player_tranform = player_query.single().translation;
-        let mut camera_transform = camera_query.single_mut();
-
-        camera_transform.translation.x = player_tranform.x;
-        camera_transform.translation.y = player_tranform.y;
+        //let player_tranform = player_query.single().translation;
+        for (mut transform, mut entity) in &mut player_query {
+            let mut camera_transform = camera_query.single_mut();
+            camera_transform.translation = entity.position.0
+            //camera_transform.translation.y = player_tranform.y;
+        }
     }
 
     fn camera_zoom(

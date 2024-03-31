@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
+use crate::core::Entity::{Health, Position, Speed, Velocity};
 #[allow(unused_imports)]
 use crate::core::{
     items::Weapon::*, 
@@ -19,26 +20,26 @@ use crate::core::{
 #[derive(Component, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
 pub struct PlayerEntity {
-    pub speed: f32,
-    pub sprint: f32,
-    pub position: Vec3,
-    pub direction: DirectionState,
-    pub velocity: Vec3,
-    pub movable: bool,
+    // pub speed: f32,
+    // pub sprint: f32,
+    // pub position: Vec3,
+    // pub direction: DirectionState,
+    // pub velocity: Vec3,
+    // pub movable: bool,
 }
 
-impl Default for PlayerEntity {
-    fn default() -> Self {
-        Self {
-            speed: 50.0,
-            sprint: 125.0,
-            position: Vec3::new(0.0, 0.0, 0.0),
-            direction: DirectionState::South,
-            velocity: Vec3::ZERO,
-            movable: true,
-        }
-    }
-}
+// impl Default for PlayerEntity {
+//     fn default() -> Self {
+//         Self {
+//             speed: 50.0,
+//             sprint: 125.0,
+//             position: Vec3::new(0.0, 0.0, 0.0),
+//             direction: DirectionState::South,
+//             velocity: Vec3::ZERO,
+//             movable: true,
+//         }
+//     }
+// }
 
 impl PlayerEntity {}
 
@@ -97,9 +98,17 @@ impl Player {
                 atlas: atlas,
                 ..default()
             },
-            PlayerEntity::default(),
+            //PlayerEntity::default(),
+            EntityBase {
+                speed: Speed(50. , 150. , 25. ),
+                health: Health(2.),
+                position: Position(Vec3::ZERO),
+                direction: DirectionState::South,
+                velocity: Velocity(Vec3::ZERO),
+                movable: true
+            },
             Name::new("Player"),
-        ));
+        )).insert(PlayerEntity{});
         
 
         // Спавн оружия и соединение с игроком
@@ -117,7 +126,7 @@ impl Player {
         }).insert(PlayerAttach{ offset: Vec2::new(0.,0.)}).insert(GunController{ shoot_cooldown: 0.3, shoot_timer: 0. }); // 0.3
 
         // не переходить часто с главного меню в игру и на оборот, дублируются!
-        commands.spawn(TransformBundle { ..default() } ).insert(EnemySpawner{ cooldown: 1., timer: 1. });
+        //commands.spawn(TransformBundle { ..default() } ).insert(EnemySpawner{ cooldown: 1., timer: 1. });
     }
 
     /// "Удаление" игрока
@@ -133,22 +142,22 @@ impl Player {
     // Query<(&mut Transform, &mut EntityBase), With<PlayerEntity>>
     /// Передвижение игрока
     fn player_movement(
-        mut player_entity: Query<(&mut Transform, &mut PlayerEntity), With<PlayerEntity>>,
+        mut entity_query: Query<(&mut Transform, &mut EntityBase), With<PlayerEntity>>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
         _mouse_input: Res<OffsetedCursorPosition>,
         time: Res<Time>,
     ) {
-        if player_entity.is_empty() {
+        if entity_query.is_empty() {
             return;
         }
 
-        for (mut transform, mut player) in &mut player_entity {
+        for (mut transform, mut player) in &mut entity_query {
             if player.movable {
                 let mut direction = Vec3::ZERO;
-                let mut speed_var: f32 = player.speed;
+                let mut speed_var: f32 = player.speed.0;
 
                 if keyboard_input.pressed(KeyCode::ShiftLeft) {
-                    speed_var = player.sprint;
+                    speed_var = player.speed.1;
                 }
                 
                 if keyboard_input.pressed(KeyCode::KeyW) {
@@ -171,10 +180,9 @@ impl Player {
                 if direction != Vec3::ZERO {
                     let new_pos = transform.translation + time.delta_seconds() * speed_var * direction.normalize();
                     transform.translation = new_pos;
-                    player.position = new_pos;
+                    player.position = Position(new_pos);
                 } else {
-                    let pos = player.position;
-                    transform.translation = pos
+                    transform.translation = player.position.0
                 }
             }
         }

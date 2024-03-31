@@ -2,10 +2,7 @@ use bevy::{prelude::*, window::PrimaryWindow};
 use rand::Rng;
 
 use crate::core::{
-    player::PlayerEntity::PlayerEntity,
-    Entity::{EntityBase, Health, Speed, Position},
-    graphic::Atlas::{TestTextureAtlas, DirectionAtlas},
-    Movement::DirectionState
+    graphic::Atlas::{DirectionAtlas, TestTextureAtlas}, player::PlayerEntity::PlayerEntity, Entity::{EntityBase, Health, Position, Speed, Velocity}, Movement::DirectionState
 };
 
 #[derive(Component)]
@@ -78,7 +75,9 @@ pub fn update_spawning(
                     speed: Speed(100. , 150. , 50.),
                     health: Health(1.0),
                     position: Position(spawn_transform.translation),
-                    direction: DirectionState::South
+                    direction: DirectionState::South,
+                    velocity: Velocity(Vec3::ZERO),
+                    movable: true
                 });
         }
     }

@@ -31,6 +31,8 @@ pub struct EntityBase {
     pub health: Health,
     pub position: Position,
     pub direction: DirectionState,
+    pub velocity: Velocity,
+    pub movable: bool
 }
 
 #[derive(Component, Default)]
