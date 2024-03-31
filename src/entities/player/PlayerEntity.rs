@@ -9,10 +9,10 @@ use crate::core::{
     AppState, 
     Input::OffsetedCursorPosition, 
     Bullet::*, 
-    Entity::{update_enemies, EntityBase}, 
-    entities::EntitySys::{update_spawning, EnemySpawner}, 
+    Entity::EntityBase, 
+    entities::EntitySystem::{update_spawning, update_enemies, EnemySpawner}, 
     Input::{CursorPosition, cursor_track},
-    graphic::Atlas::TestTextureAtlas,
+    graphic::Atlas::{TestTextureAtlas, DirectionAtlas},
     Movement::DirectionState
 };
 
@@ -86,21 +86,20 @@ impl Player {
     fn spawn_player(
         mut commands: Commands, 
         _asset_server: Res<AssetServer>,
-        handle: Res<TestTextureAtlas>
+        handle: Res<TestTextureAtlas>,
+        handle_dir: Res<DirectionAtlas>
     ) {
         // Спавн спрайта, являющийся игроком
+        let (texture, atlas) = DirectionAtlas::set_sprite("human", &handle_dir);
         commands.spawn((
             SpriteSheetBundle {
-                texture: handle.image.clone().unwrap(),
-                atlas: TextureAtlas {
-                    layout: handle.layout.clone().unwrap(),
-                    index: TestTextureAtlas::get_index("body_south", &handle)
-                },
+                texture: texture,
+                atlas: atlas,
                 ..default()
             },
             PlayerEntity::default(),
             Name::new("Player"),
-            ));
+        ));
         
 
         // Спавн оружия и соединение с игроком
@@ -118,7 +117,7 @@ impl Player {
         }).insert(PlayerAttach{ offset: Vec2::new(0.,0.)}).insert(GunController{ shoot_cooldown: 0.3, shoot_timer: 0. }); // 0.3
 
         // не переходить часто с главного меню в игру и на оборот, дублируются!
-        //commands.spawn(TransformBundle { ..default() } ).insert(EnemySpawner{ cooldown: 1., timer: 1. });
+        commands.spawn(TransformBundle { ..default() } ).insert(EnemySpawner{ cooldown: 1., timer: 1. });
     }
 
     /// "Удаление" игрока
@@ -131,6 +130,7 @@ impl Player {
         }
     }
 
+    // Query<(&mut Transform, &mut EntityBase), With<PlayerEntity>>
     /// Передвижение игрока
     fn player_movement(
         mut player_entity: Query<(&mut Transform, &mut PlayerEntity), With<PlayerEntity>>,

@@ -17,7 +17,7 @@ pub fn gun_controls(
     cursor: Res<CursorPosition>,
     time : Res<Time>,
     buttons: Res<ButtonInput<MouseButton>>,
-    asset_server : Res<AssetServer>,
+    _asset_server : Res<AssetServer>,
     handle: Res<TestTextureAtlas>,
     mut commands: Commands
 ) {

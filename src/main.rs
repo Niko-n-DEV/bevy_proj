@@ -54,7 +54,7 @@ fn main() {
                         title: "SINT-et".to_string(),
                         resolution: WindowResolution::new(1280.0, 720.0),
                         resizable: true,
-                        present_mode: bevy::window::PresentMode::AutoNoVsync,
+                        present_mode: bevy::window::PresentMode::AutoVsync,
                         ..default()
                     }),
                     ..default()

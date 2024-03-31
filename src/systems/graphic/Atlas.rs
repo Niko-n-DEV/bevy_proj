@@ -46,10 +46,22 @@ impl TestTextureAtlas {
         }
         0
     }
+
+    pub fn set_sprite(name: &str, atlas: &Self) -> SpriteSheetBundle {
+        let sprite_sheet = SpriteSheetBundle {
+            texture: atlas.image.clone().unwrap(),
+            atlas: TextureAtlas {
+                layout: atlas.layout.clone().unwrap(),
+                index: Self::get_index(&name, &atlas)
+            },
+            ..default()
+        };
+        sprite_sheet
+    }
 }
 
 // для сторонозависимых атласов
-#[derive(Resource)]
+#[derive(Resource, Component)]
 pub struct DirectionAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
     pub image: Option<Handle<Image>>,
@@ -65,15 +77,25 @@ impl Default for DirectionAtlas {
         }
     }
 }
-
+// ! Сделать функцию, которая будет возвращать текстуру
 impl DirectionAtlas {
-    pub fn get_index(name: &str, atlas: &Self) -> usize {
+    fn get_index(name: &str, atlas: &Self) -> usize {
         if let Some(ids) = &atlas.ids {
             if let Some(index) = ids.get(name) {
                 return *index;
             }
         }
         0
+    }
+
+    pub fn set_sprite(name: &str, atlas: &Self) -> (Handle<Image>, TextureAtlas) {
+        let texture = atlas.image.clone().unwrap();
+        let atlas = TextureAtlas {
+            layout: atlas.layout.clone().unwrap(),
+            index: Self::get_index(name, &atlas)
+        };
+
+        (texture, atlas)
     }
 }
 

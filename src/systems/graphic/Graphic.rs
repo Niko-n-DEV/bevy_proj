@@ -50,7 +50,7 @@ fn check_textures(
 }
 
 fn setup_ex(
-    // mut commands: Commands,
+    mut commands: Commands,
     // asset_server: Res<AssetServer>,
     resource_handle: Res<ResourceFolder>,
     mut handle_cust_atlas: ResMut<TestTextureAtlas>,
@@ -71,6 +71,11 @@ fn setup_ex(
     );
     let atlas_nearest_handle = texture_atlases.add(texture_atlas_nearest);
 
+    commands.spawn(SpriteBundle{
+        texture: nearest_texture.clone(),
+        ..default()
+    });
+
     handle_cust_atlas.layout = Some(atlas_nearest_handle);
     handle_cust_atlas.image = Some(nearest_texture);
     handle_cust_atlas.ids = Some(_hash);
@@ -89,6 +94,8 @@ fn setup_ex(
     handle_dir_atlas.layout = Some(atlas_dir_nearest_handle);
     handle_dir_atlas.image = Some(nearest_texture_atlases);
     handle_dir_atlas.ids = Some(_hash);
+
+    
 
     next_state.set(AppState::MainMenu);
     info!("State: MainMenu")
@@ -227,7 +234,7 @@ fn load_and_index_atlas(
         None,
     );
 
-    (texture_atlas_layout, texture, textures_ids)
+    (layout, texture, textures_ids)
 }
 
 // /// Создание и установка спрайта и атласа
