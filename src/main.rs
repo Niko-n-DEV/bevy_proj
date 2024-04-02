@@ -5,6 +5,8 @@ use bevy::prelude::*;
 use bevy::{input::common_conditions::input_toggle_active, window::WindowResolution};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
+use bevy_pancam::{PanCam, PanCamPlugin};
+
 use iyes_perf_ui::prelude::*;
 
 // Определение модулей
@@ -54,13 +56,14 @@ fn main() {
                         title: "SINT-et".to_string(),
                         resolution: WindowResolution::new(1280.0, 720.0),
                         resizable: true,
-                        present_mode: bevy::window::PresentMode::AutoVsync,
+                        present_mode: bevy::window::PresentMode::AutoNoVsync,
                         ..default()
                     }),
                     ..default()
                 })
                 .set(ImagePlugin::default_nearest())
                 .build(),
+                PanCamPlugin::default()
         ))
         // Плагин - Инспектор, для отладки и мониторинга элементов
         .add_plugins(
@@ -103,7 +106,7 @@ fn setup(mut _commands: Commands) {
     ));
 }
 
-/// enum Состояний приложения
+/// Состояние приложения
 #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
 pub enum AppState {
     Start,
@@ -111,7 +114,9 @@ pub enum AppState {
     ResourceCheck,
     ResourceLoading,
     MainMenu,
+    LoadingInGame,
     Game,
     Pause,
+    SavingGame,
     Finished,
 }

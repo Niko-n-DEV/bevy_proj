@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug",
+            "name": "Debuging",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=bevy_proj",
-                    "--package=bevy_proj"
+                    "--bin=sint-et",
+                    "--package=sint-et"
                 ],
                 "filter": {
-                    "name": "bevy_proj",
+                    "name": "sint-et",
                     "kind": "bin"
                 }
             },

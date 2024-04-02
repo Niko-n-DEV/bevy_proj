@@ -2,7 +2,10 @@ use bevy::{prelude::*, window::PrimaryWindow};
 use rand::Rng;
 
 use crate::core::{
-    graphic::Atlas::{DirectionAtlas, TestTextureAtlas}, player::PlayerEntity::PlayerEntity, Entity::{EntityBase, Health, Position, Speed, Velocity}, Movement::DirectionState
+    graphic::Atlas::{DirectionAtlas, TestTextureAtlas}, 
+    player::PlayerEntity::PlayerEntity, 
+    Entity::{EntityBase, Health, Position, Speed, Velocity}, 
+    Movement::DirectionState
 };
 
 #[derive(Component)]
@@ -10,6 +13,9 @@ pub struct EnemySpawner {
     pub cooldown: f32,
     pub timer: f32,
 }
+
+#[derive(Component)]
+pub struct Enemy;
 
 pub fn update_spawning(
     primary_query: Query<&Window, With<PrimaryWindow>>,
@@ -61,24 +67,25 @@ pub fn update_spawning(
                     );
                 }
             }
-            println!("{}", spawn_transform.translation);
+
             commands
                 .spawn(SpriteSheetBundle {
                     texture: handle.image.clone().unwrap(),
-                atlas: TextureAtlas {
-                    layout: handle.layout.clone().unwrap(),
-                    index: TestTextureAtlas::get_index("mob", &handle)
-                },
+                    atlas: TextureAtlas {
+                        layout: handle.layout.clone().unwrap(),
+                        index: TestTextureAtlas::get_index("mob", &handle)
+                    },
+                    transform: spawn_transform,
                     ..default()
                 })
                 .insert(EntityBase {
-                    speed: Speed(100. , 150. , 50.),
                     health: Health(1.0),
-                    position: Position(spawn_transform.translation),
                     direction: DirectionState::South,
                     velocity: Velocity(Vec3::ZERO),
-                    movable: true
-                });
+                    movable: true,
+                    ..default()
+                })
+                .insert(Enemy);
         }
     }
 }
@@ -89,13 +96,18 @@ pub fn update_spawning(
 // В данном случае движение их в сторону позиции игрока
 // ==================================================
 pub fn update_enemies(
-    time: Res<Time>,
-    mut enemy_query: Query<(&EntityBase, &mut Transform, Entity), Without<PlayerEntity>>,
-    player_query: Query<(&PlayerEntity, &mut Transform), Without<EntityBase>>,
     mut commands: Commands,
+    mut enemy_query: Query<(&mut Transform, &EntityBase, Entity), With<Enemy>>,
+    player_query: Query<(&Transform, &PlayerEntity), Without<Enemy>>,
+    time: Res<Time>,
 ) {
-    if let Ok((_player_movement, player_transform)) = player_query.get_single() {
-        for (enemy, mut transform, entity) in enemy_query.iter_mut() {
+    if enemy_query.is_empty() || player_query.is_empty() {
+        return;
+    }
+
+    if let Ok((player_transform, _player)) = player_query.get_single() {
+        for (mut transform, enemy, entity) in enemy_query.iter_mut() {
+            
             let moving = Vec3::normalize(player_transform.translation - transform.translation)
                 * enemy.speed.0
                 * time.delta_seconds();
@@ -105,6 +117,8 @@ pub fn update_enemies(
                 commands.entity(entity).despawn();
             }
         }
+    } else {
+        warn!("Error - An exception occurred while reading player_query!")
     }
 }
 

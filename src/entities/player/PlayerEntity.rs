@@ -9,7 +9,7 @@ use crate::core::{
     items::Weapon::*, 
     AppState, 
     Input::OffsetedCursorPosition, 
-    Bullet::*, 
+    Missile::*, 
     Entity::EntityBase, 
     entities::EntitySystem::{update_spawning, update_enemies, EnemySpawner}, 
     Input::{CursorPosition, cursor_track},
@@ -98,17 +98,17 @@ impl Player {
                 atlas: atlas,
                 ..default()
             },
-            //PlayerEntity::default(),
-            EntityBase {
-                speed: Speed(50. , 150. , 25. ),
-                health: Health(2.),
-                position: Position(Vec3::ZERO),
-                direction: DirectionState::South,
-                velocity: Velocity(Vec3::ZERO),
-                movable: true
-            },
+            PlayerEntity {},
             Name::new("Player"),
-        )).insert(PlayerEntity{});
+        ))
+        .insert(EntityBase {
+            speed: Speed(50. , 150. , 25. ),
+            health: Health(2.),
+            position: Position(Vec3::ZERO),
+            direction: DirectionState::South,
+            velocity: Velocity(Vec3::ZERO),
+            movable: true
+        });
         
 
         // Спавн оружия и соединение с игроком
@@ -123,10 +123,12 @@ impl Player {
                 ..default()
             },
             ..default()
-        }).insert(PlayerAttach{ offset: Vec2::new(0.,0.)}).insert(GunController{ shoot_cooldown: 0.3, shoot_timer: 0. }); // 0.3
+        })
+        .insert(PlayerAttach { offset: Vec2::new(0.,0.) })
+        .insert(GunController { shoot_cooldown: 0.3, shoot_timer: 0. });
 
         // не переходить часто с главного меню в игру и на оборот, дублируются!
-        //commands.spawn(TransformBundle { ..default() } ).insert(EnemySpawner{ cooldown: 1., timer: 1. });
+        commands.spawn(TransformBundle { ..default() } ).insert(EnemySpawner{ cooldown: 1., timer: 1. });
     }
 
     /// "Удаление" игрока

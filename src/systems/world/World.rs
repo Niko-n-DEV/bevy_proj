@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::core::{
     AppState,
     player::PlayerEntity::PlayerEntity,
-    graphic::Atlas::TestTextureAtlas,
+    graphic::Atlas::{TestTextureAtlas, DirectionAtlas},
     Settings::Settings
 };
 
@@ -13,9 +13,10 @@ pub struct WorldSystem;
 
 impl Plugin for WorldSystem {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::Game), Self::setup)
+        app
+            .add_systems(OnEnter(AppState::Game), Self::setup)
             .init_resource::<WorldRes>()
-            .add_systems(Update, Self::load.run_if(in_state(AppState::Game)));
+            .add_systems(Update, Self::load_chunk_around.run_if(in_state(AppState::Game)));
     }
 }
 
@@ -26,8 +27,19 @@ impl WorldSystem {
         settings.save();
     }
 
+    fn init_world(
+        mut commands: Commands,
+        handle: Res<TestTextureAtlas>,
+        handle_dir: Res<DirectionAtlas>
+    ) {
+        /*
+            Тут будет непосредственно инициализация мира, где будет размещение игровой сетки, основных его компонентов и сущностей.
+            Установка синхронно с процессом загрузки ресурсов из файла.
+        */
+    }
+
     /// Функция для инициализации загрузки чанков вокруг игрока в пределах установленной прогрузки.
-    fn load(
+    fn load_chunk_around(
         mut commands: Commands,
         asset_server: Res<AssetServer>,
         mut worldres: ResMut<WorldRes>,

@@ -35,6 +35,19 @@ pub struct EntityBase {
     pub movable: bool
 }
 
+impl Default for EntityBase {
+    fn default() -> Self {
+        Self {
+            speed: Speed(50. , 150. , 25. ),
+            health: Health(1.),
+            position: Position(Vec3::ZERO),
+            direction: DirectionState::South,
+            velocity: Velocity(Vec3::ZERO),
+            movable: true,
+        }
+    }
+}
+
 #[derive(Component, Default)]
 pub enum EntityState {
     #[default]
@@ -42,5 +55,11 @@ pub enum EntityState {
     Move,
 }
 
-#[derive(Event)]
-pub struct EntityCollisionEvent;
+// #[derive(Event)]
+// pub struct EntityCollisionEvent;
+
+#[derive(Component)]
+pub struct EntityMissile;
+
+#[derive(Component)]
+pub struct EntityParticle;

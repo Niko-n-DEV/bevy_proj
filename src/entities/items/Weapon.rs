@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::core::{
-    Bullet::{Bullet, BULLET_LIFETIME, BULLET_SPEED}, 
+    Missile::{Bullet, BULLET_LIFETIME, BULLET_SPEED}, 
     Input::CursorPosition,
     graphic::Atlas::TestTextureAtlas
 };
@@ -13,13 +13,13 @@ pub struct GunController {
 }
 
 pub fn gun_controls(
+    mut commands: Commands,
     mut gun_query : Query<(&mut GunController, &mut Transform)>,
     cursor: Res<CursorPosition>,
     time : Res<Time>,
     buttons: Res<ButtonInput<MouseButton>>,
     _asset_server : Res<AssetServer>,
     handle: Res<TestTextureAtlas>,
-    mut commands: Commands
 ) {
     for(mut gun_controller, mut transform) in gun_query.iter_mut()
     {
@@ -33,7 +33,7 @@ pub fn gun_controls(
 
         if gun_controller.shoot_timer <= 0.
         {
-            if buttons.pressed(MouseButton::Right)
+            if buttons.pressed(MouseButton::Left)
             {
                 let mut spawn_transform = Transform::from_scale(Vec3::splat(3.0));
                 spawn_transform.translation = transform.translation;
@@ -48,7 +48,9 @@ pub fn gun_controls(
                         index: TestTextureAtlas::get_index("bullet", &handle)
                     },
                     ..default()
-                }).insert(Bullet {lifetime: BULLET_LIFETIME, speed: BULLET_SPEED, direction: diff.normalize()});
+                })
+                .insert(Name::new("Bullet"))
+                .insert(Bullet {lifetime: BULLET_LIFETIME, speed: BULLET_SPEED, direction: diff.normalize()});
             }
         }
     }

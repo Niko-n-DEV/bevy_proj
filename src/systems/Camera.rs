@@ -1,8 +1,10 @@
 #![allow(unused)]
 use bevy::{
-    // Для тестирования
-    ecs::entity, input::mouse::{MouseMotion, MouseWheel}, prelude::*
+    prelude::*,
+    input::mouse::{MouseMotion, MouseWheel}, 
+    math::vec3,
 };
+use bevy_pancam::PanCam;
 
 // test
 // Для тестирования EntitiTiles
@@ -11,11 +13,13 @@ use crate::{
     entities::Entity::EntityBase,
     AppState
 };
+
 use bevy_entitiles::{
     tilemap::chunking::camera::CameraChunkUpdater,
 };
 
 // Основной компонент камеры
+// Определить параметр зацепа к объекту (option)
 #[derive(Component)]
 pub struct CameraX {}
 
@@ -116,7 +120,12 @@ impl Plugin for CameraController {
 
 impl CameraController {
     fn setup_camera(mut commands: Commands) {
-        commands.spawn((Camera2dBundle::default(), CameraX {}, CameraChunkUpdater::new(1.3, 2.2))).id();
+        commands.spawn((Camera2dBundle::default(), CameraX {}, CameraChunkUpdater::new(1.3, 2.2)))
+        .insert(PanCam {
+            grab_buttons: vec![MouseButton::Middle],
+            ..default()
+        })
+        .id();
     }
 
     fn camera_follow(
@@ -131,15 +140,18 @@ impl CameraController {
     }
 
     fn camera_follow_player(
-        mut player_query: Query<(&Transform, &mut EntityBase), With<PlayerEntity>>,
+        mut player_query: Query<&Transform, With<PlayerEntity>>,
         mut camera_query: Query<&mut Transform, (With<Camera2d>, Without<PlayerEntity>)>,
     ) {
-        //let player_tranform = player_query.single().translation;
-        for (mut transform, mut entity) in &mut player_query {
-            let mut camera_transform = camera_query.single_mut();
-            camera_transform.translation = entity.position.0
-            //camera_transform.translation.y = player_tranform.y;
+        if player_query.is_empty() || camera_query.is_empty() {
+            return;
         }
+
+        let mut camera_transform = camera_query.single_mut();
+        let player_transform = player_query.single().translation;
+
+        let (x, y) = (player_transform.x, player_transform.y);
+        camera_transform.translation = camera_transform.translation.lerp(vec3(x, y, 0.0), 0.1);
     }
 
     fn camera_zoom(
@@ -148,11 +160,11 @@ impl CameraController {
         keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
         let scale_factor = 0.1;
-        if keyboard_input.pressed(KeyCode::NumpadAdd) {
+        if keyboard_input.pressed(KeyCode::NumpadSubtract) {
             let mut camera_transform = camera_query.single_mut();
             camera_transform.scale *= Vec3::splat(1.0 + scale_factor);
         }
-        if keyboard_input.pressed(KeyCode::NumpadSubtract) {
+        if keyboard_input.pressed(KeyCode::NumpadAdd) {
             let mut camera_transform = camera_query.single_mut();
             camera_transform.scale *= Vec3::splat(1.0 - scale_factor);
         }
