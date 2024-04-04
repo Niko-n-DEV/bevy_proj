@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use bevy::{input::common_conditions::input_toggle_active, window::WindowResolution};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
-use bevy_pancam::{PanCam, PanCamPlugin};
+use bevy_pancam::PanCamPlugin;
 
 use iyes_perf_ui::prelude::*;
 
@@ -34,7 +34,11 @@ mod core {
 }
 
 use crate::core::{
-    player::PlayerEntity::Player, world::World::WorldSystem, Camera::CameraController, UI::UI //, world::TileMap::TileMapPlugin
+    player::PlayerEntity::PlayerPlugin, 
+    entities::EntitySystem::EntitySystem,
+    world::World::WorldSystem, 
+    Camera::CameraController, 
+    UI::UI //, world::TileMap::TileMapPlugin
 };
 
 fn main() {
@@ -80,7 +84,7 @@ fn main() {
         // Инициализация плагина камеры и пользовательского интерфейса
         .add_plugins((CameraController, UI))
         // Инициализация плагина игрока и [Test] Системы Мира
-        .add_plugins((Player, WorldSystem)) //, TileMapPlugin))
+        .add_plugins((EntitySystem, PlayerPlugin, WorldSystem)) //, TileMapPlugin))
         // Инициализация StartUP функции setup
         .add_systems(Startup, setup)
         .run();

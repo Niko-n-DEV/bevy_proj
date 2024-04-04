@@ -1,6 +1,9 @@
 #![allow(unused)]
 use bevy::prelude::*;
 
+use bevy_inspector_egui::prelude::ReflectInspectorOptions;
+use bevy_inspector_egui::InspectorOptions;
+
 use crate::core::{
     player::PlayerEntity::PlayerEntity,
     Movement::DirectionState
@@ -31,6 +34,7 @@ pub struct EntityBase {
     pub health: Health,
     pub position: Position,
     pub direction: DirectionState,
+    //pub sprite: SpriteSheetBundle,
     pub velocity: Velocity,
     pub movable: bool
 }
@@ -42,6 +46,7 @@ impl Default for EntityBase {
             health: Health(1.),
             position: Position(Vec3::ZERO),
             direction: DirectionState::South,
+            //sprite: SpriteSheetBundle::default(),
             velocity: Velocity(Vec3::ZERO),
             movable: true,
         }
@@ -54,6 +59,16 @@ pub enum EntityState {
     Idle,
     Move,
 }
+
+#[derive(Component)]
+pub enum EntityType {
+    Humonoid(HumonoidType),
+} 
+
+#[derive(Component)]
+pub enum HumonoidType {
+    Human,
+} 
 
 // #[derive(Event)]
 // pub struct EntityCollisionEvent;

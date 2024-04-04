@@ -60,6 +60,14 @@ impl TestTextureAtlas {
     }
 }
 
+#[derive(Component, Reflect, PartialEq)]
+pub enum OrientationState {
+    South,
+    North,
+    West,
+    East
+}
+
 // для сторонозависимых атласов
 #[derive(Resource, Component)]
 pub struct DirectionAtlas {
@@ -79,7 +87,7 @@ impl Default for DirectionAtlas {
 }
 // ! Сделать функцию, которая будет возвращать текстуру
 impl DirectionAtlas {
-    fn get_index(name: &str, atlas: &Self) -> usize {
+    pub fn get_index(name: &str, atlas: &Self) -> usize {
         if let Some(ids) = &atlas.ids {
             if let Some(index) = ids.get(name) {
                 return *index;

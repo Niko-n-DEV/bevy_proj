@@ -27,7 +27,6 @@ pub fn update_bullets(
         transform.translation += Vec3::new(moving.x, moving.y, 0.);
 
         if bullet.lifetime <= 0. {
-            println!("Despawn Bullet");
             commands.entity(entity).despawn();
         }
     }

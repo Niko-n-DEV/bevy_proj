@@ -11,7 +11,7 @@ use crate::core::{
     Input::OffsetedCursorPosition, 
     Missile::*, 
     Entity::EntityBase, 
-    entities::EntitySystem::{update_spawning, update_enemies, EnemySpawner}, 
+    entities::EntitySystem::{update_spawning, update_enemies, EnemySpawner, DirectionChangeEvent}, 
     Input::{CursorPosition, cursor_track},
     graphic::Atlas::{TestTextureAtlas, DirectionAtlas},
     Movement::DirectionState
@@ -19,33 +19,11 @@ use crate::core::{
 
 #[derive(Component, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
-pub struct PlayerEntity {
-    // pub speed: f32,
-    // pub sprint: f32,
-    // pub position: Vec3,
-    // pub direction: DirectionState,
-    // pub velocity: Vec3,
-    // pub movable: bool,
-}
+pub struct PlayerEntity;
 
-// impl Default for PlayerEntity {
-//     fn default() -> Self {
-//         Self {
-//             speed: 50.0,
-//             sprint: 125.0,
-//             position: Vec3::new(0.0, 0.0, 0.0),
-//             direction: DirectionState::South,
-//             velocity: Vec3::ZERO,
-//             movable: true,
-//         }
-//     }
-// }
+pub struct PlayerPlugin;
 
-impl PlayerEntity {}
-
-pub struct Player;
-
-impl Plugin for Player {
+impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
             // Установка игрока при переходе в стостояние "игра"
@@ -83,7 +61,7 @@ impl Plugin for Player {
     }
 }
 
-impl Player {
+impl PlayerPlugin {
     fn spawn_player(
         mut commands: Commands, 
         _asset_server: Res<AssetServer>,
@@ -93,23 +71,22 @@ impl Player {
         // Спавн спрайта, являющийся игроком
         let (texture, atlas) = DirectionAtlas::set_sprite("human", &handle_dir);
         commands.spawn((
+            EntityBase {
+                speed: Speed(50. , 150. , 25. ),
+                health: Health(2.),
+                position: Position(Vec3::ZERO),
+                direction: DirectionState::South,
+                velocity: Velocity(Vec3::ZERO),
+                movable: true
+            },
             SpriteSheetBundle {
-                texture: texture,
-                atlas: atlas,
+                texture,
+                atlas,
                 ..default()
             },
-            PlayerEntity {},
+            PlayerEntity,
             Name::new("Player"),
-        ))
-        .insert(EntityBase {
-            speed: Speed(50. , 150. , 25. ),
-            health: Health(2.),
-            position: Position(Vec3::ZERO),
-            direction: DirectionState::South,
-            velocity: Velocity(Vec3::ZERO),
-            movable: true
-        });
-        
+        ));
 
         // Спавн оружия и соединение с игроком
         commands.spawn(SpriteSheetBundle {
@@ -124,11 +101,11 @@ impl Player {
             },
             ..default()
         })
-        .insert(PlayerAttach { offset: Vec2::new(0.,0.) })
+        .insert(PlayerAttach { offset: Vec2::new(0.,-3.) })
         .insert(GunController { shoot_cooldown: 0.3, shoot_timer: 0. });
 
         // не переходить часто с главного меню в игру и на оборот, дублируются!
-        commands.spawn(TransformBundle { ..default() } ).insert(EnemySpawner{ cooldown: 1., timer: 1. });
+        //commands.spawn(TransformBundle { ..default() } ).insert(EnemySpawner{ cooldown: 1., timer: 1. });
     }
 
     /// "Удаление" игрока
@@ -145,17 +122,22 @@ impl Player {
     /// Передвижение игрока
     fn player_movement(
         mut entity_query: Query<(&mut Transform, &mut EntityBase), With<PlayerEntity>>,
+        player: Query<Entity, With<PlayerEntity>>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
         _mouse_input: Res<OffsetedCursorPosition>,
+        mut change_dir_event: EventWriter<DirectionChangeEvent>,
         time: Res<Time>,
     ) {
         if entity_query.is_empty() {
             return;
         }
 
+        let entity = player.single();
         for (mut transform, mut player) in &mut entity_query {
             if player.movable {
                 let mut direction = Vec3::ZERO;
+                let mut dir_state_temp = DirectionState::default();
+                let mut dir_state = DirectionState::default();
                 let mut speed_var: f32 = player.speed.0;
 
                 if keyboard_input.pressed(KeyCode::ShiftLeft) {
@@ -163,21 +145,36 @@ impl Player {
                 }
                 
                 if keyboard_input.pressed(KeyCode::KeyW) {
-                    player.direction = DirectionState::North;
+                    dir_state = DirectionState::North;
+                    dir_state_temp = DirectionState::North;
                     direction.y += 1.0;
+                    //change_dir_event.send(DirectionChangeEvent(entity, DirectionState::North));
                 }
                 if keyboard_input.pressed(KeyCode::KeyS) {
-                    player.direction = DirectionState::South;
+                    dir_state = DirectionState::South;
+                    dir_state_temp = DirectionState::South;
                     direction.y -= 1.0;
+                    //change_dir_event.send(DirectionChangeEvent(entity, DirectionState::South));
                 }
                 if keyboard_input.pressed(KeyCode::KeyA) {
-                    player.direction = DirectionState::West;
+                    dir_state = DirectionState::West;
+                    dir_state_temp = DirectionState::West;
                     direction.x -= 1.0;
+                    //change_dir_event.send(DirectionChangeEvent(entity, DirectionState::West));
                 }
                 if keyboard_input.pressed(KeyCode::KeyD) {
-                    player.direction = DirectionState::East;
+                    dir_state = DirectionState::East;
+                    dir_state_temp = DirectionState::East;
                     direction.x += 1.0;
+                    //change_dir_event.send(DirectionChangeEvent(entity, DirectionState::East));
                 }
+
+                if player.direction != dir_state_temp {
+                    change_dir_event.send(DirectionChangeEvent(entity, dir_state_temp));
+
+                    player.direction = dir_state;
+                }
+                
 
                 if direction != Vec3::ZERO {
                     let new_pos = transform.translation + time.delta_seconds() * speed_var * direction.normalize();

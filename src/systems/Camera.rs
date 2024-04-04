@@ -21,7 +21,20 @@ use bevy_entitiles::{
 // Основной компонент камеры
 // Определить параметр зацепа к объекту (option)
 #[derive(Component)]
-pub struct CameraX {}
+pub struct CameraX;
+
+#[derive(Resource)]
+pub struct CameraXRes {
+    pub player_fixed: bool
+}
+
+impl Default for CameraXRes {
+    fn default() -> Self {
+        Self {
+            player_fixed: true
+        }
+    }
+}
 
 // test
 // Для тестирования EntitiTiles
@@ -109,18 +122,25 @@ pub struct CameraController;
 
 impl Plugin for CameraController {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, Self::setup_camera)
+        app
+            .add_systems(Startup, Self::setup_camera)
+            .init_resource::<CameraXRes>()
             .add_systems(
                 Update,
                 Self::camera_follow_player.run_if(in_state(AppState::Game)),
             )
-            .add_systems(Update, Self::camera_zoom.run_if(in_state(AppState::Game)));
+            .add_systems(Update, Self::toggle_camera_fix.run_if(in_state(AppState::Game)))
+            ;
     }
 }
 
 impl CameraController {
     fn setup_camera(mut commands: Commands) {
-        commands.spawn((Camera2dBundle::default(), CameraX {}, CameraChunkUpdater::new(1.3, 2.2)))
+        commands.spawn((
+            Camera2dBundle::default(), 
+            CameraX, 
+            CameraChunkUpdater::new(1.3, 2.2)
+        ))
         .insert(PanCam {
             grab_buttons: vec![MouseButton::Middle],
             ..default()
@@ -128,30 +148,35 @@ impl CameraController {
         .id();
     }
 
-    fn camera_follow(
-        mut follower_query: Query<(&mut Transform, &CameraX)>,
-        camera_query: Query<&Transform, (With<Camera2d>, Without<CameraX>)>,
-    ) {
-        let camera_translation = camera_query.single().translation;
-        for (mut transform, _) in follower_query.iter_mut() {
-            transform.translation.x = camera_translation.x;
-            transform.translation.y = camera_translation.y;
-        }
-    }
-
     fn camera_follow_player(
         mut player_query: Query<&Transform, With<PlayerEntity>>,
         mut camera_query: Query<&mut Transform, (With<Camera2d>, Without<PlayerEntity>)>,
+        camera_res: Res<CameraXRes>
     ) {
         if player_query.is_empty() || camera_query.is_empty() {
             return;
         }
-
+        
         let mut camera_transform = camera_query.single_mut();
         let player_transform = player_query.single().translation;
 
-        let (x, y) = (player_transform.x, player_transform.y);
-        camera_transform.translation = camera_transform.translation.lerp(vec3(x, y, 0.0), 0.1);
+        if camera_res.player_fixed {
+            let (x, y) = (player_transform.x, player_transform.y);
+            camera_transform.translation = camera_transform.translation.lerp(vec3(x, y, 0.0), 0.1);
+        }
+    }
+
+    fn toggle_camera_fix(
+        mut camera_res: ResMut<CameraXRes>,
+        keyboard_input: Res<ButtonInput<KeyCode>>
+    ) {
+        if keyboard_input.just_released(KeyCode::F1) {
+            if camera_res.player_fixed {
+                camera_res.player_fixed = false
+            } else {
+                camera_res.player_fixed = true
+            }
+        }
     }
 
     fn camera_zoom(

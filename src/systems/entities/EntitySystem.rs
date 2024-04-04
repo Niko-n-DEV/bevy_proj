@@ -1,12 +1,21 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 use rand::Rng;
 
-use crate::core::{
-    graphic::Atlas::{DirectionAtlas, TestTextureAtlas}, 
+use crate::{core::{
+    graphic::Atlas::{
+        DirectionAtlas, 
+        TestTextureAtlas
+    }, 
     player::PlayerEntity::PlayerEntity, 
-    Entity::{EntityBase, Health, Position, Speed, Velocity}, 
+    Entity::{
+        EntityBase, 
+        Health, 
+        //Position, 
+        //Speed, 
+        Velocity
+    }, 
     Movement::DirectionState
-};
+}, AppState};
 
 #[derive(Component)]
 pub struct EnemySpawner {
@@ -127,19 +136,16 @@ pub struct EntitySystem;
 impl Plugin for EntitySystem {
     fn build(&self, app: &mut App) {
         app
-            .add_event::<DirectionEvent>()
-            .add_systems(Update, handle_direction_changed_events)
+            .add_event::<DirectionChangeEvent>()
+            .add_systems(Update, handle_direction_changed_events.run_if(in_state(AppState::Game)))
         ;
     }
 }
 
-// Dir
+// Direction texture updater
 
 #[derive(Event)]
-pub struct DirectionEvent {
-    entity: EntityBase,
-    new_direction: DirectionState,
-}
+pub struct DirectionChangeEvent(pub Entity, pub DirectionState);
 
 // Важно создать систему, которая будет контролировать все сущности
 /*
@@ -150,28 +156,50 @@ pub struct DirectionEvent {
 // скорее будет работать по ивенту, по типу if direction_entity_is_change -> изменение текстуры на другое направление
 /// Обновляет текстуру моба в зависимости от его направления
 fn handle_direction_changed_events(
-    //mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    // mut query: Query<(&mut DirectionAtlas, &DirectionState)>,
-    // direction_changed_events: Res<Events<DirectionChangedEvent>>,
-    mut event: EventReader<DirectionEvent>
+    mut _query: Query<(&mut EntityBase, &mut TextureAtlas)>,
+    _handle_dir: Res<DirectionAtlas>,
+    mut event: EventReader<DirectionChangeEvent>
 ) {
-    // for event in direction_changed_events.iter() {
-    //     if let Ok((mut sprite, direction)) = query.get_mut(event.entity) {
-    //         // Здесь вы можете изменить текстуру в соответствии с новым направлением
-    //         match direction.0 {
-    //             DirectionState::Up => {
-    //                 // Изменить текстуру на текстуру для движения вверх
-    //             }
-    //             DirectionState::Down => {
-    //                 // Изменить текстуру на текстуру для движения вниз
-    //             }
-    //             DirectionState::Left => {
-    //                 // Изменить текстуру на текстуру для движения влево
-    //             }
-    //             DirectionState::Right => {
-    //                 // Изменить текстуру на текстуру для движения вправо
-    //             }
-    //         }
-    //     }
-    // }
+    if event.is_empty() {
+        return;
+    }
+
+    let index_atlas = DirectionAtlas::get_index("human", &_handle_dir);
+    for event in event.read() {
+        //if let Ok(mut entity_base) = _query.get_component_mut::<EntityBase>(event.0) {
+        if let Ok((mut _entity_base, mut atlas)) = _query.get_mut(event.0) {
+            match event.1 {
+                DirectionState::North => {
+                    // Изменить текстуру на текстуру для движения вверх
+                    // Сделать типы сущностей
+                    //event.atlas.index = index_atlas;
+                    // if let Some(atlas) = &mut entity_base.atlas {
+                    //     atlas
+                    // }
+                    atlas.index = index_atlas + 1;
+                    info!("Hi - North")
+                }
+                DirectionState::South => {
+                    // Изменить текстуру на текстуру для движения вниз
+                    atlas.index = index_atlas;
+                    info!("Hi - South")
+                }
+                DirectionState::West => {
+                    // Изменить текстуру на текстуру для движения влево
+                    atlas.index = index_atlas + 3;
+                    info!("Hi - West")
+                }
+                DirectionState::East => {
+                    // Изменить текстуру на текстуру для движения вправо
+                    atlas.index = index_atlas + 2;
+                    info!("Hi - East")
+                }
+                DirectionState::None => {
+
+                }
+            }
+        } else {
+            warn!("Говно, а не Ok!")
+        }
+    }
 }

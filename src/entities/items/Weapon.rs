@@ -14,14 +14,15 @@ pub struct GunController {
 
 pub fn gun_controls(
     mut commands: Commands,
-    mut gun_query : Query<(&mut GunController, &mut Transform)>,
+    mut gun_query : Query<(&mut GunController, &mut Transform, &mut Sprite)>,
     cursor: Res<CursorPosition>,
     time : Res<Time>,
-    buttons: Res<ButtonInput<MouseButton>>,
+    _buttons: Res<ButtonInput<MouseButton>>,
+    _keyboard_input: Res<ButtonInput<KeyCode>>,
     _asset_server : Res<AssetServer>,
     handle: Res<TestTextureAtlas>,
 ) {
-    for(mut gun_controller, mut transform) in gun_query.iter_mut()
+    for (mut gun_controller, mut transform, mut sprite) in gun_query.iter_mut()
     {
         gun_controller.shoot_timer -= time.delta_seconds();
 
@@ -31,11 +32,17 @@ pub fn gun_controls(
         let angle = diff.y.atan2(diff.x);
         transform.rotation = Quat::from_axis_angle(Vec3::new(0.,0.,1.), angle);
 
+        if cursor_pos.x > transform.translation.x {
+            sprite.flip_y = false
+        } else {
+            sprite.flip_y = true
+        }
+
         if gun_controller.shoot_timer <= 0.
         {
-            if buttons.pressed(MouseButton::Left)
+            if _keyboard_input.pressed(KeyCode::AltLeft)
             {
-                let mut spawn_transform = Transform::from_scale(Vec3::splat(3.0));
+                let mut spawn_transform = Transform::from_scale(Vec3::splat(1.0));
                 spawn_transform.translation = transform.translation;
                 spawn_transform.rotation = Quat::from_axis_angle(Vec3::new(0.,0.,1.), angle);
                 gun_controller.shoot_timer = gun_controller.shoot_cooldown;
