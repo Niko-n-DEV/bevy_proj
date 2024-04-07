@@ -4,7 +4,7 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-bevy = { version = "0.13.1" }
+bevy = { version = "0.13.2" }
 bevy-inspector-egui = "0.23.4"
 iyes_perf_ui = "0.2.3"
 bevy_simple_text_input = "0.5.1"
@@ -13,7 +13,7 @@ bevy_entitiles = { version = "0.7.0" , features = ["physics", "serializing", "de
 bevy_xpbd_2d = { version = "0.4.2"}
 rand = { version = "0.8.5" }
 serde = { version = "1.0.197", features = ["derive"] }
-serde_json = "1.0.114"
+serde_json = "1.0.115"
 
 [profile.dev]
 opt-level = 1

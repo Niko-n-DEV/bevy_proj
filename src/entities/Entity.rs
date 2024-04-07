@@ -68,7 +68,16 @@ pub enum EntityType {
 #[derive(Component)]
 pub enum HumonoidType {
     Human,
-} 
+}
+
+#[derive(Component, Default)]
+pub enum EntityGender {
+    Male,
+    Female,
+    Hermophrodite,
+    #[default]
+    None
+}
 
 // #[derive(Event)]
 // pub struct EntityCollisionEvent;

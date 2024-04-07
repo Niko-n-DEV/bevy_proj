@@ -178,20 +178,4 @@ impl CameraController {
             }
         }
     }
-
-    fn camera_zoom(
-        mut camera_query: Query<&mut Transform, With<Camera2d>>,
-        //mut camera_query: Query<&mut Transform, (With<Camera2d>, Without<PlayerEntity>)>,
-        keyboard_input: Res<ButtonInput<KeyCode>>,
-    ) {
-        let scale_factor = 0.1;
-        if keyboard_input.pressed(KeyCode::NumpadSubtract) {
-            let mut camera_transform = camera_query.single_mut();
-            camera_transform.scale *= Vec3::splat(1.0 + scale_factor);
-        }
-        if keyboard_input.pressed(KeyCode::NumpadAdd) {
-            let mut camera_transform = camera_query.single_mut();
-            camera_transform.scale *= Vec3::splat(1.0 - scale_factor);
-        }
-    }
 }

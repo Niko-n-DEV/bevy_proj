@@ -138,7 +138,27 @@ impl Plugin for EntitySystem {
         app
             .add_event::<DirectionChangeEvent>()
             .add_systems(Update, handle_direction_changed_events.run_if(in_state(AppState::Game)))
+            .add_systems(OnExit(AppState::Game), delete_enemy_spawner)
         ;
+    }
+}
+
+/// Удаление спавнера врагов при выходе из сцены игры
+fn delete_enemy_spawner(
+    mut commands: Commands,
+    spawner: Query<Entity, With<EnemySpawner>>,
+    mut enemy: Query<Entity, With<Enemy>>
+) {
+    if spawner.is_empty() && enemy.is_empty() {
+        return;
+    }
+
+    if let Ok(spawner) = spawner.get_single() {
+        commands.entity(spawner).despawn_recursive()
+    }
+
+    for entity in enemy.iter_mut() {
+        commands.entity(entity).despawn();
     }
 }
 
@@ -166,40 +186,28 @@ fn handle_direction_changed_events(
 
     let index_atlas = DirectionAtlas::get_index("human", &_handle_dir);
     for event in event.read() {
-        //if let Ok(mut entity_base) = _query.get_component_mut::<EntityBase>(event.0) {
         if let Ok((mut _entity_base, mut atlas)) = _query.get_mut(event.0) {
             match event.1 {
                 DirectionState::North => {
-                    // Изменить текстуру на текстуру для движения вверх
-                    // Сделать типы сущностей
-                    //event.atlas.index = index_atlas;
-                    // if let Some(atlas) = &mut entity_base.atlas {
-                    //     atlas
-                    // }
                     atlas.index = index_atlas + 1;
-                    info!("Hi - North")
+                    // info!("Hi - North")
                 }
                 DirectionState::South => {
-                    // Изменить текстуру на текстуру для движения вниз
                     atlas.index = index_atlas;
-                    info!("Hi - South")
+                    // info!("Hi - South")
                 }
                 DirectionState::West => {
-                    // Изменить текстуру на текстуру для движения влево
                     atlas.index = index_atlas + 3;
-                    info!("Hi - West")
+                    // info!("Hi - West")
                 }
                 DirectionState::East => {
-                    // Изменить текстуру на текстуру для движения вправо
                     atlas.index = index_atlas + 2;
-                    info!("Hi - East")
+                    // info!("Hi - East")
                 }
                 DirectionState::None => {
 
                 }
             }
-        } else {
-            warn!("Говно, а не Ok!")
         }
     }
 }

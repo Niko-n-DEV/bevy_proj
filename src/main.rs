@@ -7,6 +7,7 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use bevy_pancam::PanCamPlugin;
 
+#[cfg(debug_assertions)]
 use iyes_perf_ui::prelude::*;
 
 // Определение модулей
@@ -74,10 +75,12 @@ fn main() {
             WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F3)),
         )
         // Плагины для Debug info panel
-        .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin)
-        .add_plugins(bevy::diagnostic::EntityCountDiagnosticsPlugin)
-        .add_plugins(bevy::diagnostic::SystemInformationDiagnosticsPlugin)
-        .add_plugins(PerfUiPlugin)
+        .add_plugins((
+            bevy::diagnostic::FrameTimeDiagnosticsPlugin,
+            bevy::diagnostic::EntityCountDiagnosticsPlugin,
+            bevy::diagnostic::SystemInformationDiagnosticsPlugin,
+            PerfUiPlugin
+        ))
         // Инициализация основных плагинов приложения
         // Инициализация загрузки ресурсов приложения
         .add_plugins(Graphic)

@@ -1,9 +1,7 @@
 use bevy::prelude::*;
 
 use crate::core::{
-    Missile::{Bullet, BULLET_LIFETIME, BULLET_SPEED}, 
-    Input::CursorPosition,
-    graphic::Atlas::TestTextureAtlas
+    graphic::Atlas::TestTextureAtlas, player::PlayerEntity::PlayerAttach, Input::CursorPosition, Missile::{Bullet, BULLET_LIFETIME, BULLET_SPEED}
 };
 
 #[derive(Component)]
@@ -14,7 +12,7 @@ pub struct GunController {
 
 pub fn gun_controls(
     mut commands: Commands,
-    mut gun_query : Query<(&mut GunController, &mut Transform, &mut Sprite)>,
+    mut gun_query : Query<(&mut GunController, &mut Transform, &mut Sprite, &mut PlayerAttach)>,
     cursor: Res<CursorPosition>,
     time : Res<Time>,
     _buttons: Res<ButtonInput<MouseButton>>,
@@ -22,8 +20,7 @@ pub fn gun_controls(
     _asset_server : Res<AssetServer>,
     handle: Res<TestTextureAtlas>,
 ) {
-    for (mut gun_controller, mut transform, mut sprite) in gun_query.iter_mut()
-    {
+    for (mut gun_controller, mut transform, mut sprite, mut attach) in gun_query.iter_mut() {
         gun_controller.shoot_timer -= time.delta_seconds();
 
         let cursor_pos = cursor.0;
@@ -38,26 +35,29 @@ pub fn gun_controls(
             sprite.flip_y = true
         }
 
-        if gun_controller.shoot_timer <= 0.
-        {
-            if _keyboard_input.pressed(KeyCode::AltLeft)
-            {
-                let mut spawn_transform = Transform::from_scale(Vec3::splat(1.0));
-                spawn_transform.translation = transform.translation;
-                spawn_transform.rotation = Quat::from_axis_angle(Vec3::new(0.,0.,1.), angle);
-                gun_controller.shoot_timer = gun_controller.shoot_cooldown;
+        if gun_controller.shoot_timer <= 0. {
+            if _buttons.pressed(MouseButton::Right) {
+                attach.offset = Vec2::new(0., -2.);
+                if _buttons.pressed(MouseButton::Left) {
+                    let mut spawn_transform = Transform::from_scale(Vec3::splat(1.0));
+                    spawn_transform.translation = transform.translation;
+                    spawn_transform.rotation = Quat::from_axis_angle(Vec3::new(0.,0.,1.), angle);
+                    gun_controller.shoot_timer = gun_controller.shoot_cooldown;
 
-                commands.spawn(SpriteSheetBundle{
-                    transform: spawn_transform,
-                    texture: handle.image.clone().unwrap(),
-                    atlas: TextureAtlas {
-                        layout: handle.layout.clone().unwrap(),
-                        index: TestTextureAtlas::get_index("bullet", &handle)
-                    },
-                    ..default()
-                })
-                .insert(Name::new("Bullet"))
-                .insert(Bullet {lifetime: BULLET_LIFETIME, speed: BULLET_SPEED, direction: diff.normalize()});
+                    commands.spawn(SpriteSheetBundle{
+                        transform: spawn_transform,
+                        texture: handle.image.clone().unwrap(),
+                        atlas: TextureAtlas {
+                            layout: handle.layout.clone().unwrap(),
+                            index: TestTextureAtlas::get_index("bullet", &handle)
+                        },
+                        ..default()
+                    })
+                    .insert(Name::new("Bullet"))
+                    .insert(Bullet {lifetime: BULLET_LIFETIME, speed: BULLET_SPEED, direction: diff.normalize()});
+                }
+            } else {
+                attach.offset = Vec2::new(0., -3.);
             }
         }
     }

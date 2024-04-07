@@ -105,16 +105,20 @@ impl PlayerPlugin {
         .insert(GunController { shoot_cooldown: 0.3, shoot_timer: 0. });
 
         // не переходить часто с главного меню в игру и на оборот, дублируются!
-        //commands.spawn(TransformBundle { ..default() } ).insert(EnemySpawner{ cooldown: 1., timer: 1. });
+        commands.spawn(TransformBundle { ..default() } ).insert(EnemySpawner{ cooldown: 1., timer: 1. });
     }
 
     /// "Удаление" игрока
     fn despawn_player(
         mut commands: Commands,
         player: Query<Entity, With<PlayerEntity>>,
+        gun: Query<Entity, With<GunController>>
     ) {
         if let Ok(player) = player.get_single() {
             commands.entity(player).despawn_recursive()
+        }
+        if let Ok(gun) = gun.get_single() {
+            commands.entity(gun).despawn_recursive()
         }
     }
 
@@ -136,8 +140,10 @@ impl PlayerPlugin {
         for (mut transform, mut player) in &mut entity_query {
             if player.movable {
                 let mut direction = Vec3::ZERO;
+
                 let mut dir_state_temp = DirectionState::default();
                 let mut dir_state = DirectionState::default();
+
                 let mut speed_var: f32 = player.speed.0;
 
                 if keyboard_input.pressed(KeyCode::ShiftLeft) {
