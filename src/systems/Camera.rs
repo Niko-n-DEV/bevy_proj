@@ -1,22 +1,16 @@
 #![allow(unused)]
 use bevy::{
-    prelude::*,
-    input::mouse::{MouseMotion, MouseWheel}, 
+    input::mouse::{MouseMotion, MouseWheel},
     math::vec3,
+    prelude::*,
 };
 use bevy_pancam::PanCam;
 
 // test
 // Для тестирования EntitiTiles
-use crate::{
-    entities::player::PlayerEntity::PlayerEntity,
-    entities::Entity::EntityBase,
-    AppState
-};
+use crate::{entities::player::PlayerEntity::PlayerEntity, entities::Entity::EntityBase, AppState};
 
-use bevy_entitiles::{
-    tilemap::chunking::camera::CameraChunkUpdater,
-};
+use bevy_entitiles::tilemap::chunking::camera::CameraChunkUpdater;
 
 // Основной компонент камеры
 // Определить параметр зацепа к объекту (option)
@@ -25,14 +19,12 @@ pub struct CameraX;
 
 #[derive(Resource)]
 pub struct CameraXRes {
-    pub player_fixed: bool
+    pub player_fixed: bool,
 }
 
 impl Default for CameraXRes {
     fn default() -> Self {
-        Self {
-            player_fixed: true
-        }
+        Self { player_fixed: true }
     }
 }
 
@@ -122,41 +114,43 @@ pub struct CameraController;
 
 impl Plugin for CameraController {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(Startup, Self::setup_camera)
+        app.add_systems(Startup, Self::setup_camera)
             .init_resource::<CameraXRes>()
             .add_systems(
                 Update,
                 Self::camera_follow_player.run_if(in_state(AppState::Game)),
             )
-            .add_systems(Update, Self::toggle_camera_fix.run_if(in_state(AppState::Game)))
-            ;
+            .add_systems(
+                Update,
+                Self::toggle_camera_fix.run_if(in_state(AppState::Game)),
+            );
     }
 }
 
 impl CameraController {
     fn setup_camera(mut commands: Commands) {
-        commands.spawn((
-            Camera2dBundle::default(), 
-            CameraX, 
-            CameraChunkUpdater::new(1.3, 2.2)
-        ))
-        .insert(PanCam {
-            grab_buttons: vec![MouseButton::Middle],
-            ..default()
-        })
-        .id();
+        commands
+            .spawn((
+                Camera2dBundle::default(),
+                CameraX,
+                CameraChunkUpdater::new(1.3, 2.2),
+            ))
+            .insert(PanCam {
+                grab_buttons: vec![MouseButton::Middle],
+                ..default()
+            })
+            .id();
     }
 
     fn camera_follow_player(
         mut player_query: Query<&Transform, With<PlayerEntity>>,
         mut camera_query: Query<&mut Transform, (With<Camera2d>, Without<PlayerEntity>)>,
-        camera_res: Res<CameraXRes>
+        camera_res: Res<CameraXRes>,
     ) {
         if player_query.is_empty() || camera_query.is_empty() {
             return;
         }
-        
+
         let mut camera_transform = camera_query.single_mut();
         let player_transform = player_query.single().translation;
 
@@ -168,7 +162,7 @@ impl CameraController {
 
     fn toggle_camera_fix(
         mut camera_res: ResMut<CameraXRes>,
-        keyboard_input: Res<ButtonInput<KeyCode>>
+        keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
         if keyboard_input.just_released(KeyCode::F1) {
             if camera_res.player_fixed {

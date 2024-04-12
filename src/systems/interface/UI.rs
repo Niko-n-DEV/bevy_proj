@@ -1,5 +1,5 @@
 #![allow(unused)]
-use bevy::{prelude::*, window::PrimaryWindow, app::AppExit};
+use bevy::{app::AppExit, prelude::*, window::PrimaryWindow};
 
 use bevy_simple_text_input::{TextInputBundle, TextInputInactive, TextInputPlugin};
 
@@ -22,13 +22,13 @@ pub struct GameUI;
 
 #[derive(Component, Resource)]
 pub struct GameUIRes {
-    pub debug_toggle: bool
+    pub debug_toggle: bool,
 }
 
 impl Default for GameUIRes {
     fn default() -> Self {
         Self {
-            debug_toggle: false
+            debug_toggle: false,
         }
     }
 }
@@ -55,9 +55,7 @@ impl Plugin for UI {
         app.add_systems(OnEnter(AppState::MainMenu), Self::spawn_main_menu)
             .add_systems(Update, (transition_to_game_state, translation_to_main_menu))
             .init_resource::<GameUIRes>()
-
             .add_plugins(TextInputPlugin)
-
             .add_systems(
                 Update,
                 (
@@ -65,7 +63,7 @@ impl Plugin for UI {
                     Self::interact_with_quit_button.run_if(in_state(AppState::MainMenu)),
                     Self::interact_with_to_menu_button.run_if(in_state(AppState::Game)),
                     Self::debug_toggle.run_if(in_state(AppState::Game)),
-                    focus.run_if(in_state(AppState::Game))
+                    focus.run_if(in_state(AppState::Game)),
                 ),
             )
             .add_systems(Update, exit_game)
@@ -176,22 +174,23 @@ impl UI {
     /// Функция для размещения игрового интерфейса.
     fn build_game_ui(commands: &mut Commands, _asset_server: &Res<AssetServer>) -> Entity {
         let gameui_entity = commands
-            .spawn(( 
+            .spawn((
                 NodeBundle {
                     style: Style {
                         height: Val::Percent(100.),
                         width: Val::Percent(100.),
                         ..default()
                     },
-                    ..default() 
+                    ..default()
                 },
                 GameUI,
                 Interaction::None,
-                Name::new("Game UI")
+                Name::new("Game UI"),
             ))
             .with_children(|parent| {
                 // === Base Node* ===
-                parent.spawn(NodeBundle {
+                parent
+                    .spawn(NodeBundle {
                         style: Style {
                             width: Val::Percent(100.0),
                             height: Val::Percent(5.0),
@@ -203,33 +202,33 @@ impl UI {
                         background_color: Color::GRAY.into(),
                         ..default()
                     })
-                .with_children(|parent| {
-                    // === Back To Menu Button ===
-                    parent
-                        .spawn((
-                            ButtonBundle {
-                                style: button_container_style(25.0, 45.0),
-                                border_color: Color::BLACK.into(),
-                                background_color: NORMAL_BUTTON_COLOR.into(),
-                                ..default()
-                            },
-                            BackToMenuButton {},
-                        ))
-                        .with_children(|parent| {
-                            parent.spawn(TextBundle {
-                                text: Text {
-                                    sections: vec![TextSection::new(
-                                        "Menu",
-                                        TextStyle {
-                                            font_size: 11.0,
-                                            ..default()
-                                        },
-                                    )],
+                    .with_children(|parent| {
+                        // === Back To Menu Button ===
+                        parent
+                            .spawn((
+                                ButtonBundle {
+                                    style: button_container_style(25.0, 45.0),
+                                    border_color: Color::BLACK.into(),
+                                    background_color: NORMAL_BUTTON_COLOR.into(),
                                     ..default()
                                 },
-                                ..default()
+                                BackToMenuButton {},
+                            ))
+                            .with_children(|parent| {
+                                parent.spawn(TextBundle {
+                                    text: Text {
+                                        sections: vec![TextSection::new(
+                                            "Menu",
+                                            TextStyle {
+                                                font_size: 11.0,
+                                                ..default()
+                                            },
+                                        )],
+                                        ..default()
+                                    },
+                                    ..default()
+                                });
                             });
-                        });
                         // === CMDline ===
                         parent.spawn((
                             NodeBundle {
@@ -244,11 +243,10 @@ impl UI {
                                 ..default()
                             },
                             Name::new("CMDline"),
-                            TextInputBundle::default()
-                                .with_inactive(true),
-                            CMDline
+                            TextInputBundle::default().with_inactive(true),
+                            CMDline,
                         ));
-                });
+                    });
             })
             .id();
         gameui_entity
@@ -273,8 +271,8 @@ impl UI {
             match *interaction {
                 Interaction::Pressed => {
                     *background_color = PRESSED_BUTTON_COLOR.into();
-                    app_state_next_state.set(AppState::Game);
-                    println!("Entered AppState::Game");
+                    app_state_next_state.set(AppState::LoadingInGame);
+                    info!("State: LoadingInGame")
                 }
                 Interaction::Hovered => {
                     *background_color = HOVERED_BUTTON_COLOR.into();
@@ -322,7 +320,7 @@ impl UI {
                 Interaction::Pressed => {
                     *background_color = PRESSED_BUTTON_COLOR.into();
                     app_state_next_state.set(AppState::MainMenu);
-                    println!("Entered AppState::MainMenu");
+                    info!("State: MainMenu")
                 }
                 Interaction::Hovered => {
                     *background_color = HOVERED_BUTTON_COLOR.into();
@@ -340,19 +338,15 @@ impl UI {
         parent_query: Query<Entity, With<GameUI>>,
         child_query: Query<Entity, With<DebugInfoPanel>>,
         mut parent_state: ResMut<GameUIRes>,
-        keyboard_input: Res<ButtonInput<KeyCode>>
+        keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
         if keyboard_input.just_released(KeyCode::F5) {
             if !parent_state.debug_toggle {
                 if let Ok(parent) = parent_query.get_single() {
-
                     commands.entity(parent).with_children(|parent| {
-                        parent.spawn((
-                            NodeBundle {
-                                ..default()
-                            },
-                            DebugInfoPanel
-                        )).insert(Name::new("Debug"));
+                        parent
+                            .spawn((NodeBundle { ..default() }, DebugInfoPanel))
+                            .insert(Name::new("Debug"));
                     });
 
                     parent_state.debug_toggle = true;
@@ -397,7 +391,7 @@ pub fn translation_to_main_menu(
     }
 }
 
-/// focus для CMDline 
+/// focus для CMDline
 fn focus(
     query: Query<(Entity, &Interaction), Changed<Interaction>>,
     mut text_input_query: Query<(Entity, &mut TextInputInactive, &mut BorderColor)>,

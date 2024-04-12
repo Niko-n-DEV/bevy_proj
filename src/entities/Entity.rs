@@ -4,17 +4,14 @@ use bevy::prelude::*;
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
-use crate::core::{
-    player::PlayerEntity::PlayerEntity,
-    Movement::DirectionState
-};
+use crate::core::{player::PlayerEntity::PlayerEntity, Movement::DirectionState};
 
 /// Компонент отвечающий за [Здоровье]
 #[derive(Component)]
 pub struct Health(pub f32);
 
 /// Компонент отвечающий за [Скорость]
-/// 
+///
 /// 0 - Обычная скорость | 1 - Бег | 2 - Медленное передвижение
 #[derive(Component)]
 pub struct Speed(pub f32, pub f32, pub f32);
@@ -36,13 +33,13 @@ pub struct EntityBase {
     pub direction: DirectionState,
     //pub sprite: SpriteSheetBundle,
     pub velocity: Velocity,
-    pub movable: bool
+    pub movable: bool,
 }
 
 impl Default for EntityBase {
     fn default() -> Self {
         Self {
-            speed: Speed(50. , 150. , 25. ),
+            speed: Speed(50., 150., 25.),
             health: Health(1.),
             position: Position(Vec3::ZERO),
             direction: DirectionState::South,
@@ -63,7 +60,7 @@ pub enum EntityState {
 #[derive(Component)]
 pub enum EntityType {
     Humonoid(HumonoidType),
-} 
+}
 
 #[derive(Component)]
 pub enum HumonoidType {
@@ -76,7 +73,7 @@ pub enum EntityGender {
     Female,
     Hermophrodite,
     #[default]
-    None
+    None,
 }
 
 // #[derive(Event)]

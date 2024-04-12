@@ -4,40 +4,43 @@ use std::{collections::HashMap, path::Path};
 use bevy::{asset::LoadedFolder, prelude::*, render::texture::ImageSampler};
 
 use crate::core::{
-    AppState, 
-    graphic::Atlas::{TestTextureAtlas, DirectionAtlas}
+    resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
+    AppState,
 };
 
 /// Ресурс хранящий в себе загружаемую папку ресурсов
 #[derive(Resource, Default)]
-struct ResourceFolder(Handle<LoadedFolder>, Handle<LoadedFolder>);
+pub struct ResourceFolder(Handle<LoadedFolder>, Handle<LoadedFolder>);
 
-pub struct Graphic;
+// pub struct Graphic;
 
-impl Plugin for Graphic {
-    fn build(&self, app: &mut App) {
-        app
-            // Взятие ресурсов из assets
-            .add_systems(OnEnter(AppState::ResourceCheck), load_resource_folder)
-            // Ну, атлас, да
-            .insert_resource(TestTextureAtlas::default())
-            .insert_resource(DirectionAtlas::default())
-            // Проверка ресурсов на зависимости (Непонятно как оно точно работает)
-            .add_systems(Update,check_textures.run_if(in_state(AppState::ResourceCheck)))
-            .add_systems(OnEnter(AppState::ResourceLoading), setup_ex)
-            ;
-    }
-}
+// impl Plugin for Graphic {
+//     fn build(&self, app: &mut App) {
+//         app
+//             // Взятие ресурсов из assets
+//             .add_systems(OnEnter(AppState::ResourceCheck), load_resource_folder)
+//             // Ну, атлас, да
+//             .insert_resource(TestTextureAtlas::default())
+//             .insert_resource(DirectionAtlas::default())
+//             // Проверка ресурсов на зависимости (Непонятно как оно точно работает)
+//             .add_systems(Update,check_textures.run_if(in_state(AppState::ResourceCheck)))
+//             .add_systems(OnEnter(AppState::ResourceLoading), setup_ex)
+//             ;
+//     }
+// }
 
 /// функция для загрузки ресурсов из определённой папки, по умолчанию эта папка - assets, и всё его содержимое
-fn load_resource_folder(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn load_resource_folder(mut commands: Commands, asset_server: Res<AssetServer>) {
     info!("Insert resources");
-    commands.insert_resource(ResourceFolder(asset_server.load_folder(""), asset_server.load_folder("core/textures/entity/player")));
+    commands.insert_resource(ResourceFolder(
+        asset_server.load_folder(""),
+        asset_server.load_folder("core/textures/entity/player"),
+    ));
     info!("State: ResourceCheck");
 }
 
 /// Проверка чего-то с каждым обновлением
-fn check_textures(
+pub fn check_textures(
     mut next_state: ResMut<NextState<AppState>>,
     resource_folder: Res<ResourceFolder>,
     mut events: EventReader<AssetEvent<LoadedFolder>>,
@@ -49,7 +52,7 @@ fn check_textures(
     }
 }
 
-fn setup_ex(
+pub fn setup_ex(
     mut commands: Commands,
     // asset_server: Res<AssetServer>,
     resource_handle: Res<ResourceFolder>,
@@ -58,7 +61,7 @@ fn setup_ex(
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     loaded_folders: Res<Assets<LoadedFolder>>,
     mut textures: ResMut<Assets<Image>>,
-    mut next_state: ResMut<NextState<AppState>>
+    mut next_state: ResMut<NextState<AppState>>,
 ) {
     // Сборка текстур в единый атлас
     let loaded_folder = loaded_folders.get(&resource_handle.0).unwrap();
@@ -71,7 +74,7 @@ fn setup_ex(
     );
     let atlas_nearest_handle = texture_atlases.add(texture_atlas_nearest);
 
-    commands.spawn(SpriteBundle{
+    commands.spawn(SpriteBundle {
         texture: nearest_texture.clone(),
         ..default()
     });
@@ -95,8 +98,6 @@ fn setup_ex(
     handle_dir_atlas.image = Some(nearest_texture_atlases);
     handle_dir_atlas.ids = Some(_hash);
 
-    
-
     next_state.set(AppState::MainMenu);
     info!("State: MainMenu")
 }
@@ -107,11 +108,7 @@ fn create_texture_atlas(
     padding: Option<UVec2>,
     sampling: Option<ImageSampler>,
     textures: &mut ResMut<Assets<Image>>,
-) -> (
-    TextureAtlasLayout,
-    Handle<Image>,
-    HashMap<String, usize>,
-) {
+) -> (TextureAtlasLayout, Handle<Image>, HashMap<String, usize>) {
     let mut textures_ids: HashMap<String, usize> = HashMap::new();
     // Скорее всего создаётся полотно, в которое будет помещаться текстуры
     let mut texture_atlas_builder =
@@ -128,7 +125,7 @@ fn create_texture_atlas(
                 "{:?} did not resolve to an `Image` asset.",
                 handle.path().unwrap()
             );
-            
+
             continue;
         };
 
@@ -136,7 +133,7 @@ fn create_texture_atlas(
         if let Some(path) = handle.path() {
             if let Some(file_name) = path.to_string().as_str().split('/').last() {
                 let file_fmt = Path::new(file_name).file_stem().unwrap().to_string_lossy();
-                info!("Loaded resource | {}", file_fmt);
+                println!("Loaded resource | {}", file_fmt);
                 textures_ids.insert(file_fmt.to_string(), num);
             } else {
                 warn!("[Error] - An error occurred while reading the file name!")
@@ -152,7 +149,7 @@ fn create_texture_atlas(
 
     // Финальная сборка полотна в layout и цельную текстуру
     let (texture_atlas_layout, texture) = texture_atlas_builder.finish().unwrap();
-    // Добавление текстуры в handle 
+    // Добавление текстуры в handle
     let texture = textures.add(texture);
 
     // Обновление настройки выборки в атласе текстур
@@ -172,11 +169,7 @@ fn load_and_index_atlas(
     padding: Option<UVec2>,
     sampling: Option<ImageSampler>,
     textures: &mut ResMut<Assets<Image>>,
-) -> (
-    TextureAtlasLayout,
-    Handle<Image>,
-    HashMap<String, usize>,
-) {
+) -> (TextureAtlasLayout, Handle<Image>, HashMap<String, usize>) {
     let mut texture_atlas_builder =
         TextureAtlasBuilder::default().padding(padding.unwrap_or_default());
 
@@ -190,7 +183,7 @@ fn load_and_index_atlas(
                 "{:?} did not resolve to an `Image` asset.",
                 handle.path().unwrap()
             );
-            
+
             continue;
         };
 

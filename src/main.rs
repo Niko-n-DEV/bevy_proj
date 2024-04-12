@@ -1,5 +1,3 @@
-use core::graphic::Graphic::Graphic;
-
 use bevy::prelude::*;
 
 use bevy::{input::common_conditions::input_toggle_active, window::WindowResolution};
@@ -7,7 +5,6 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use bevy_pancam::PanCamPlugin;
 
-#[cfg(debug_assertions)]
 use iyes_perf_ui::prelude::*;
 
 // Определение модулей
@@ -35,11 +32,12 @@ mod core {
 }
 
 use crate::core::{
-    player::PlayerEntity::PlayerPlugin, 
     entities::EntitySystem::EntitySystem,
-    world::World::WorldSystem, 
-    Camera::CameraController, 
-    UI::UI //, world::TileMap::TileMapPlugin
+    player::PlayerEntity::PlayerPlugin,
+    resource::ResourcePlugin,
+    world::World::WorldSystem,
+    Camera::CameraController,
+    UI::UI, //, world::TileMap::TileMapPlugin
 };
 
 fn main() {
@@ -68,7 +66,7 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest())
                 .build(),
-                PanCamPlugin::default()
+            PanCamPlugin::default(),
         ))
         // Плагин - Инспектор, для отладки и мониторинга элементов
         .add_plugins(
@@ -79,11 +77,11 @@ fn main() {
             bevy::diagnostic::FrameTimeDiagnosticsPlugin,
             bevy::diagnostic::EntityCountDiagnosticsPlugin,
             bevy::diagnostic::SystemInformationDiagnosticsPlugin,
-            PerfUiPlugin
+            PerfUiPlugin,
         ))
         // Инициализация основных плагинов приложения
         // Инициализация загрузки ресурсов приложения
-        .add_plugins(Graphic)
+        .add_plugins(ResourcePlugin)
         // Инициализация плагина камеры и пользовательского интерфейса
         .add_plugins((CameraController, UI))
         // Инициализация плагина игрока и [Test] Системы Мира
@@ -98,32 +96,34 @@ fn main() {
 
 // [Test] Debug info panel
 fn setup(mut _commands: Commands) {
-    _commands.spawn((
-        PerfUiRoot::default(),
-        PerfUiEntryFPS::default(),
-        PerfUiEntryFPSWorst::default(),
-        PerfUiEntryFrameTime::default(),
-        PerfUiEntryFrameTimeWorst::default(),
-        PerfUiEntryFrameCount::default(),
-        PerfUiEntryEntityCount::default(),
-        PerfUiEntryCpuUsage::default(),
-        PerfUiEntryMemUsage::default(),
-        PerfUiEntryRunningTime::default(),
-        PerfUiEntryClock::default(),
-    ));
+    if true {
+        _commands.spawn((
+            PerfUiRoot::default(),
+            PerfUiEntryFPS::default(),
+            PerfUiEntryFPSWorst::default(),
+            PerfUiEntryFrameTime::default(),
+            PerfUiEntryFrameTimeWorst::default(),
+            PerfUiEntryFrameCount::default(),
+            PerfUiEntryEntityCount::default(),
+            PerfUiEntryCpuUsage::default(),
+            PerfUiEntryMemUsage::default(),
+            PerfUiEntryRunningTime::default(),
+            PerfUiEntryClock::default(),
+        ));
+    }
 }
 
 /// Состояние приложения
 #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
 pub enum AppState {
-    Start,
+    Start, // Инициализация программы
     #[default]
-    ResourceCheck,
-    ResourceLoading,
-    MainMenu,
-    LoadingInGame,
-    Game,
-    Pause,
-    SavingGame,
-    Finished,
+    ResourceCheck, // Этап проверки ресурсов
+    ResourceLoading, // Этап загрузки ресурсов
+    MainMenu, // Этап главного меню
+    LoadingInGame, // Этап загрузки мира
+    Game,  // Этап игрового процесса
+    Pause, // Пауза
+    SavingGame, // Этап сохранения данных мира (при сохранении мир находится в состоянии Pause, может быть обратно переведён в game)
+    Finished,   // Этап полного сохранения данных и переход в главное меню/закрытие программы
 }

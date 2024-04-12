@@ -3,20 +3,31 @@ use bevy::{log::tracing_subscriber::fmt::format, prelude::*, transform::commands
 use std::collections::HashMap;
 
 use crate::core::{
+    entities::EntitySystem::EnemySpawner,
+    items::Weapon::GunController,
+    player::PlayerEntity::{PlayerAttach, PlayerEntity},
+    resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
+    world::WorldTaskManager,
     AppState,
-    player::PlayerEntity::PlayerEntity,
-    graphic::Atlas::{TestTextureAtlas, DirectionAtlas},
-    Settings::Settings
+    Entity::*,
+    Movement::DirectionState,
+    Settings::Settings,
 };
 
 pub struct WorldSystem;
 
 impl Plugin for WorldSystem {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(OnEnter(AppState::Game), Self::setup)
-            .init_resource::<WorldRes>()
-            .add_systems(Update, Self::load_chunk_around.run_if(in_state(AppState::Game)));
+        app.add_systems(
+            OnEnter(AppState::LoadingInGame),
+            WorldTaskManager::load_data,
+        )
+        .add_systems(OnEnter(AppState::Game), (Self::setup, Self::init_world))
+        .init_resource::<WorldRes>()
+        .add_systems(
+            Update,
+            Self::load_chunk_around.run_if(in_state(AppState::Game)),
+        );
     }
 }
 
@@ -30,12 +41,64 @@ impl WorldSystem {
     fn init_world(
         mut commands: Commands,
         handle: Res<TestTextureAtlas>,
-        handle_dir: Res<DirectionAtlas>
+        handle_dir: Res<DirectionAtlas>,
     ) {
         /*
             Тут будет непосредственно инициализация мира, где будет размещение игровой сетки, основных его компонентов и сущностей.
             Установка синхронно с процессом загрузки ресурсов из файла.
         */
+
+        // Test ==============================
+
+        // Спавн спрайта, являющийся игроком
+        let (texture, atlas) = DirectionAtlas::set_sprite("human", &handle_dir);
+        commands.spawn((
+            EntityBase {
+                speed: Speed(50., 150., 25.),
+                health: Health(2.),
+                position: Position(Vec3::ZERO),
+                direction: DirectionState::South,
+                velocity: Velocity(Vec3::ZERO),
+                movable: true,
+            },
+            SpriteSheetBundle {
+                texture,
+                atlas,
+                ..default()
+            },
+            PlayerEntity,
+            Name::new("Player"),
+        ));
+
+        // Спавн оружия и соединение с игроком
+        commands
+            .spawn(SpriteSheetBundle {
+                texture: handle.image.clone().unwrap(),
+                atlas: TextureAtlas {
+                    layout: handle.layout.clone().unwrap(),
+                    index: TestTextureAtlas::get_index("gun", &handle),
+                },
+                transform: Transform {
+                    translation: Vec3::splat(0.),
+                    ..default()
+                },
+                ..default()
+            })
+            .insert(PlayerAttach {
+                offset: Vec2::new(0., -3.),
+            })
+            .insert(GunController {
+                shoot_cooldown: 0.1,
+                shoot_timer: 0.,
+            });
+
+        // не переходить часто с главного меню в игру и на оборот, дублируются!
+        commands
+            .spawn(TransformBundle { ..default() })
+            .insert(EnemySpawner {
+                cooldown: 1.,
+                timer: 1.,
+            });
     }
 
     /// Функция для инициализации загрузки чанков вокруг игрока в пределах установленной прогрузки.
@@ -64,7 +127,9 @@ impl WorldSystem {
             worldres.player_chunk_position = Self::get_current_chunk(player_translation)
         }
 
-        if worldres.player_chunk_position == worldres.player_chunk_last_position && worldres.first_launch {
+        if worldres.player_chunk_position == worldres.player_chunk_last_position
+            && worldres.first_launch
+        {
             worldres.player_chunk_last_position = IVec2::ZERO;
             worldres.first_launch = false
         }
@@ -72,8 +137,10 @@ impl WorldSystem {
         if worldres.player_chunk_position != worldres.player_chunk_last_position {
             worldres.player_chunk_last_position = worldres.player_chunk_position;
 
-            let (player_chunk_x, player_chunk_y) =
-                (worldres.player_chunk_position.x, worldres.player_chunk_position.y);
+            let (player_chunk_x, player_chunk_y) = (
+                worldres.player_chunk_position.x,
+                worldres.player_chunk_position.y,
+            );
 
             // Нужна более чательная проработка
             let mut loaded_chunks_new: Vec<IVec2> = Vec::new();
@@ -135,7 +202,7 @@ impl WorldSystem {
                 texture: handle.image.clone().unwrap(),
                 atlas: TextureAtlas {
                     layout: handle.layout.clone().unwrap(),
-                    index: TestTextureAtlas::get_index("dirt", &handle)
+                    index: TestTextureAtlas::get_index("dirt", &handle),
                 },
                 transform: Transform {
                     translation: Vec3::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0, -1.0),

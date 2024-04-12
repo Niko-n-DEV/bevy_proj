@@ -6,9 +6,11 @@ use bevy::{
     text::Text,
 };
 
+#[allow(dead_code)]
 #[derive(Component)]
 pub struct DebugFpsText;
 
+#[allow(dead_code)]
 pub fn debug_info_display(
     mut query: Query<&mut Text, With<DebugFpsText>>,
     diag: Res<DiagnosticsStore>,

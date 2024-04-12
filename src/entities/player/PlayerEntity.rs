@@ -6,36 +6,42 @@ use bevy_inspector_egui::InspectorOptions;
 use crate::core::Entity::{Health, Position, Speed, Velocity};
 #[allow(unused_imports)]
 use crate::core::{
-    items::Weapon::*, 
-    AppState, 
-    Input::OffsetedCursorPosition, 
-    Missile::*, 
-    Entity::EntityBase, 
-    entities::EntitySystem::{update_spawning, update_enemies, EnemySpawner, DirectionChangeEvent}, 
-    Input::{CursorPosition, cursor_track},
-    graphic::Atlas::{TestTextureAtlas, DirectionAtlas},
-    Movement::DirectionState
+    entities::EntitySystem::{update_enemies, update_spawning, DirectionChangeEvent, EnemySpawner},
+    items::Weapon::*,
+    resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
+    AppState,
+    Entity::EntityBase,
+    Input::OffsetedCursorPosition,
+    Input::{cursor_track, CursorPosition},
+    Missile::*,
+    Movement::DirectionState,
 };
 
 #[derive(Component, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
-pub struct PlayerEntity;
+pub struct PlayerEntity; // Rename to User
 
+//
+// Всё это под вырез, т.к. будет переносится в Entity System с взаимодействием с Entity, а player будет как свойство для entity
+//
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
             // Установка игрока при переходе в стостояние "игра"
-            .add_systems(OnEnter(AppState::Game), Self::spawn_player)
+            //.add_systems(OnEnter(AppState::Game), Self::spawn_player)
             // Регистрация типа "PlayerEntity" для индексации параметров в Инспекторе
             .register_type::<PlayerEntity>()
             // Использование данных о позиции курсора из CursorPosition
             .init_resource::<CursorPosition>()
             // Инициализация чего-то (я сам до конца не понял)
-            .insert_resource(OffsetedCursorPosition {x: 0., y: 0.})
+            .insert_resource(OffsetedCursorPosition { x: 0., y: 0. })
             // Передвижение игрока
-            .add_systems(Update, Self::player_movement.run_if(in_state(AppState::Game)))
+            .add_systems(
+                Update,
+                Self::player_movement.run_if(in_state(AppState::Game)),
+            )
             // Обновление информации о позиции курсора
             .add_systems(PreUpdate, cursor_track.run_if(in_state(AppState::Game)))
             // [Test] Обновление системы управления оружием
@@ -43,76 +49,32 @@ impl Plugin for PlayerPlugin {
             // [Test] Соединение оружия и игрока
             .add_systems(Update, attach_objects.run_if(in_state(AppState::Game)))
             // [Test] Обновление системы просчёта пуль и попадений
-            .add_systems(Update, 
+            .add_systems(
+                Update,
                 (
-                            update_bullets.run_if(in_state(AppState::Game)), 
-                            update_bullet_hits.run_if(in_state(AppState::Game))
-                        )
-                    )
-            // [Test] Обновление системы просчёта врагов и их спавна 
-            .add_systems(Update, 
+                    update_bullets.run_if(in_state(AppState::Game)),
+                    update_bullet_hits.run_if(in_state(AppState::Game)),
+                ),
+            )
+            // [Test] Обновление системы просчёта врагов и их спавна
+            .add_systems(
+                Update,
                 (
-                            update_enemies.run_if(in_state(AppState::Game)), 
-                            update_spawning.run_if(in_state(AppState::Game))
-                        )
-                    )
+                    update_enemies.run_if(in_state(AppState::Game)),
+                    update_spawning.run_if(in_state(AppState::Game)),
+                ),
+            )
             // Инициализация "удаления" игрока при переходе из состояния "игра"
             .add_systems(OnExit(AppState::Game), Self::despawn_player);
     }
 }
 
 impl PlayerPlugin {
-    fn spawn_player(
-        mut commands: Commands, 
-        _asset_server: Res<AssetServer>,
-        handle: Res<TestTextureAtlas>,
-        handle_dir: Res<DirectionAtlas>
-    ) {
-        // Спавн спрайта, являющийся игроком
-        let (texture, atlas) = DirectionAtlas::set_sprite("human", &handle_dir);
-        commands.spawn((
-            EntityBase {
-                speed: Speed(50. , 150. , 25. ),
-                health: Health(2.),
-                position: Position(Vec3::ZERO),
-                direction: DirectionState::South,
-                velocity: Velocity(Vec3::ZERO),
-                movable: true
-            },
-            SpriteSheetBundle {
-                texture,
-                atlas,
-                ..default()
-            },
-            PlayerEntity,
-            Name::new("Player"),
-        ));
-
-        // Спавн оружия и соединение с игроком
-        commands.spawn(SpriteSheetBundle {
-            texture: handle.image.clone().unwrap(),
-            atlas: TextureAtlas {
-                layout: handle.layout.clone().unwrap(),
-                index: TestTextureAtlas::get_index("gun", &handle)
-            },
-            transform: Transform {
-                translation: Vec3::splat(0.),
-                ..default()
-            },
-            ..default()
-        })
-        .insert(PlayerAttach { offset: Vec2::new(0.,-3.) })
-        .insert(GunController { shoot_cooldown: 0.3, shoot_timer: 0. });
-
-        // не переходить часто с главного меню в игру и на оборот, дублируются!
-        commands.spawn(TransformBundle { ..default() } ).insert(EnemySpawner{ cooldown: 1., timer: 1. });
-    }
-
     /// "Удаление" игрока
     fn despawn_player(
         mut commands: Commands,
         player: Query<Entity, With<PlayerEntity>>,
-        gun: Query<Entity, With<GunController>>
+        gun: Query<Entity, With<GunController>>,
     ) {
         if let Ok(player) = player.get_single() {
             commands.entity(player).despawn_recursive()
@@ -149,7 +111,7 @@ impl PlayerPlugin {
                 if keyboard_input.pressed(KeyCode::ShiftLeft) {
                     speed_var = player.speed.1;
                 }
-                
+
                 if keyboard_input.pressed(KeyCode::KeyW) {
                     dir_state = DirectionState::North;
                     dir_state_temp = DirectionState::North;
@@ -180,10 +142,10 @@ impl PlayerPlugin {
 
                     player.direction = dir_state;
                 }
-                
 
                 if direction != Vec3::ZERO {
-                    let new_pos = transform.translation + time.delta_seconds() * speed_var * direction.normalize();
+                    let new_pos = transform.translation
+                        + time.delta_seconds() * speed_var * direction.normalize();
                     transform.translation = new_pos;
                     player.position = Position(new_pos);
                 } else {

@@ -10,5 +10,5 @@ pub enum DirectionState {
     South,
     North,
     West,
-    East
+    East,
 }

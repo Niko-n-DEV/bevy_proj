@@ -1,19 +1,19 @@
 #![allow(unused)]
-use std::collections::HashMap;
 use bevy::prelude::*;
+use std::collections::HashMap;
 
 #[derive(Component, Resource)]
 pub struct ItemsAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
     pub image: Option<Handle<Image>>,
-    pub ids: Option<HashMap<String, usize>>
+    pub ids: Option<HashMap<String, usize>>,
 }
 
 #[derive(Component, Resource)]
 pub struct MaterialAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
     pub image: Option<Handle<Image>>,
-    pub ids: Option<HashMap<String, usize>>
+    pub ids: Option<HashMap<String, usize>>,
 }
 
 // Атлас для хранения текстур местности
@@ -21,7 +21,7 @@ pub struct MaterialAtlas {
 pub struct TerrainAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
     pub image: Option<Handle<Image>>,
-    pub ids: Option<HashMap<String, usize>>
+    pub ids: Option<HashMap<String, usize>>,
 }
 
 impl TerrainAtlas {
@@ -40,7 +40,7 @@ impl TerrainAtlas {
             texture: atlas.image.clone().unwrap(),
             atlas: TextureAtlas {
                 layout: atlas.layout.clone().unwrap(),
-                index: Self::get_index(&name, &atlas)
+                index: Self::get_index(&name, &atlas),
             },
             ..default()
         };
@@ -48,30 +48,26 @@ impl TerrainAtlas {
     }
 }
 
-
-
 #[derive(Component, Resource)]
 pub struct VehicleAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
     pub image: Option<Handle<Image>>,
-    pub ids: Option<HashMap<String, usize>>
+    pub ids: Option<HashMap<String, usize>>,
 }
 
 #[derive(Component, Resource)]
 pub struct ObjectAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
     pub image: Option<Handle<Image>>,
-    pub ids: Option<HashMap<String, usize>>
+    pub ids: Option<HashMap<String, usize>>,
 }
-
-
 
 // [Test]
 #[derive(Resource)]
 pub struct TestTextureAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
     pub image: Option<Handle<Image>>,
-    pub ids: Option<HashMap<String, usize>>
+    pub ids: Option<HashMap<String, usize>>,
 }
 
 impl Default for TestTextureAtlas {
@@ -79,7 +75,7 @@ impl Default for TestTextureAtlas {
         Self {
             layout: None,
             image: None,
-            ids: None
+            ids: None,
         }
     }
 }
@@ -100,7 +96,7 @@ impl TestTextureAtlas {
             texture: atlas.image.clone().unwrap(),
             atlas: TextureAtlas {
                 layout: atlas.layout.clone().unwrap(),
-                index: Self::get_index(&name, &atlas)
+                index: Self::get_index(&name, &atlas),
             },
             ..default()
         };
@@ -113,7 +109,7 @@ pub enum OrientationState {
     South,
     North,
     West,
-    East
+    East,
 }
 
 // для сторонозависимых атласов
@@ -121,7 +117,7 @@ pub enum OrientationState {
 pub struct DirectionAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
     pub image: Option<Handle<Image>>,
-    pub ids: Option<HashMap<String, usize>>
+    pub ids: Option<HashMap<String, usize>>,
 }
 
 impl Default for DirectionAtlas {
@@ -129,7 +125,7 @@ impl Default for DirectionAtlas {
         Self {
             layout: None,
             image: None,
-            ids: None
+            ids: None,
         }
     }
 }
@@ -149,15 +145,15 @@ impl DirectionAtlas {
         let texture = atlas.image.clone().unwrap();
         let atlas = TextureAtlas {
             layout: atlas.layout.clone().unwrap(),
-            index: Self::get_index(name, &atlas)
+            index: Self::get_index(name, &atlas),
         };
 
         (texture, atlas)
     }
 }
 
-/* 
-    Реализовать тут основные компоненты атласов, а точнее определение их и индексирование внутренних элементов, 
+/*
+    Реализовать тут основные компоненты атласов, а точнее определение их и индексирование внутренних элементов,
     чтобы в дальнейшем по id/имени к ним можно было обратиться, и применить их к объекту.
     Так же, нужно реализовать индексацию анимированных элементов, путём запоминания их с общей таблицы в отдельные, но с друг-другом взаимосвязанными
 */

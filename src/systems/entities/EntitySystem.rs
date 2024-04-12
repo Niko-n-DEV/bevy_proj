@@ -1,21 +1,21 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 use rand::Rng;
 
-use crate::{core::{
-    graphic::Atlas::{
-        DirectionAtlas, 
-        TestTextureAtlas
-    }, 
-    player::PlayerEntity::PlayerEntity, 
-    Entity::{
-        EntityBase, 
-        Health, 
-        //Position, 
-        //Speed, 
-        Velocity
-    }, 
-    Movement::DirectionState
-}, AppState};
+use crate::{
+    core::{
+        player::PlayerEntity::PlayerEntity,
+        resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
+        Entity::{
+            EntityBase,
+            Health,
+            //Position,
+            //Speed,
+            Velocity,
+        },
+        Movement::DirectionState,
+    },
+    AppState,
+};
 
 #[derive(Component)]
 pub struct EnemySpawner {
@@ -82,13 +82,13 @@ pub fn update_spawning(
                     texture: handle.image.clone().unwrap(),
                     atlas: TextureAtlas {
                         layout: handle.layout.clone().unwrap(),
-                        index: TestTextureAtlas::get_index("mob", &handle)
+                        index: TestTextureAtlas::get_index("mob", &handle),
                     },
                     transform: spawn_transform,
                     ..default()
                 })
                 .insert(EntityBase {
-                    health: Health(1.0),
+                    health: Health(2.0),
                     direction: DirectionState::South,
                     velocity: Velocity(Vec3::ZERO),
                     movable: true,
@@ -116,7 +116,6 @@ pub fn update_enemies(
 
     if let Ok((player_transform, _player)) = player_query.get_single() {
         for (mut transform, enemy, entity) in enemy_query.iter_mut() {
-            
             let moving = Vec3::normalize(player_transform.translation - transform.translation)
                 * enemy.speed.0
                 * time.delta_seconds();
@@ -135,11 +134,12 @@ pub struct EntitySystem;
 
 impl Plugin for EntitySystem {
     fn build(&self, app: &mut App) {
-        app
-            .add_event::<DirectionChangeEvent>()
-            .add_systems(Update, handle_direction_changed_events.run_if(in_state(AppState::Game)))
-            .add_systems(OnExit(AppState::Game), delete_enemy_spawner)
-        ;
+        app.add_event::<DirectionChangeEvent>()
+            .add_systems(
+                Update,
+                handle_direction_changed_events.run_if(in_state(AppState::Game)),
+            )
+            .add_systems(OnExit(AppState::Game), delete_enemy_spawner);
     }
 }
 
@@ -147,7 +147,7 @@ impl Plugin for EntitySystem {
 fn delete_enemy_spawner(
     mut commands: Commands,
     spawner: Query<Entity, With<EnemySpawner>>,
-    mut enemy: Query<Entity, With<Enemy>>
+    mut enemy: Query<Entity, With<Enemy>>,
 ) {
     if spawner.is_empty() && enemy.is_empty() {
         return;
@@ -178,7 +178,7 @@ pub struct DirectionChangeEvent(pub Entity, pub DirectionState);
 fn handle_direction_changed_events(
     mut _query: Query<(&mut EntityBase, &mut TextureAtlas)>,
     _handle_dir: Res<DirectionAtlas>,
-    mut event: EventReader<DirectionChangeEvent>
+    mut event: EventReader<DirectionChangeEvent>,
 ) {
     if event.is_empty() {
         return;
@@ -204,9 +204,7 @@ fn handle_direction_changed_events(
                     atlas.index = index_atlas + 2;
                     // info!("Hi - East")
                 }
-                DirectionState::None => {
-
-                }
+                DirectionState::None => {}
             }
         }
     }

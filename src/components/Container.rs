@@ -4,23 +4,38 @@ use bevy::prelude::*;
 use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
-    ObjType::{ItemType, ItemAndCount},
+    AppState,
     Debug::{GameError, GameErrorType},
-    AppState
+    ItemType::{ItemAndCount, ItemType},
 };
-
 
 #[derive(Component)]
 pub struct Container {
-    pub size: Option<i32>
+    pub items: Vec<Option<InventoryItemStack>>,
 }
 
-impl Default for Container {
-    fn default() -> Self {
-        Self {
-            size: None
-        }
-    }
+// impl Default for Container {
+//     fn default() -> Self {
+//         Self {
+//             size: None
+//         }
+//     }
+// }
+
+#[derive(Component, Debug, PartialEq, Reflect, Default, Clone)]
+//#[reflect(Schematic, Default)]
+pub struct ItemStack {
+    // pub obj_type: WorldObject,
+    pub count: usize,
+    // pub rarity: ItemRarity,
+    // pub attributes: ItemAttributes,
+    // pub metadata: ItemDisplayMetaData,
+}
+
+#[derive(Component, Debug, PartialEq, Clone)]
+pub struct InventoryItemStack {
+    pub item_stack: ItemStack,
+    pub slot: usize,
 }
 
 pub const INVENTORY_SIZE: usize = 7;
