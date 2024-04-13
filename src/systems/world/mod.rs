@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+#![allow(unused)]
 pub mod TileMap;
 pub mod World;
 
@@ -6,7 +7,7 @@ pub mod World;
 
 use bevy::prelude::*;
 
-use crate::AppState;
+use crate::{core::Entity::EntityBase, AppState};
 
 pub struct WorldTaskManager;
 
@@ -43,6 +44,19 @@ impl WorldTaskManager {
     /// функция выгрузки объектов
 
     /// функция выгрузки ентити
+    fn despawn_entities(
+        mut commands: Commands,
+        mut entities: Query<Entity, With<EntityBase>>,
+        //gun: Query<Entity, With<GunController>>,
+    ) {
+        if entities.is_empty()  {
+            return;
+        }
+    
+        for entities in entities.iter_mut() {
+            commands.entity(entities).despawn();
+        }
+    }
 
     /// Универсальная функция сохранения
     pub fn discharge_and_save() {}

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 /* Потом переделаю под снаряды */
-use crate::core::{player::PlayerEntity::PlayerEntity, Entity::EntityBase};
+use crate::core::{player::PlayerEntity::User, Entity::EntityBase};
 
 pub const BULLET_LIFETIME: f32 = 10.0;
 pub const BULLET_SPEED: f32 = 3000.;
@@ -42,7 +42,7 @@ pub fn update_bullet_hits(
     bullet_query: Query<(&Transform, Entity), (With<Bullet>, Without<EntityBase>)>,
     mut enemy_query: Query<
         (&mut EntityBase, &mut Transform),
-        (Without<Bullet>, Without<PlayerEntity>),
+        (Without<Bullet>, Without<User>),
     >,
 ) {
     if bullet_query.is_empty() {

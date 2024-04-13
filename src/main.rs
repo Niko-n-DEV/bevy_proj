@@ -33,7 +33,7 @@ mod core {
 
 use crate::core::{
     entities::EntitySystem::EntitySystem,
-    player::PlayerEntity::PlayerPlugin,
+    player::PlayerEntity::UserPlugin,
     resource::ResourcePlugin,
     world::World::WorldSystem,
     Camera::CameraController,
@@ -59,7 +59,7 @@ fn main() {
                         title: "SINT-et".to_string(),
                         resolution: WindowResolution::new(1280.0, 720.0),
                         resizable: true,
-                        present_mode: bevy::window::PresentMode::AutoNoVsync,
+                        present_mode: bevy::window::PresentMode::AutoVsync,
                         ..default()
                     }),
                     ..default()
@@ -85,7 +85,7 @@ fn main() {
         // Инициализация плагина камеры и пользовательского интерфейса
         .add_plugins((CameraController, UI))
         // Инициализация плагина игрока и [Test] Системы Мира
-        .add_plugins((EntitySystem, PlayerPlugin, WorldSystem)) //, TileMapPlugin))
+        .add_plugins((EntitySystem, UserPlugin, WorldSystem)) //, TileMapPlugin))
         // Инициализация StartUP функции setup
         .add_systems(Startup, setup)
         .run();

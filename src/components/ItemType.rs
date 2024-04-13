@@ -72,6 +72,7 @@ pub enum Ammo {
 }
 
 /// Структура для того, что может быть поднято
+#[allow(unused)]
 #[derive(Component, InspectorOptions)]
 pub struct Pickupable {
     pub(crate) item: ItemType,
@@ -89,25 +90,10 @@ impl std::fmt::Display for ItemAndCount {
     }
 }
 
-pub struct ItemsPlugin;
+#[allow(unused)]
+pub struct Items;
 
-impl Plugin for ItemsPlugin {
-    fn build(&self, app: &mut App) {
-        // app
-        //     // .add_systems(
-        //     //     OnEnter(AppState::Game),
-
-        //     //     //.with_system(Self::spawn_test_objects.after("graphics")),
-        //     // )
-        // .add_systems(
-        //     SystemSet::on_update(GameState::Main)
-        //         .with_system(Self::update_graphics)
-        //         .with_system(Self::world_object_growth),
-        // );
-    }
-}
-
-impl ItemsPlugin {
+impl Items {
     // Ticks the timers for everything in the world that can regrow and calls grow on them
     // fn world_object_growth(
     //     mut commands: Commands,

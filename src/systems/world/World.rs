@@ -5,8 +5,12 @@ use std::collections::HashMap;
 use crate::core::{
     entities::EntitySystem::EnemySpawner,
     items::Weapon::GunController,
-    player::PlayerEntity::{PlayerAttach, PlayerEntity},
-    resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
+    player::PlayerEntity::{
+        PlayerAttach, User
+    },
+    resource::graphic::Atlas::{
+        DirectionAtlas, TestTextureAtlas
+    },
     world::WorldTaskManager,
     AppState,
     Entity::*,
@@ -18,16 +22,20 @@ pub struct WorldSystem;
 
 impl Plugin for WorldSystem {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            OnEnter(AppState::LoadingInGame),
-            WorldTaskManager::load_data,
-        )
-        .add_systems(OnEnter(AppState::Game), (Self::setup, Self::init_world))
-        .init_resource::<WorldRes>()
-        .add_systems(
-            Update,
-            Self::load_chunk_around.run_if(in_state(AppState::Game)),
-        );
+        app
+            .add_systems(
+                OnEnter(AppState::LoadingInGame),
+                WorldTaskManager::load_data,
+            )
+            .add_systems(OnEnter(AppState::Game), (Self::setup, Self::init_world))
+            .init_resource::<WorldRes>()
+            .add_systems(
+                Update,
+                Self::load_chunk_around.run_if(in_state(AppState::Game)),
+            )
+            .add_systems(OnExit(AppState::Game), WorldTaskManager::despawn_entities)
+        ;
+
     }
 }
 
@@ -66,7 +74,9 @@ impl WorldSystem {
                 atlas,
                 ..default()
             },
-            PlayerEntity,
+            EntityType::Humonoid(HumonoidType::Human),
+            EntityNeutrality::Neutral,
+            User { ..default() },
             Name::new("Player"),
         ));
 
@@ -107,7 +117,7 @@ impl WorldSystem {
         asset_server: Res<AssetServer>,
         mut worldres: ResMut<WorldRes>,
         handle: Res<TestTextureAtlas>,
-        player_query: Query<(&mut Transform, &mut PlayerEntity)>,
+        player_query: Query<(&mut Transform, &mut User)>,
     ) {
         /*
                 По сути потоковая функция, которая будет прогружать территорию

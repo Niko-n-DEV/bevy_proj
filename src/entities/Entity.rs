@@ -1,10 +1,12 @@
 #![allow(unused)]
+use std::default;
+
 use bevy::prelude::*;
 
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
-use crate::core::{player::PlayerEntity::PlayerEntity, Movement::DirectionState};
+use crate::core::{player::PlayerEntity::User, Movement::DirectionState};
 
 /// Компонент отвечающий за [Здоровье]
 #[derive(Component)]
@@ -31,7 +33,6 @@ pub struct EntityBase {
     pub health: Health,
     pub position: Position,
     pub direction: DirectionState,
-    //pub sprite: SpriteSheetBundle,
     pub velocity: Velocity,
     pub movable: bool,
 }
@@ -43,7 +44,6 @@ impl Default for EntityBase {
             health: Health(1.),
             position: Position(Vec3::ZERO),
             direction: DirectionState::South,
-            //sprite: SpriteSheetBundle::default(),
             velocity: Velocity(Vec3::ZERO),
             movable: true,
         }
@@ -61,6 +61,15 @@ pub enum EntityState {
 pub enum EntityType {
     Humonoid(HumonoidType),
 }
+
+#[derive(Component, Default)]
+pub enum EntityNeutrality {
+    Hostile,
+    Friendly,
+    #[default]
+    Neutral
+}
+
 
 #[derive(Component)]
 pub enum HumonoidType {

@@ -8,7 +8,7 @@ use bevy_pancam::PanCam;
 
 // test
 // Для тестирования EntitiTiles
-use crate::{entities::player::PlayerEntity::PlayerEntity, entities::Entity::EntityBase, AppState};
+use crate::{entities::player::PlayerEntity::User, entities::Entity::EntityBase, AppState};
 
 use bevy_entitiles::tilemap::chunking::camera::CameraChunkUpdater;
 
@@ -133,7 +133,7 @@ impl CameraController {
             .spawn((
                 Camera2dBundle::default(),
                 CameraX,
-                CameraChunkUpdater::new(1.3, 2.2),
+                //CameraChunkUpdater::new(1.3, 2.2),
             ))
             .insert(PanCam {
                 grab_buttons: vec![MouseButton::Middle],
@@ -143,8 +143,8 @@ impl CameraController {
     }
 
     fn camera_follow_player(
-        mut player_query: Query<&Transform, With<PlayerEntity>>,
-        mut camera_query: Query<&mut Transform, (With<Camera2d>, Without<PlayerEntity>)>,
+        mut player_query: Query<&Transform, With<User>>,
+        mut camera_query: Query<&mut Transform, (With<Camera2d>, Without<User>)>,
         camera_res: Res<CameraXRes>,
     ) {
         if player_query.is_empty() || camera_query.is_empty() {

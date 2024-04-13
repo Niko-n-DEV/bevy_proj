@@ -3,14 +3,19 @@ use bevy::prelude::*;
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
-use crate::core::Entity::{Health, Position, Speed, Velocity};
 #[allow(unused_imports)]
 use crate::core::{
-    entities::EntitySystem::{update_enemies, update_spawning, DirectionChangeEvent, EnemySpawner},
+    entities::EntitySystem::{
+        update_enemies, 
+        update_spawning, 
+        DirectionChangeEvent, 
+        EnemySpawner,
+        Movement
+    },
     items::Weapon::*,
     resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
     AppState,
-    Entity::EntityBase,
+    Entity::{EntityBase, Position},
     Input::OffsetedCursorPosition,
     Input::{cursor_track, CursorPosition},
     Missile::*,
@@ -19,20 +24,32 @@ use crate::core::{
 
 #[derive(Component, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
-pub struct PlayerEntity; // Rename to User
+pub struct User {
+    pub uid: usize,
+    pub user_name: String
+}
+
+impl Default for User {
+    fn default() -> Self {
+        Self {
+            uid: 0,
+            user_name: "Niko_n".to_string()
+        }
+    }
+}
 
 //
 // Всё это под вырез, т.к. будет переносится в Entity System с взаимодействием с Entity, а player будет как свойство для entity
 //
-pub struct PlayerPlugin;
+pub struct UserPlugin;
 
-impl Plugin for PlayerPlugin {
+impl Plugin for UserPlugin {
     fn build(&self, app: &mut App) {
         app
             // Установка игрока при переходе в стостояние "игра"
             //.add_systems(OnEnter(AppState::Game), Self::spawn_player)
             // Регистрация типа "PlayerEntity" для индексации параметров в Инспекторе
-            .register_type::<PlayerEntity>()
+            .register_type::<User>()
             // Использование данных о позиции курсора из CursorPosition
             .init_resource::<CursorPosition>()
             // Инициализация чего-то (я сам до конца не понял)
@@ -65,41 +82,39 @@ impl Plugin for PlayerPlugin {
                 ),
             )
             // Инициализация "удаления" игрока при переходе из состояния "игра"
-            .add_systems(OnExit(AppState::Game), Self::despawn_player);
+            .add_systems(OnExit(AppState::Game), Self::despawn_gun);
     }
 }
 
-impl PlayerPlugin {
+impl UserPlugin {
     /// "Удаление" игрока
-    fn despawn_player(
+    fn despawn_gun(
         mut commands: Commands,
-        player: Query<Entity, With<PlayerEntity>>,
+        //player: Query<Entity, With<User>>,
         gun: Query<Entity, With<GunController>>,
     ) {
-        if let Ok(player) = player.get_single() {
-            commands.entity(player).despawn_recursive()
-        }
+        // if let Ok(player) = player.get_single() {
+        //     commands.entity(player).despawn_recursive()
+        // }
+
         if let Ok(gun) = gun.get_single() {
             commands.entity(gun).despawn_recursive()
         }
     }
 
-    // Query<(&mut Transform, &mut EntityBase), With<PlayerEntity>>
     /// Передвижение игрока
     fn player_movement(
-        mut entity_query: Query<(&mut Transform, &mut EntityBase), With<PlayerEntity>>,
-        player: Query<Entity, With<PlayerEntity>>,
+        mut entity_query: Query<(&mut Transform, &mut EntityBase, Entity), With<User>>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
         _mouse_input: Res<OffsetedCursorPosition>,
         mut change_dir_event: EventWriter<DirectionChangeEvent>,
-        time: Res<Time>,
+        mut move_event: EventWriter<Movement>
     ) {
         if entity_query.is_empty() {
             return;
         }
 
-        let entity = player.single();
-        for (mut transform, mut player) in &mut entity_query {
+        for (mut _transform, mut player, entity) in &mut entity_query {
             if player.movable {
                 let mut direction = Vec3::ZERO;
 
@@ -144,13 +159,15 @@ impl PlayerPlugin {
                 }
 
                 if direction != Vec3::ZERO {
-                    let new_pos = transform.translation
-                        + time.delta_seconds() * speed_var * direction.normalize();
-                    transform.translation = new_pos;
-                    player.position = Position(new_pos);
-                } else {
-                    transform.translation = player.position.0
-                }
+                    // let new_pos = transform.translation
+                    //     + time.delta_seconds() * speed_var * direction.normalize();
+                    // transform.translation = new_pos;
+                    // player.position = Position(new_pos);
+
+                    move_event.send(Movement(entity, direction.normalize(), speed_var));
+                } // else {
+                //     transform.translation = player.position.0
+                // }
             }
         }
     }
@@ -169,8 +186,8 @@ pub struct PlayerAttach {
 // Используется для применение этих данных объектам, для их привязки к игроку.
 
 pub fn attach_objects(
-    player_query: Query<(&PlayerEntity, &mut Transform), Without<PlayerAttach>>,
-    mut objects_query: Query<(&PlayerAttach, &mut Transform), Without<PlayerEntity>>,
+    player_query: Query<(&User, &mut Transform), Without<PlayerAttach>>,
+    mut objects_query: Query<(&PlayerAttach, &mut Transform), Without<User>>,
 ) {
     if let Ok((_, player_transform)) = player_query.get_single() {
         for (attach, mut transform) in objects_query.iter_mut() {

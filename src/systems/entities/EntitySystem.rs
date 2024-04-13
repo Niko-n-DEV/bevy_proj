@@ -3,19 +3,27 @@ use rand::Rng;
 
 use crate::{
     core::{
-        player::PlayerEntity::PlayerEntity,
+        player::PlayerEntity::User,
         resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
         Entity::{
             EntityBase,
             Health,
-            //Position,
+            Position,
             //Speed,
             Velocity,
+            EntityType,
+            HumonoidType,
+            EntityNeutrality
         },
         Movement::DirectionState,
     },
     AppState,
 };
+
+// ==============================
+// TEST
+// Enemy
+// ==============================
 
 #[derive(Component)]
 pub struct EnemySpawner {
@@ -94,7 +102,11 @@ pub fn update_spawning(
                     movable: true,
                     ..default()
                 })
-                .insert(Enemy);
+                .insert(Enemy)
+                .insert((
+                    EntityType::Humonoid(HumonoidType::Human),
+                    EntityNeutrality::Hostile,
+                ));
         }
     }
 }
@@ -107,19 +119,18 @@ pub fn update_spawning(
 pub fn update_enemies(
     mut commands: Commands,
     mut enemy_query: Query<(&mut Transform, &EntityBase, Entity), With<Enemy>>,
-    player_query: Query<(&Transform, &PlayerEntity), Without<Enemy>>,
-    time: Res<Time>,
+    player_query: Query<(&Transform, &User), Without<Enemy>>,
+    mut move_event: EventWriter<Movement>
 ) {
     if enemy_query.is_empty() || player_query.is_empty() {
         return;
     }
 
     if let Ok((player_transform, _player)) = player_query.get_single() {
-        for (mut transform, enemy, entity) in enemy_query.iter_mut() {
-            let moving = Vec3::normalize(player_transform.translation - transform.translation)
-                * enemy.speed.0
-                * time.delta_seconds();
-            transform.translation += moving;
+        for (transform, enemy, entity) in enemy_query.iter_mut() {
+            let direction = Vec3::normalize(player_transform.translation - transform.translation);
+
+            move_event.send(Movement(entity, direction.normalize(), enemy.speed.0));
 
             if enemy.health.0 <= 0. {
                 commands.entity(entity).despawn();
@@ -130,35 +141,93 @@ pub fn update_enemies(
     }
 }
 
+// ==============================
+// EntitySystem
+// ==============================
+
 pub struct EntitySystem;
 
 impl Plugin for EntitySystem {
     fn build(&self, app: &mut App) {
-        app.add_event::<DirectionChangeEvent>()
+        app
+            .add_event::<DirectionChangeEvent>()
+            .add_event::<Movement>()
             .add_systems(
                 Update,
-                handle_direction_changed_events.run_if(in_state(AppState::Game)),
+                (
+                    handle_direction_changed_events.run_if(in_state(AppState::Game)),
+                    handle_move.run_if(in_state(AppState::Game))
+                )
             )
-            .add_systems(OnExit(AppState::Game), delete_enemy_spawner);
+            .add_systems(OnExit(AppState::Game), delete_enemy_spawner)
+        ;
     }
 }
 
+// Перенести в world, т.к. этот компонет спавнера
 /// Удаление спавнера врагов при выходе из сцены игры
 fn delete_enemy_spawner(
     mut commands: Commands,
     spawner: Query<Entity, With<EnemySpawner>>,
-    mut enemy: Query<Entity, With<Enemy>>,
 ) {
-    if spawner.is_empty() && enemy.is_empty() {
+    if spawner.is_empty() { // && enemy.is_empty() {
         return;
     }
 
     if let Ok(spawner) = spawner.get_single() {
         commands.entity(spawner).despawn_recursive()
     }
+}
 
-    for entity in enemy.iter_mut() {
-        commands.entity(entity).despawn();
+// ==============================
+// Movement
+// ==============================
+
+#[derive(Event)]
+pub struct Movement(pub Entity, pub Vec3, pub f32);
+
+fn handle_move(
+    mut query: Query<(
+        &mut EntityBase, 
+        &mut Transform
+    )>,
+    mut event: EventReader<Movement>,
+    mut dir_event: EventWriter<DirectionChangeEvent>,
+    time: Res<Time>
+) {
+    if event.is_empty() {
+        return;
+    }
+
+    for event in event.read() {
+        if let Ok((mut entity_base, mut transform)) = query.get_mut(event.0) {
+            if event.1 != Vec3::ZERO {
+                dir_event.send(DirectionChangeEvent(event.0, determine_direction(event.1)));
+                transform.translation = transform.translation + time.delta_seconds() * event.2 * event.1;
+                entity_base.position = Position(transform.translation);
+            } else {
+                transform.translation = entity_base.position.0
+            }
+        }
+    }
+}
+
+/// Функция для определения направления на основе нормализованного вектора
+fn determine_direction(vector: Vec3) -> DirectionState {
+    if vector == Vec3::ZERO {
+        return DirectionState::None;
+    }
+
+    let angle = vector.y.atan2(vector.x).to_degrees().rem_euclid(360.0);
+
+    if angle > 45.0 && angle <= 135.0 {
+        return DirectionState::North;
+    } else if angle > 135.0 && angle <= 225.0 {
+        return DirectionState::West;
+    } else if angle > 225.0 && angle <= 315.0 {
+        return DirectionState::South;
+    } else {
+        return DirectionState::East;
     }
 }
 
@@ -176,7 +245,11 @@ pub struct DirectionChangeEvent(pub Entity, pub DirectionState);
 // скорее будет работать по ивенту, по типу if direction_entity_is_change -> изменение текстуры на другое направление
 /// Обновляет текстуру моба в зависимости от его направления
 fn handle_direction_changed_events(
-    mut _query: Query<(&mut EntityBase, &mut TextureAtlas)>,
+    mut _query: Query<(
+        &mut EntityBase, 
+        &mut TextureAtlas,
+        &EntityType
+    )>,
     _handle_dir: Res<DirectionAtlas>,
     mut event: EventReader<DirectionChangeEvent>,
 ) {
@@ -186,7 +259,7 @@ fn handle_direction_changed_events(
 
     let index_atlas = DirectionAtlas::get_index("human", &_handle_dir);
     for event in event.read() {
-        if let Ok((mut _entity_base, mut atlas)) = _query.get_mut(event.0) {
+        if let Ok((mut _entity_base, mut atlas, _entity_type)) = _query.get_mut(event.0) {
             match event.1 {
                 DirectionState::North => {
                     atlas.index = index_atlas + 1;
