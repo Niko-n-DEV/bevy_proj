@@ -1,6 +1,6 @@
-use crate::core::*;
+use bevy::prelude::*;
 
 pub struct Chunk {
     pub chunk_size: i32,
-    pub chunk_pos: Vec2
+    pub chunk_pos: IVec2
 }

@@ -26,6 +26,12 @@ pub struct Position(pub Vec3);
 #[derive(Component)]
 pub struct Velocity(pub Vec3);
 
+/// Компонент отвечающий за возможность атаки на сущность.
+/// 
+/// При значении `false` не даёт наносить урон сущности, давая её неуязвимость.
+#[derive(Component)]
+pub struct Attackable(pub bool);
+
 /// Базовый компонент отвечающий за основу [Entity]
 #[derive(Component)]
 pub struct EntityBase {
@@ -85,8 +91,24 @@ pub enum EntityGender {
     None,
 }
 
-// #[derive(Event)]
-// pub struct EntityCollisionEvent;
+#[derive(Component)]
+pub struct EntityObject {
+    pub health: Health,
+    pub position: Position,
+    pub direction: DirectionState,
+    pub movable: bool,
+}
+
+impl Default for EntityObject {
+    fn default() -> Self {
+        Self {
+            health: Health(1.),
+            position: Position(Vec3::ZERO),
+            direction: DirectionState::South,
+            movable: true,
+        }
+    }
+}
 
 #[derive(Component)]
 pub struct EntityMissile;

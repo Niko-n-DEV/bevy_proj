@@ -76,6 +76,10 @@ pub fn setup_ex(
 
     commands.spawn(SpriteBundle {
         texture: nearest_texture.clone(),
+        transform: Transform {
+            translation: Vec3 { x: -128., y: -128., z: 1. },
+            ..default()
+        },
         ..default()
     });
 

@@ -4,7 +4,10 @@ use bevy::{
     math::vec3,
     prelude::*,
 };
-use bevy_pancam::PanCam;
+use bevy_pancam::{
+    PanCam,
+    PanCamPlugin
+};
 
 // test
 // Для тестирования EntitiTiles
@@ -114,7 +117,9 @@ pub struct CameraController;
 
 impl Plugin for CameraController {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, Self::setup_camera)
+        app
+            .add_plugins(PanCamPlugin::default())
+            .add_systems(Startup, Self::setup_camera)
             .init_resource::<CameraXRes>()
             .add_systems(
                 Update,
@@ -136,7 +141,8 @@ impl CameraController {
                 //CameraChunkUpdater::new(1.3, 2.2),
             ))
             .insert(PanCam {
-                grab_buttons: vec![MouseButton::Middle],
+                grab_buttons: vec![],
+                zoom_to_cursor: false,
                 ..default()
             })
             .id();
@@ -162,12 +168,20 @@ impl CameraController {
 
     fn toggle_camera_fix(
         mut camera_res: ResMut<CameraXRes>,
+        mut cam: Query<&mut PanCam>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
         if keyboard_input.just_released(KeyCode::F1) {
+            let mut cam = cam.single_mut();
             if camera_res.player_fixed {
+                cam.grab_buttons = vec![MouseButton::Middle];
+                cam.zoom_to_cursor = true;
+
                 camera_res.player_fixed = false
             } else {
+                cam.grab_buttons = vec![];
+                cam.zoom_to_cursor = false;
+                
                 camera_res.player_fixed = true
             }
         }

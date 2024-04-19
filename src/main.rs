@@ -1,12 +1,5 @@
 use bevy::prelude::*;
 
-use bevy::{input::common_conditions::input_toggle_active, window::WindowResolution};
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
-
-use bevy_pancam::PanCamPlugin;
-
-use iyes_perf_ui::prelude::*;
-
 // Определение модулей
 
 mod components;
@@ -24,10 +17,6 @@ mod core {
     pub use crate::entities::*;
     pub use crate::systems::*;
 
-    //pub use crate::systems::graphic::*;
-
-    pub use crate::systems::interface::*;
-
     pub use crate::util::*;
 }
 
@@ -37,8 +26,13 @@ use crate::core::{
     resource::ResourcePlugin,
     world::World::WorldSystem,
     Camera::CameraController,
-    UI::UI, //, world::TileMap::TileMapPlugin
+    interface::UI::UI,
 };
+
+use bevy::{input::common_conditions::input_toggle_active, window::WindowResolution};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
+
+use iyes_perf_ui::prelude::*;
 
 fn main() {
     App::new()
@@ -66,7 +60,6 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest())
                 .build(),
-            PanCamPlugin::default(),
         ))
         // Плагин - Инспектор, для отладки и мониторинга элементов
         .add_plugins(

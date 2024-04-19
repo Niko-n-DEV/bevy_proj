@@ -2,6 +2,8 @@
 use bevy::{log::tracing_subscriber::fmt::format, prelude::*, transform::commands};
 use std::collections::HashMap;
 
+use bevy_entitiles::EntiTilesPlugin;
+
 use crate::core::{
     entities::EntitySystem::EnemySpawner,
     items::Weapon::GunController,
@@ -11,7 +13,16 @@ use crate::core::{
     resource::graphic::Atlas::{
         DirectionAtlas, TestTextureAtlas
     },
-    world::WorldTaskManager,
+    world::{
+        WorldTaskManager,
+        {
+            TileMap,
+            TileMap::{
+                LoadChunkPos, 
+                DischargeChunkPos
+            }
+        }
+    },
     AppState,
     Entity::*,
     Movement::DirectionState,
@@ -23,29 +34,47 @@ pub struct WorldSystem;
 impl Plugin for WorldSystem {
     fn build(&self, app: &mut App) {
         app
+            .add_plugins(EntiTilesPlugin)
+            .add_event::<LoadChunkPos>()
+            .add_event::<DischargeChunkPos>()
             .add_systems(
                 OnEnter(AppState::LoadingInGame),
-                WorldTaskManager::load_data,
+                (
+                    WorldTaskManager::load_data,
+                    TileMap::setup
+                )
             )
             .add_systems(OnEnter(AppState::Game), (Self::setup, Self::init_world))
             .init_resource::<WorldRes>()
             .add_systems(
                 Update,
-                Self::load_chunk_around.run_if(in_state(AppState::Game)),
+                (
+                    Self::load_chunk_around.run_if(in_state(AppState::Game)),
+                    TileMap::toggle.run_if(in_state(AppState::Game)),
+                    TileMap::fill_chunk.run_if(in_state(AppState::Game)),
+                    TileMap::clear_chunk.run_if(in_state(AppState::Game))
+                )
             )
-            .add_systems(OnExit(AppState::Game), WorldTaskManager::despawn_entities)
+            .add_systems(OnExit(AppState::Game), (
+                WorldTaskManager::despawn_entities,
+                WorldTaskManager::despawn_object
+            ))
         ;
 
     }
 }
 
 impl WorldSystem {
+
     fn setup(mut commands: Commands, asset_server: Res<AssetServer>, mut world: ResMut<WorldRes>) {
         let settings = Settings::load();
         world.player_render_distance = settings.rendering_distance;
         settings.save();
     }
 
+    /// Функция инициализации мира, где будет производиться загрузка всех компонентов мира.
+    /// 
+    /// Установка как задачи процессы загрузки ресурсов и прогрузки отдельных комплексных компонентов.
     fn init_world(
         mut commands: Commands,
         handle: Res<TestTextureAtlas>,
@@ -94,6 +123,9 @@ impl WorldSystem {
                 },
                 ..default()
             })
+            .insert(
+                EntityObject::default()
+            )
             .insert(PlayerAttach {
                 offset: Vec2::new(0., -3.),
             })
@@ -103,12 +135,12 @@ impl WorldSystem {
             });
 
         // не переходить часто с главного меню в игру и на оборот, дублируются!
-        commands
-            .spawn(TransformBundle { ..default() })
-            .insert(EnemySpawner {
-                cooldown: 1.,
-                timer: 1.,
-            });
+        // commands
+        //     .spawn(TransformBundle { ..default() })
+        //     .insert(EnemySpawner {
+        //         cooldown: 1.,
+        //         timer: 1.,
+        //     });
     }
 
     /// Функция для инициализации загрузки чанков вокруг игрока в пределах установленной прогрузки.
@@ -118,6 +150,8 @@ impl WorldSystem {
         mut worldres: ResMut<WorldRes>,
         handle: Res<TestTextureAtlas>,
         player_query: Query<(&mut Transform, &mut User)>,
+        mut chunk_load: EventWriter<LoadChunkPos>,
+        mut chunk_upload: EventWriter<DischargeChunkPos>
     ) {
         /*
                 По сути потоковая функция, которая будет прогружать территорию
@@ -172,7 +206,7 @@ impl WorldSystem {
 
             let mut chunks_to_discharge: Vec<IVec2> = Vec::new();
             // Проверяет в chunk, есть ли чанки, которые не входят в радиус прогрузки, чтобы их выгрузить
-            for (pos, _) in &worldres.chunks {
+            for (pos) in &worldres.chunk {
                 if !loaded_chunks_new.contains(pos) {
                     chunks_to_discharge.push(*pos);
                 }
@@ -180,62 +214,30 @@ impl WorldSystem {
             // Проверяет, есть ли чанки в списке на прогрузку, которые ещё не загружены, чтобы их загрузить.
             let mut chunks_to_upload: Vec<IVec2> = Vec::new();
             for chunk in &loaded_chunks_new {
-                if !worldres.chunks.contains_key(chunk) {
+                if !worldres.chunk.contains(chunk) {
                     chunks_to_upload.push(*chunk);
                 }
             }
 
-            for chunk in chunks_to_upload {
-                Self::create_chunk(&mut commands, &asset_server, &mut worldres, &handle, chunk);
-            }
-
             for chunk in chunks_to_discharge {
-                Self::despawn_chunk(&mut commands, &mut worldres, chunk);
-            }
-        }
-    }
+                println!("clear");
+                //Self::despawn_chunk(&mut commands, &mut worldres, chunk);
+                chunk_upload.send(DischargeChunkPos(chunk));
 
-    //временно
-    fn create_chunk(
-        commands: &mut Commands,
-        asset_server: &Res<AssetServer>,
-        world_res: &mut ResMut<WorldRes>,
-        handle: &Res<TestTextureAtlas>,
-        pos: IVec2,
-    ) -> Entity {
-        let chunk = commands
-            .spawn(SpriteSheetBundle {
-                sprite: Sprite {
-                    anchor: bevy::sprite::Anchor::BottomLeft,
-                    ..default()
-                },
-                texture: handle.image.clone().unwrap(),
-                atlas: TextureAtlas {
-                    layout: handle.layout.clone().unwrap(),
-                    index: TestTextureAtlas::get_index("dirt", &handle),
-                },
-                transform: Transform {
-                    translation: Vec3::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0, -1.0),
-                    scale: Vec3::new(16.0, 16.0, 0.0),
-                    ..default()
-                },
-                ..default()
-            })
-            .insert(Name::new(format!("{pos}_chunk")))
-            .id();
-        world_res.chunks.insert(pos, chunk);
-        chunk
-    }
-    fn despawn_chunk(
-        commands: &mut Commands,
-        world: &mut ResMut<WorldRes>,
-        //chunk: &Chunk,
-        pos: IVec2,
-    ) {
-        if let Some(entity) = world.chunks.remove(&pos) {
-            commands.entity(entity).despawn();
-        } else {
-            println!("despawn failed")
+                let chunk_list_len = worldres.chunk.len();
+                for index in 0..chunk_list_len-1 {
+                    if &chunk == worldres.chunk.get(index).unwrap() {
+                        worldres.chunk.remove(index);
+                    }
+                }
+            }
+
+            for chunk in chunks_to_upload {
+                println!("set");
+                //Self::create_chunk(&mut commands, &asset_server, &mut worldres, &handle, chunk);
+                chunk_load.send(LoadChunkPos(chunk));
+                worldres.chunk.push(chunk);
+            }
         }
     }
 
@@ -283,6 +285,7 @@ pub struct WorldRes {
     chunk_size_t: i32,
 
     chunks: HashMap<IVec2, Entity>,
+    chunk: Vec<IVec2>
 }
 
 impl Default for WorldRes {
@@ -295,6 +298,7 @@ impl Default for WorldRes {
             chunk_size_t: 256,
 
             chunks: HashMap::new(),
+            chunk: Vec::new()
         }
     }
 }

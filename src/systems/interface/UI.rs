@@ -3,7 +3,10 @@ use bevy::{app::AppExit, prelude::*, window::PrimaryWindow};
 
 use bevy_simple_text_input::{TextInputBundle, TextInputInactive, TextInputPlugin};
 
-use crate::core::{AppState, Styles::*};
+use crate::core::{
+    AppState, 
+    interface::Styles::*
+};
 
 // Main menu components =====
 #[derive(Component)]
@@ -52,8 +55,9 @@ pub struct UI;
 
 impl Plugin for UI {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::MainMenu), Self::spawn_main_menu)
-            .add_systems(Update, (transition_to_game_state, translation_to_main_menu))
+        app
+            .add_systems(OnEnter(AppState::MainMenu), Self::spawn_main_menu)
+            
             .init_resource::<GameUIRes>()
             .add_plugins(TextInputPlugin)
             .add_systems(
@@ -66,10 +70,12 @@ impl Plugin for UI {
                     focus.run_if(in_state(AppState::Game)),
                 ),
             )
-            .add_systems(Update, exit_game)
+            //.add_systems(Update, exit_game)
+            //.add_systems(Update, (transition_to_game_state, translation_to_main_menu))
             .add_systems(OnExit(AppState::MainMenu), Self::despawn_main_menu)
             .add_systems(OnEnter(AppState::Game), Self::spawn_game_ui)
-            .add_systems(OnExit(AppState::Game), Self::despawn_game_ui);
+            .add_systems(OnExit(AppState::Game), Self::despawn_game_ui)
+            ;
     }
 }
 
@@ -93,7 +99,7 @@ impl UI {
                         align_items: AlignItems::Center,
                         ..default()
                     },
-                    background_color: Color::rgb_u8(40, 40, 40).into(),
+                    background_color: DARK_LGRAY_COLOR.into(),
                     ..default()
                 },
                 MainMenu {},
@@ -199,7 +205,7 @@ impl UI {
                             padding: UiRect::all(Val::Px(10.0)),
                             ..default()
                         },
-                        background_color: Color::GRAY.into(),
+                        background_color: DARK_LGRAY_COLOR.into(),
                         ..default()
                     })
                     .with_children(|parent| {
@@ -345,7 +351,22 @@ impl UI {
                 if let Ok(parent) = parent_query.get_single() {
                     commands.entity(parent).with_children(|parent| {
                         parent
-                            .spawn((NodeBundle { ..default() }, DebugInfoPanel))
+                            .spawn((
+                                NodeBundle {
+                                    style: Style {
+                                        position_type: PositionType::Absolute,
+                                        width: Val::Percent(20.0),
+                                        height: Val::Percent(5.0),
+                                        align_items: AlignItems::Center,
+                                        align_self: AlignSelf::Start,
+                                        padding: UiRect::all(Val::Px(10.0)),
+                                        ..default()
+                                    },
+                                    background_color: Color::RED.into(),
+                                    ..default() 
+                                }, 
+                                DebugInfoPanel
+                            ))
                             .insert(Name::new("Debug"));
                     });
 

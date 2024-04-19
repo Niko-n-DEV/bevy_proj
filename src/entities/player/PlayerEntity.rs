@@ -81,26 +81,11 @@ impl Plugin for UserPlugin {
                     update_spawning.run_if(in_state(AppState::Game)),
                 ),
             )
-            // Инициализация "удаления" игрока при переходе из состояния "игра"
-            .add_systems(OnExit(AppState::Game), Self::despawn_gun);
+            ;
     }
 }
 
 impl UserPlugin {
-    /// "Удаление" игрока
-    fn despawn_gun(
-        mut commands: Commands,
-        //player: Query<Entity, With<User>>,
-        gun: Query<Entity, With<GunController>>,
-    ) {
-        // if let Ok(player) = player.get_single() {
-        //     commands.entity(player).despawn_recursive()
-        // }
-
-        if let Ok(gun) = gun.get_single() {
-            commands.entity(gun).despawn_recursive()
-        }
-    }
 
     /// Передвижение игрока
     fn player_movement(
@@ -131,25 +116,21 @@ impl UserPlugin {
                     dir_state = DirectionState::North;
                     dir_state_temp = DirectionState::North;
                     direction.y += 1.0;
-                    //change_dir_event.send(DirectionChangeEvent(entity, DirectionState::North));
                 }
                 if keyboard_input.pressed(KeyCode::KeyS) {
                     dir_state = DirectionState::South;
                     dir_state_temp = DirectionState::South;
                     direction.y -= 1.0;
-                    //change_dir_event.send(DirectionChangeEvent(entity, DirectionState::South));
                 }
                 if keyboard_input.pressed(KeyCode::KeyA) {
                     dir_state = DirectionState::West;
                     dir_state_temp = DirectionState::West;
                     direction.x -= 1.0;
-                    //change_dir_event.send(DirectionChangeEvent(entity, DirectionState::West));
                 }
                 if keyboard_input.pressed(KeyCode::KeyD) {
                     dir_state = DirectionState::East;
                     dir_state_temp = DirectionState::East;
                     direction.x += 1.0;
-                    //change_dir_event.send(DirectionChangeEvent(entity, DirectionState::East));
                 }
 
                 if player.direction != dir_state_temp {
@@ -159,15 +140,8 @@ impl UserPlugin {
                 }
 
                 if direction != Vec3::ZERO {
-                    // let new_pos = transform.translation
-                    //     + time.delta_seconds() * speed_var * direction.normalize();
-                    // transform.translation = new_pos;
-                    // player.position = Position(new_pos);
-
                     move_event.send(Movement(entity, direction.normalize(), speed_var));
-                } // else {
-                //     transform.translation = player.position.0
-                // }
+                }
             }
         }
     }
