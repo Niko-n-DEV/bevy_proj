@@ -1,7 +1,10 @@
-use bevy::{prelude::*, window::PrimaryWindow};
-use rand::Rng;
+use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 
-use crate::{
+//, window::PrimaryWindow};
+//use rand::Rng;
+
+use crate::
     core::{
         player::PlayerEntity::User,
         resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
@@ -10,15 +13,15 @@ use crate::{
             Health,
             Position,
             //Speed,
-            Velocity,
+            //Velocity,
             EntityType,
             HumonoidType,
             EntityNeutrality
         },
+        //ObjType::Collision,
         Movement::DirectionState,
-    },
-    AppState,
-};
+        AppState
+    };
 
 // ==============================
 // TEST
@@ -35,55 +38,17 @@ pub struct EnemySpawner {
 pub struct Enemy;
 
 pub fn update_spawning(
-    primary_query: Query<&Window, With<PrimaryWindow>>,
-    mut spawner_query: Query<&mut EnemySpawner>,
+    mut spawner_query: Query<(&mut EnemySpawner, &Transform)>,
     time: Res<Time>,
-    //asset_server: Res<AssetServer>,
     handle: Res<TestTextureAtlas>,
     mut commands: Commands,
 ) {
-    for mut spawner in spawner_query.iter_mut() {
+    for (mut spawner, trans) in spawner_query.iter_mut() {
         spawner.timer -= time.delta_seconds();
         if spawner.timer <= 0. {
-            let Ok(primary) = primary_query.get_single() else {
-                return;
-            };
 
             spawner.timer = spawner.cooldown;
-
-            let mut spawn_transform = Transform::from_scale(Vec3::splat(5.));
-
-            let mut rng = rand::thread_rng();
-
-            if rng.gen_range(0..2) == 1 {
-                if rng.gen_range(0..2) == 1 {
-                    spawn_transform.translation = Vec3::new(
-                        primary.width() / 2.,
-                        rng.gen_range(-primary.height() / 2.0..primary.height() / 2.0),
-                        0.,
-                    );
-                } else {
-                    spawn_transform.translation = Vec3::new(
-                        -primary.width() / 2.,
-                        rng.gen_range(-primary.height() / 2.0..primary.height() / 2.0),
-                        0.,
-                    );
-                }
-            } else {
-                if rng.gen_range(0..2) == 1 {
-                    spawn_transform.translation = Vec3::new(
-                        rng.gen_range(-primary.width() / 2.0..primary.width() / 2.0),
-                        primary.height() / 2.,
-                        0.,
-                    );
-                } else {
-                    spawn_transform.translation = Vec3::new(
-                        rng.gen_range(-primary.width() / 2.0..primary.width() / 2.0),
-                        -primary.height() / 2.,
-                        0.,
-                    );
-                }
-            }
+            let pos = trans.translation;
 
             commands
                 .spawn(SpriteSheetBundle {
@@ -92,13 +57,16 @@ pub fn update_spawning(
                         layout: handle.layout.clone().unwrap(),
                         index: TestTextureAtlas::get_index("mob", &handle),
                     },
-                    transform: spawn_transform,
+                    transform: Transform {
+                        translation: pos,
+                        ..default()
+                    },
                     ..default()
                 })
                 .insert(EntityBase {
                     health: Health(2.0),
                     direction: DirectionState::South,
-                    velocity: Velocity(Vec3::ZERO),
+                    //velocity: Velocity(Vec3::ZERO),
                     movable: true,
                     ..default()
                 })
@@ -106,7 +74,11 @@ pub fn update_spawning(
                 .insert((
                     EntityType::Humonoid(HumonoidType::Human),
                     EntityNeutrality::Hostile,
-                ));
+                ))
+                .insert(Velocity::zero())
+                .insert(RigidBody::Dynamic)
+                .insert(Collider::round_cuboid(2., 2., 0.01))
+                .insert(LockedAxes::ROTATION_LOCKED);
         }
     }
 }
@@ -120,7 +92,7 @@ pub fn update_enemies(
     mut commands: Commands,
     mut enemy_query: Query<(&mut Transform, &EntityBase, Entity), With<Enemy>>,
     player_query: Query<(&Transform, &User), Without<Enemy>>,
-    mut move_event: EventWriter<Movement>
+    mut move_event: EventWriter<MovementEntity>
 ) {
     if enemy_query.is_empty() || player_query.is_empty() {
         return;
@@ -130,7 +102,7 @@ pub fn update_enemies(
         for (transform, enemy, entity) in enemy_query.iter_mut() {
             let direction = Vec3::normalize(player_transform.translation - transform.translation);
 
-            move_event.send(Movement(entity, direction.normalize(), enemy.speed.0));
+            move_event.send(MovementEntity(entity, direction.normalize(), enemy.speed.0));
 
             if enemy.health.0 <= 0. {
                 commands.entity(entity).despawn();
@@ -150,8 +122,9 @@ pub struct EntitySystem;
 impl Plugin for EntitySystem {
     fn build(&self, app: &mut App) {
         app
+            .register_type::<EntityBase>()
             .add_event::<DirectionChangeEvent>()
-            .add_event::<Movement>()
+            .add_event::<MovementEntity>()
             .add_systems(
                 Update,
                 (
@@ -164,7 +137,7 @@ impl Plugin for EntitySystem {
     }
 }
 
-// Перенести в world, т.к. этот компонет спавнера
+// Перенести в world, т.к. эdSAтот компонет спавнера
 /// Удаление спавнера врагов при выходе из сцены игры
 fn delete_enemy_spawner(
     mut commands: Commands,
@@ -184,14 +157,16 @@ fn delete_enemy_spawner(
 // ==============================
 
 #[derive(Event)]
-pub struct Movement(pub Entity, pub Vec3, pub f32);
+pub struct MovementEntity(pub Entity, pub Vec3, pub f32);
 
 fn handle_move(
     mut query: Query<(
         &mut EntityBase, 
-        &mut Transform
+        &mut Transform,
+        &mut Velocity
     )>,
-    mut event: EventReader<Movement>,
+    //mut collision: Query<&Transform, With<Collision>>,
+    mut event: EventReader<MovementEntity>,
     mut dir_event: EventWriter<DirectionChangeEvent>,
     time: Res<Time>
 ) {
@@ -200,9 +175,10 @@ fn handle_move(
     }
 
     for event in event.read() {
-        if let Ok((mut entity_base, mut transform)) = query.get_mut(event.0) {
+        if let Ok((mut entity_base, mut transform, mut vel)) = query.get_mut(event.0) {
             if event.1 != Vec3::ZERO {
                 dir_event.send(DirectionChangeEvent(event.0, determine_direction(event.1)));
+                vel.linvel = Vec2::ZERO;
                 transform.translation = transform.translation + time.delta_seconds() * event.2 * event.1;
                 entity_base.position = Position(transform.translation);
             } else {
@@ -230,6 +206,17 @@ fn determine_direction(vector: Vec3) -> DirectionState {
         return DirectionState::East;
     }
 }
+
+/// Функция для определения коллизии в стороне направления движения
+// fn collision_check(
+//     target_pos: Transform,
+//     mut collision_query: Query<&Transform, With<Collision>>
+// ) -> bool {
+//     for collision_transform in collision_query.iter() {
+//         //let collision = collide();
+//     }
+//     true
+// }
 
 // Direction texture updater
 
@@ -262,22 +249,28 @@ fn handle_direction_changed_events(
         if let Ok((mut _entity_base, mut atlas, _entity_type)) = _query.get_mut(event.0) {
             match event.1 {
                 DirectionState::North => {
+                    _entity_base.direction = DirectionState::North;
                     atlas.index = index_atlas + 1;
                     // info!("Hi - North")
                 }
                 DirectionState::South => {
+                    _entity_base.direction = DirectionState::South;
                     atlas.index = index_atlas;
                     // info!("Hi - South")
                 }
                 DirectionState::West => {
+                    _entity_base.direction = DirectionState::West;
                     atlas.index = index_atlas + 3;
                     // info!("Hi - West")
                 }
                 DirectionState::East => {
+                    _entity_base.direction = DirectionState::East;
                     atlas.index = index_atlas + 2;
                     // info!("Hi - East")
                 }
-                DirectionState::None => {}
+                DirectionState::None => {
+                    _entity_base.direction = DirectionState::None;
+                }
             }
         }
     }

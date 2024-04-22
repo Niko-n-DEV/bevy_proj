@@ -1,8 +1,10 @@
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 
 // Определение модулей
 
 mod components;
+mod objects;
 mod entities;
 mod systems;
 mod util;
@@ -14,6 +16,8 @@ mod core {
     pub use crate::AppState;
 
     pub use crate::components::*;
+    #[allow(unused)]
+    pub use crate::objects::*;
     pub use crate::entities::*;
     pub use crate::systems::*;
 
@@ -60,7 +64,11 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest())
                 .build(),
+            // Физика
+            RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
+            RapierDebugRenderPlugin::default()
         ))
+        .insert_resource(Msaa::Off)
         // Плагин - Инспектор, для отладки и мониторинга элементов
         .add_plugins(
             WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F3)),

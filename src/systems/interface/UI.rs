@@ -49,6 +49,9 @@ const BACKGROUND_COLOR: Color = Color::rgb(0.15, 0.15, 0.15);
 
 #[derive(Component)]
 pub struct BackToMenuButton;
+
+#[derive(Component)]
+pub struct BarGui;
 // ==============================
 
 pub struct UI;
@@ -251,6 +254,24 @@ impl UI {
                             Name::new("CMDline"),
                             TextInputBundle::default().with_inactive(true),
                             CMDline,
+                        ));
+                        // === BarGui ===
+                        parent.spawn((
+                            NodeBundle {
+                                style: Style {
+                                    position_type: PositionType::Absolute,
+                                    left: Val::Percent(33.0),
+                                    bottom: Val::Percent(0.0),
+                                    width: Val::Percent(33.0),
+                                    height: Val::Percent(200.0),
+                                    align_self: AlignSelf::Center,
+                                    ..default()
+                                },
+                                background_color: NORMAL_BUTTON_COLOR.into(),
+                                ..default()
+                            },
+                            Name::new("BarGui"),
+                            BarGui
                         ));
                     });
             })

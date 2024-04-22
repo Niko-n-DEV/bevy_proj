@@ -56,6 +56,7 @@ pub fn update_bullet_hits(
             entity: entity,
         });
     }
+    
     let mut bullet_len = bullet_list.len();
     for (mut enemy, transform) in enemy_query.iter_mut() {
         let mut i: i32 = 0;

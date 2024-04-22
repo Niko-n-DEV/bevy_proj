@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
+use bevy_rapier2d::dynamics::Velocity;
 
 #[allow(unused_imports)]
 use crate::core::{
@@ -10,7 +11,7 @@ use crate::core::{
         update_spawning, 
         DirectionChangeEvent, 
         EnemySpawner,
-        Movement
+        MovementEntity
     },
     items::Weapon::*,
     resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
@@ -64,7 +65,7 @@ impl Plugin for UserPlugin {
             // [Test] Обновление системы управления оружием
             .add_systems(Update, gun_controls.run_if(in_state(AppState::Game)))
             // [Test] Соединение оружия и игрока
-            .add_systems(Update, attach_objects.run_if(in_state(AppState::Game)))
+            .add_systems(PostUpdate, attach_objects.run_if(in_state(AppState::Game)))
             // [Test] Обновление системы просчёта пуль и попадений
             .add_systems(
                 Update,
@@ -89,22 +90,18 @@ impl UserPlugin {
 
     /// Передвижение игрока
     fn player_movement(
-        mut entity_query: Query<(&mut Transform, &mut EntityBase, Entity), With<User>>,
+        mut entity_query: Query<(&mut Transform, &mut EntityBase, &mut Velocity, Entity), With<User>>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
         _mouse_input: Res<OffsetedCursorPosition>,
-        mut change_dir_event: EventWriter<DirectionChangeEvent>,
-        mut move_event: EventWriter<Movement>
+        mut move_event: EventWriter<MovementEntity>
     ) {
         if entity_query.is_empty() {
             return;
         }
 
-        for (mut _transform, mut player, entity) in &mut entity_query {
+        for (mut _transform, player, mut _vel, entity) in &mut entity_query {
             if player.movable {
                 let mut direction = Vec3::ZERO;
-
-                let mut dir_state_temp = DirectionState::default();
-                let mut dir_state = DirectionState::default();
 
                 let mut speed_var: f32 = player.speed.0;
 
@@ -113,34 +110,20 @@ impl UserPlugin {
                 }
 
                 if keyboard_input.pressed(KeyCode::KeyW) {
-                    dir_state = DirectionState::North;
-                    dir_state_temp = DirectionState::North;
                     direction.y += 1.0;
                 }
                 if keyboard_input.pressed(KeyCode::KeyS) {
-                    dir_state = DirectionState::South;
-                    dir_state_temp = DirectionState::South;
                     direction.y -= 1.0;
                 }
                 if keyboard_input.pressed(KeyCode::KeyA) {
-                    dir_state = DirectionState::West;
-                    dir_state_temp = DirectionState::West;
                     direction.x -= 1.0;
                 }
                 if keyboard_input.pressed(KeyCode::KeyD) {
-                    dir_state = DirectionState::East;
-                    dir_state_temp = DirectionState::East;
                     direction.x += 1.0;
                 }
 
-                if player.direction != dir_state_temp {
-                    change_dir_event.send(DirectionChangeEvent(entity, dir_state_temp));
-
-                    player.direction = dir_state;
-                }
-
                 if direction != Vec3::ZERO {
-                    move_event.send(Movement(entity, direction.normalize(), speed_var));
+                    move_event.send(MovementEntity(entity, direction.normalize(), speed_var));
                 }
             }
         }

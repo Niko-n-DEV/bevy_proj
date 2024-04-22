@@ -18,6 +18,9 @@ pub enum WorldObject {
     Plant(PlantType),
 }
 
+#[derive(Component)]
+pub struct Collision; 
+
 impl WorldObject {
     pub fn spawn(self, commands: &mut Commands, graphics: &TestTextureAtlas, position: Vec2) {
         // -> Entity {

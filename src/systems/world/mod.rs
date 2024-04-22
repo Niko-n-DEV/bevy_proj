@@ -8,10 +8,12 @@ pub mod World;
 
 use bevy::prelude::*;
 
-use crate::{
-    core::Entity::{
-        EntityBase, EntityObject
-    }, 
+use crate::core::{
+    Entity::{
+        EntityBase,
+        EntityObject
+    },
+    world::TileMap::TileM,
     AppState
 };
 
@@ -70,6 +72,19 @@ impl WorldTaskManager {
             return;
         }
     
+        for entities in entities.iter_mut() {
+            commands.entity(entities).despawn();
+        }
+    }
+
+    fn despawn_terrain(
+        mut commands: Commands,
+        mut entities: Query<Entity, With<TileM>>
+    ) {
+        if entities.is_empty()  {
+            return;
+        }
+
         for entities in entities.iter_mut() {
             commands.entity(entities).despawn();
         }

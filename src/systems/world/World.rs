@@ -1,5 +1,7 @@
-#![allow(unused)] // Удалить потом
-use bevy::{log::tracing_subscriber::fmt::format, prelude::*, transform::commands};
+//#![allow(unused)] // Удалить потом
+use bevy::prelude::{*, World};
+use bevy_rapier2d::prelude::{*, Collider, Velocity};
+
 use std::collections::HashMap;
 
 use bevy_entitiles::EntiTilesPlugin;
@@ -27,6 +29,7 @@ use crate::core::{
     Entity::*,
     Movement::DirectionState,
     Settings::Settings,
+    ObjType::Collision,
 };
 
 pub struct WorldSystem;
@@ -57,7 +60,8 @@ impl Plugin for WorldSystem {
             )
             .add_systems(OnExit(AppState::Game), (
                 WorldTaskManager::despawn_entities,
-                WorldTaskManager::despawn_object
+                WorldTaskManager::despawn_object,
+                WorldTaskManager::despawn_terrain
             ))
         ;
 
@@ -66,10 +70,17 @@ impl Plugin for WorldSystem {
 
 impl WorldSystem {
 
-    fn setup(mut commands: Commands, asset_server: Res<AssetServer>, mut world: ResMut<WorldRes>) {
+    fn setup(
+        mut commands: Commands, 
+        asset_server: Res<AssetServer>, 
+        mut world: ResMut<WorldRes>,
+        mut physics: ResMut<RapierConfiguration>
+    ) {
         let settings = Settings::load();
         world.player_render_distance = settings.rendering_distance;
         settings.save();
+
+        physics.gravity = Vec2::ZERO;
     }
 
     /// Функция инициализации мира, где будет производиться загрузка всех компонентов мира.
@@ -93,9 +104,8 @@ impl WorldSystem {
             EntityBase {
                 speed: Speed(50., 150., 25.),
                 health: Health(2.),
-                position: Position(Vec3::ZERO),
+                position: Position(Vec3::new(64., 64., 0.)),
                 direction: DirectionState::South,
-                velocity: Velocity(Vec3::ZERO),
                 movable: true,
             },
             SpriteSheetBundle {
@@ -107,7 +117,12 @@ impl WorldSystem {
             EntityNeutrality::Neutral,
             User { ..default() },
             Name::new("Player"),
-        ));
+        ))
+        .insert(Velocity::zero())
+        .insert(RigidBody::Dynamic)
+        .insert(Collider::round_cuboid(2., 2., 0.01))
+        .insert(LockedAxes::ROTATION_LOCKED)
+        ;//.insert(Ccd::enabled());
 
         // Спавн оружия и соединение с игроком
         commands
@@ -132,15 +147,34 @@ impl WorldSystem {
             .insert(GunController {
                 shoot_cooldown: 0.1,
                 shoot_timer: 0.,
-            });
+        });
+
+        // Стены
+        commands
+            .spawn(RigidBody::Fixed)
+            .insert(Collider::cuboid(5., 5.));
+        //     .insert(
+        //     ActiveCollisionTypes::all()
+        // );
 
         // не переходить часто с главного меню в игру и на оборот, дублируются!
-        // commands
-        //     .spawn(TransformBundle { ..default() })
-        //     .insert(EnemySpawner {
-        //         cooldown: 1.,
-        //         timer: 1.,
-        //     });
+        commands
+            .spawn(SpriteSheetBundle {
+                texture: handle.image.clone().unwrap(),
+                atlas: TextureAtlas {
+                    layout: handle.layout.clone().unwrap(),
+                    index: TestTextureAtlas::get_index("test_square", &handle),
+                },
+                transform: Transform {
+                    translation: Vec3::new(256.0, 256.0, 0.0),
+                    ..default()
+                },
+                ..default()
+            })
+            .insert(EnemySpawner {
+                cooldown: 1.,
+                timer: 1.,
+            });
     }
 
     /// Функция для инициализации загрузки чанков вокруг игрока в пределах установленной прогрузки.
@@ -220,7 +254,7 @@ impl WorldSystem {
             }
 
             for chunk in chunks_to_discharge {
-                println!("clear");
+                // println!("clear");
                 //Self::despawn_chunk(&mut commands, &mut worldres, chunk);
                 chunk_upload.send(DischargeChunkPos(chunk));
 
@@ -233,7 +267,7 @@ impl WorldSystem {
             }
 
             for chunk in chunks_to_upload {
-                println!("set");
+                // println!("set");
                 //Self::create_chunk(&mut commands, &asset_server, &mut worldres, &handle, chunk);
                 chunk_load.send(LoadChunkPos(chunk));
                 worldres.chunk.push(chunk);

@@ -21,6 +21,12 @@ use bevy_entitiles::{
 #[derive(Component)]
 pub struct TileM; 
 
+#[derive(Component)]
+pub struct TileMCollider;
+
+#[derive(Component)]
+pub struct TileMSemiCollider; 
+
 
 pub fn setup(mut commands: Commands, assets_server: Res<AssetServer>) {
 
@@ -48,28 +54,6 @@ pub fn setup(mut commands: Commands, assets_server: Res<AssetServer>) {
         ..Default::default()
     };
 
-    // for x in 0..10 {
-    //     for y in 0..10 {
-    //         tilemap.storage.set(
-    //             &mut commands,
-    //             IVec2 { x, y },
-    //             TileBuilder::new().with_layer(1, TileLayer::no_flip(7)),
-    //         );
-    //     }
-    // }
-
-    // tilemap.storage.set(
-    //     &mut commands,
-    //     IVec2 { x: 0, y: 0 },
-    //     TileBuilder::new().with_layer(1, TileLayer::no_flip(2)),
-    // );
-
-    // tilemap.storage.set(
-    //     &mut commands,
-    //     IVec2 { x: -1, y: -1 },
-    //     TileBuilder::new().with_layer(1, TileLayer::no_flip(1)),
-    // );
-
     commands.entity(entity).insert((tilemap, TileM));
 }
 
@@ -86,10 +70,6 @@ pub fn fill_chunk(
     }
 
     let (tilemap, mut storage) = tilem.single_mut();
-
-    // for t in tilem.iter() {
-    //     println!("{:?}", t);
-    // }
 
     for tilem_pos in tilem_pos.read() {
         for x in tilem_pos.0.x*16..tilem_pos.0.x*16+16 {
