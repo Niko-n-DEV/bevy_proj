@@ -4,6 +4,7 @@ use bevy::{app::AppExit, prelude::*, window::PrimaryWindow};
 use bevy_simple_text_input::{TextInputBundle, TextInputInactive, TextInputPlugin};
 
 use crate::core::{
+    entities::EntitySystem::EnemySpawner,
     AppState, 
     interface::Styles::*
 };
@@ -70,6 +71,7 @@ impl Plugin for UI {
                     Self::interact_with_quit_button.run_if(in_state(AppState::MainMenu)),
                     Self::interact_with_to_menu_button.run_if(in_state(AppState::Game)),
                     Self::debug_toggle.run_if(in_state(AppState::Game)),
+                    interact_with_toggle_spawners_button.run_if(check_debug_toggle),
                     focus.run_if(in_state(AppState::Game)),
                 ),
             )
@@ -377,17 +379,45 @@ impl UI {
                                     style: Style {
                                         position_type: PositionType::Absolute,
                                         width: Val::Percent(20.0),
-                                        height: Val::Percent(5.0),
+                                        height: Val::Percent(75.0),
                                         align_items: AlignItems::Center,
-                                        align_self: AlignSelf::Start,
+                                        align_self: AlignSelf::Center,
                                         padding: UiRect::all(Val::Px(10.0)),
                                         ..default()
                                     },
-                                    background_color: Color::RED.into(),
+                                    background_color: DARK_LGRAY_COLOR.into(),
                                     ..default() 
                                 }, 
                                 DebugInfoPanel
                             ))
+                            .with_children(|parent| {
+                                // === Toggle spawners button ===
+                                parent
+                                .spawn((
+                                    ButtonBundle {
+                                        style: button_container_style(25.0, 60.0),
+                                        border_color: Color::BLACK.into(),
+                                        background_color: NORMAL_BUTTON_COLOR.into(),
+                                        ..default()
+                                    },
+                                    ToggleSpawnersButton {},
+                                ))
+                                .with_children(|parent| {
+                                    parent.spawn(TextBundle {
+                                        text: Text {
+                                            sections: vec![TextSection::new(
+                                                "Spawner",
+                                                TextStyle {
+                                                    font_size: 11.0,
+                                                    ..default()
+                                                },
+                                            )],
+                                            ..default()
+                                        },
+                                        ..default()
+                                    });
+                                });
+                            })
                             .insert(Name::new("Debug"));
                     });
 
@@ -398,6 +428,49 @@ impl UI {
                     commands.entity(child).despawn_recursive();
                     parent_state.debug_toggle = false;
                 }
+            }
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct ToggleSpawnersButton {}
+
+fn check_debug_toggle(
+    check_res: Res<GameUIRes>,
+) -> bool {
+    check_res.debug_toggle
+}
+
+pub fn interact_with_toggle_spawners_button(
+    mut button_query: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<ToggleSpawnersButton>),
+    >,
+    mut spawners: Query<(Entity, &mut EnemySpawner), With<EnemySpawner>>
+) {
+    if spawners.is_empty() && button_query.is_empty() {
+        return;
+    }
+
+    if let Ok((interaction, mut background_color)) = button_query.get_single_mut() {
+        match *interaction {
+            Interaction::Pressed => {
+                *background_color = PRESSED_BUTTON_COLOR.into();
+
+                for (_, mut spawner) in spawners.iter_mut() {
+                    if spawner.is_active {
+                        spawner.is_active = false
+                    } else {
+                        spawner.is_active = true
+                    }
+                }
+            }
+            Interaction::Hovered => {
+                *background_color = HOVERED_BUTTON_COLOR.into();
+            }
+            Interaction::None => {
+                *background_color = NORMAL_BUTTON_COLOR.into();
             }
         }
     }

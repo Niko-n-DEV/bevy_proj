@@ -1,8 +1,8 @@
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
-use bevy_rapier2d::dynamics::Velocity;
 
 #[allow(unused_imports)]
 use crate::core::{
@@ -21,6 +21,7 @@ use crate::core::{
     Input::{cursor_track, CursorPosition},
     Missile::*,
     Movement::DirectionState,
+    world::World::WorldSystem
 };
 
 #[derive(Component, InspectorOptions, Reflect)]
@@ -58,7 +59,10 @@ impl Plugin for UserPlugin {
             // Передвижение игрока
             .add_systems(
                 Update,
-                Self::player_movement.run_if(in_state(AppState::Game)),
+                (
+                    Self::player_movement.run_if(in_state(AppState::Game)),
+                    Self::place_wall.run_if(in_state(AppState::Game))
+                )
             )
             // Обновление информации о позиции курсора
             .add_systems(PreUpdate, cursor_track.run_if(in_state(AppState::Game)))
@@ -126,6 +130,34 @@ impl UserPlugin {
                     move_event.send(MovementEntity(entity, direction.normalize(), speed_var));
                 }
             }
+        }
+    }
+
+    // Test
+    /// Установка стены
+    fn place_wall(
+        mut commands: Commands,
+        cursor: Res<CursorPosition>,
+        keyboard_input: Res<ButtonInput<KeyCode>>,
+        _buttons: Res<ButtonInput<MouseButton>>,
+    ) {
+        let cursor_pos = cursor.0;
+
+        if keyboard_input.just_pressed(KeyCode::KeyE) {
+            let tiled_pos = WorldSystem::get_currect_chunk_tile(cursor_pos.as_ivec2());
+            commands
+            .spawn((
+                RigidBody::Fixed,
+                TransformBundle {
+                    local: Transform {
+                        translation: Vec3::new(tiled_pos.x as f32 * 16. + 8., tiled_pos.y as f32 * 16. + 8., 0.),
+                        ..default()
+                    },
+                    ..default()
+                }
+            ))
+            .insert(Collider::cuboid(8., 8.))
+            .insert(Name::new("Wall"));
         }
     }
 }

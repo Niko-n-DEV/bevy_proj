@@ -150,12 +150,9 @@ impl WorldSystem {
         });
 
         // Стены
-        commands
-            .spawn(RigidBody::Fixed)
-            .insert(Collider::cuboid(5., 5.));
-        //     .insert(
-        //     ActiveCollisionTypes::all()
-        // );
+        // commands
+        //     .spawn(RigidBody::Fixed)
+        // .insert(Collider::cuboid(5., 5.));
 
         // не переходить часто с главного меню в игру и на оборот, дублируются!
         commands
@@ -172,6 +169,7 @@ impl WorldSystem {
                 ..default()
             })
             .insert(EnemySpawner {
+                is_active: false,
                 cooldown: 1.,
                 timer: 1.,
             });
@@ -239,25 +237,37 @@ impl WorldSystem {
             }
 
             let mut chunks_to_discharge: Vec<IVec2> = Vec::new();
+            let mut chunks_to_discharge_test: Vec<IVec2> = Vec::new();
             // Проверяет в chunk, есть ли чанки, которые не входят в радиус прогрузки, чтобы их выгрузить
             for (pos) in &worldres.chunk {
                 if !loaded_chunks_new.contains(pos) {
                     chunks_to_discharge.push(*pos);
                 }
             }
+            // test
+            for (pos, _) in &worldres.chunks {
+                if !loaded_chunks_new.contains(pos) {
+                    chunks_to_discharge_test.push(*pos);
+                }
+            }
+
             // Проверяет, есть ли чанки в списке на прогрузку, которые ещё не загружены, чтобы их загрузить.
             let mut chunks_to_upload: Vec<IVec2> = Vec::new();
+            let mut chunks_to_upload_test: Vec<IVec2> = Vec::new();
             for chunk in &loaded_chunks_new {
                 if !worldres.chunk.contains(chunk) {
                     chunks_to_upload.push(*chunk);
                 }
             }
+            // test
+            for chunk in &loaded_chunks_new {
+                if !worldres.chunks.contains_key(chunk) {
+                    chunks_to_upload_test.push(*chunk);
+                }
+            }
 
             for chunk in chunks_to_discharge {
-                // println!("clear");
-                //Self::despawn_chunk(&mut commands, &mut worldres, chunk);
                 chunk_upload.send(DischargeChunkPos(chunk));
-
                 let chunk_list_len = worldres.chunk.len();
                 for index in 0..chunk_list_len-1 {
                     if &chunk == worldres.chunk.get(index).unwrap() {
@@ -267,11 +277,63 @@ impl WorldSystem {
             }
 
             for chunk in chunks_to_upload {
-                // println!("set");
-                //Self::create_chunk(&mut commands, &asset_server, &mut worldres, &handle, chunk);
                 chunk_load.send(LoadChunkPos(chunk));
                 worldres.chunk.push(chunk);
             }
+
+            // test
+            for chunk in chunks_to_upload_test {
+                Self::create_chunk(&mut commands, &asset_server, &mut worldres, &handle, chunk);
+            }
+            for chunk in chunks_to_discharge_test {
+                Self::despawn_chunk(&mut commands, &mut worldres, chunk);
+            }
+        }
+    }
+
+    // ==============================
+    // TEST
+    // ==============================
+    fn create_chunk(
+        commands: &mut Commands,
+        asset_server: &Res<AssetServer>,
+        world_res: &mut ResMut<WorldRes>,
+        handle: &Res<TestTextureAtlas>,
+        pos: IVec2,
+    ) -> Entity {
+        let chunk = commands
+            .spawn(SpriteSheetBundle {
+                sprite: Sprite {
+                    anchor: bevy::sprite::Anchor::BottomLeft,
+                    ..default()
+                },
+                texture: handle.image.clone().unwrap(),
+                atlas: TextureAtlas {
+                    layout: handle.layout.clone().unwrap(),
+                    index: TestTextureAtlas::get_index("dirt", &handle),
+                },
+                transform: Transform {
+                    translation: Vec3::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0, -1.0),
+                    scale: Vec3::new(16.0, 16.0, 0.0),
+                    ..default()
+                },
+                ..default()
+            })
+            .insert(Name::new(format!("{pos}_chunk")))
+            .id();
+        world_res.chunks.insert(pos, chunk);
+        chunk
+    }
+    fn despawn_chunk(
+        commands: &mut Commands,
+        world: &mut ResMut<WorldRes>,
+        //chunk: &Chunk,
+        pos: IVec2,
+    ) {
+        if let Some(entity) = world.chunks.remove(&pos) {
+            commands.entity(entity).despawn();
+        } else {
+            println!("despawn failed")
         }
     }
 
@@ -286,7 +348,7 @@ impl WorldSystem {
     }
 
     /// Функция для форматирования значения чанков по координатной системе
-    fn get_format_current_chunk(input_var: IVec2) -> IVec2 {
+    pub fn get_format_current_chunk(input_var: IVec2) -> IVec2 {
         //IVec2::new(input_var.x / 256 + if input_var.x % 256 < 0 { -1 } else { 0 }, input_var.y / 256 + if input_var.y % 256 < 0 { -1 } else { 0 }) // Godot version, incurrent
         let mut chunk_x = input_var.x / 256;
         let mut chunk_y = input_var.y / 256;
@@ -302,7 +364,22 @@ impl WorldSystem {
     /// Функция для определения точных координат тайла в чанке
     ///
     /// Определяется по данной позиции и позиции чанка, делением на общий размер одного тайла
-    pub fn get_currect_chunk_tile(input_var: IVec2) {}
+    pub fn get_currect_chunk_tile(input_var: IVec2) -> IVec2 {
+        let cell_size = 16;
+        let result: IVec2 = IVec2::new(
+            if input_var.x >= 0 {
+                input_var.x / cell_size
+            } else {
+                (input_var.x - cell_size + 1) / cell_size
+            },
+            if input_var.y >= 0 {
+                input_var.y / cell_size
+            } else {
+                (input_var.y - cell_size + 1) / cell_size
+            }
+        );
+        result
+    }
 
     /// Функция для определения координат тайла в пределах чанка
     ///

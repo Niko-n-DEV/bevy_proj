@@ -30,6 +30,7 @@ use crate::
 
 #[derive(Component)]
 pub struct EnemySpawner {
+    pub is_active: bool,
     pub cooldown: f32,
     pub timer: f32,
 }
@@ -44,41 +45,43 @@ pub fn update_spawning(
     mut commands: Commands,
 ) {
     for (mut spawner, trans) in spawner_query.iter_mut() {
-        spawner.timer -= time.delta_seconds();
-        if spawner.timer <= 0. {
+        if spawner.is_active {
+            spawner.timer -= time.delta_seconds();
+            if spawner.timer <= 0. {
 
-            spawner.timer = spawner.cooldown;
-            let pos = trans.translation;
+                spawner.timer = spawner.cooldown;
+                let pos = trans.translation;
 
-            commands
-                .spawn(SpriteSheetBundle {
-                    texture: handle.image.clone().unwrap(),
-                    atlas: TextureAtlas {
-                        layout: handle.layout.clone().unwrap(),
-                        index: TestTextureAtlas::get_index("mob", &handle),
-                    },
-                    transform: Transform {
-                        translation: pos,
+                commands
+                    .spawn(SpriteSheetBundle {
+                        texture: handle.image.clone().unwrap(),
+                        atlas: TextureAtlas {
+                            layout: handle.layout.clone().unwrap(),
+                            index: TestTextureAtlas::get_index("mob", &handle),
+                        },
+                        transform: Transform {
+                            translation: pos,
+                            ..default()
+                        },
                         ..default()
-                    },
-                    ..default()
-                })
-                .insert(EntityBase {
-                    health: Health(2.0),
-                    direction: DirectionState::South,
-                    //velocity: Velocity(Vec3::ZERO),
-                    movable: true,
-                    ..default()
-                })
-                .insert(Enemy)
-                .insert((
-                    EntityType::Humonoid(HumonoidType::Human),
-                    EntityNeutrality::Hostile,
-                ))
-                .insert(Velocity::zero())
-                .insert(RigidBody::Dynamic)
-                .insert(Collider::round_cuboid(2., 2., 0.01))
-                .insert(LockedAxes::ROTATION_LOCKED);
+                    })
+                    .insert(EntityBase {
+                        health: Health(2.0),
+                        direction: DirectionState::South,
+                        //velocity: Velocity(Vec3::ZERO),
+                        movable: true,
+                        ..default()
+                    })
+                    .insert(Enemy)
+                    .insert((
+                        EntityType::Humonoid(HumonoidType::Human),
+                        EntityNeutrality::Hostile,
+                    ))
+                    .insert(Velocity::zero())
+                    .insert(RigidBody::Dynamic)
+                    .insert(Collider::round_cuboid(2., 2., 0.01))
+                    .insert(LockedAxes::ROTATION_LOCKED);
+            }
         }
     }
 }
