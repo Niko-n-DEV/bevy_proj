@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
-use bevy_inspector_egui::prelude::ReflectInspectorOptions;
+//use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
 #[allow(unused_imports)]
@@ -17,86 +17,36 @@ use crate::core::{
     resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
     AppState,
     Entity::{EntityBase, Position},
-    Input::OffsetedCursorPosition,
-    Input::{cursor_track, CursorPosition},
+    UserSystem::CursorPosition,
     Missile::*,
     Movement::DirectionState,
-    world::World::WorldSystem
+    world::World::WorldSystem,
+    UserSystem::User
 };
-
-#[derive(Component, InspectorOptions, Reflect)]
-#[reflect(Component, InspectorOptions)]
-pub struct User {
-    pub uid: usize,
-    pub user_name: String
-}
-
-impl Default for User {
-    fn default() -> Self {
-        Self {
-            uid: 0,
-            user_name: "Niko_n".to_string()
-        }
-    }
-}
 
 //
 // Всё это под вырез, т.к. будет переносится в Entity System с взаимодействием с Entity, а player будет как свойство для entity
 //
-pub struct UserPlugin;
+pub struct PlayerPlugin;
 
-impl Plugin for UserPlugin {
+impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
-            // Установка игрока при переходе в стостояние "игра"
-            //.add_systems(OnEnter(AppState::Game), Self::spawn_player)
-            // Регистрация типа "PlayerEntity" для индексации параметров в Инспекторе
-            .register_type::<User>()
-            // Использование данных о позиции курсора из CursorPosition
-            .init_resource::<CursorPosition>()
-            // Инициализация чего-то (я сам до конца не понял)
-            .insert_resource(OffsetedCursorPosition { x: 0., y: 0. })
             // Передвижение игрока
-            .add_systems(
-                Update,
-                (
-                    Self::player_movement.run_if(in_state(AppState::Game)),
-                    Self::place_wall.run_if(in_state(AppState::Game))
-                )
-            )
-            // Обновление информации о позиции курсора
-            .add_systems(PreUpdate, cursor_track.run_if(in_state(AppState::Game)))
+            .add_systems(Update, Self::player_movement.run_if(in_state(AppState::Game)))
             // [Test] Обновление системы управления оружием
             .add_systems(Update, gun_controls.run_if(in_state(AppState::Game)))
             // [Test] Соединение оружия и игрока
             .add_systems(PostUpdate, attach_objects.run_if(in_state(AppState::Game)))
-            // [Test] Обновление системы просчёта пуль и попадений
-            .add_systems(
-                Update,
-                (
-                    update_bullets.run_if(in_state(AppState::Game)),
-                    update_bullet_hits.run_if(in_state(AppState::Game)),
-                ),
-            )
-            // [Test] Обновление системы просчёта врагов и их спавна
-            .add_systems(
-                Update,
-                (
-                    update_enemies.run_if(in_state(AppState::Game)),
-                    update_spawning.run_if(in_state(AppState::Game)),
-                ),
-            )
             ;
     }
 }
 
-impl UserPlugin {
-
+impl PlayerPlugin {
     /// Передвижение игрока
     fn player_movement(
         mut entity_query: Query<(&mut Transform, &mut EntityBase, &mut Velocity, Entity), With<User>>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
-        _mouse_input: Res<OffsetedCursorPosition>,
         mut move_event: EventWriter<MovementEntity>
     ) {
         if entity_query.is_empty() {
@@ -130,34 +80,6 @@ impl UserPlugin {
                     move_event.send(MovementEntity(entity, direction.normalize(), speed_var));
                 }
             }
-        }
-    }
-
-    // Test
-    /// Установка стены
-    fn place_wall(
-        mut commands: Commands,
-        cursor: Res<CursorPosition>,
-        keyboard_input: Res<ButtonInput<KeyCode>>,
-        _buttons: Res<ButtonInput<MouseButton>>,
-    ) {
-        let cursor_pos = cursor.0;
-
-        if keyboard_input.just_pressed(KeyCode::KeyE) {
-            let tiled_pos = WorldSystem::get_currect_chunk_tile(cursor_pos.as_ivec2());
-            commands
-            .spawn((
-                RigidBody::Fixed,
-                TransformBundle {
-                    local: Transform {
-                        translation: Vec3::new(tiled_pos.x as f32 * 16. + 8., tiled_pos.y as f32 * 16. + 8., 0.),
-                        ..default()
-                    },
-                    ..default()
-                }
-            ))
-            .insert(Collider::cuboid(8., 8.))
-            .insert(Name::new("Wall"));
         }
     }
 }

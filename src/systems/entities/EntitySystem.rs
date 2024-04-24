@@ -6,7 +6,7 @@ use bevy_rapier2d::prelude::*;
 
 use crate::
     core::{
-        player::PlayerEntity::User,
+        UserSystem::User,
         resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
         Entity::{
             EntityBase,
@@ -20,6 +20,7 @@ use crate::
         },
         //ObjType::Collision,
         Movement::DirectionState,
+        Missile::{update_bullet_hits, update_bullets},
         AppState
     };
 
@@ -132,8 +133,25 @@ impl Plugin for EntitySystem {
                 Update,
                 (
                     handle_direction_changed_events.run_if(in_state(AppState::Game)),
-                    handle_move.run_if(in_state(AppState::Game))
+                    handle_move.run_if(in_state(AppState::Game)),
+                    inertia_attenuation.run_if(in_state(AppState::Game))
                 )
+            )
+            // [Test] Обновление системы просчёта пуль и попадений
+            .add_systems(
+                Update,
+                (
+                    update_bullets.run_if(in_state(AppState::Game)),
+                    update_bullet_hits.run_if(in_state(AppState::Game)),
+                ),
+            )
+            // [Test] Обновление системы просчёта врагов и их спавна
+            .add_systems(
+                Update,
+                (
+                    update_enemies.run_if(in_state(AppState::Game)),
+                    update_spawning.run_if(in_state(AppState::Game)),
+                ),
             )
             .add_systems(OnExit(AppState::Game), delete_enemy_spawner)
         ;
@@ -178,15 +196,33 @@ fn handle_move(
     }
 
     for event in event.read() {
-        if let Ok((mut entity_base, mut transform, mut vel)) = query.get_mut(event.0) {
+        if let Ok((mut entity_base, mut transform, mut _vel)) = query.get_mut(event.0) {
             if event.1 != Vec3::ZERO {
                 dir_event.send(DirectionChangeEvent(event.0, determine_direction(event.1)));
-                vel.linvel = Vec2::ZERO;
+                //vel.linvel = Vec2::ZERO;
                 transform.translation = transform.translation + time.delta_seconds() * event.2 * event.1;
                 entity_base.position = Position(transform.translation);
             } else {
                 transform.translation = entity_base.position.0
             }
+        }
+    }
+}
+
+fn inertia_attenuation(
+    mut query: Query<&mut Velocity, With<EntityBase>>,
+    time: Res<Time>
+) {
+    if query.is_empty() {
+        return;
+    }
+
+    let damping_coefficient = 0.9;
+
+    for mut vel in query.iter_mut() {
+        if vel.linvel != Vec2::ZERO {
+            vel.linvel.x *= damping_coefficient * time.delta_seconds();
+            vel.linvel.y *= damping_coefficient * time.delta_seconds();
         }
     }
 }

@@ -3,7 +3,6 @@
 use bevy::prelude::*;
 
 pub mod Container;
-pub mod Input;
 pub mod ItemType;
 pub mod Missile;
 pub mod Movement;

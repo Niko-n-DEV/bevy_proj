@@ -1,6 +1,6 @@
 //#![allow(unused)] // Удалить потом
 use bevy::prelude::{*, World};
-use bevy_rapier2d::prelude::{*, Collider, Velocity};
+use bevy_rapier2d::{prelude::{Collider, Velocity, *}, rapier::dynamics::RigidBodyDamping};
 
 use std::collections::HashMap;
 
@@ -9,9 +9,7 @@ use bevy_entitiles::EntiTilesPlugin;
 use crate::core::{
     entities::EntitySystem::EnemySpawner,
     items::Weapon::GunController,
-    player::PlayerEntity::{
-        PlayerAttach, User
-    },
+    player::PlayerEntity::PlayerAttach,
     resource::graphic::Atlas::{
         DirectionAtlas, TestTextureAtlas
     },
@@ -23,13 +21,15 @@ use crate::core::{
                 LoadChunkPos, 
                 DischargeChunkPos
             }
-        }
+        },
+        chunk::Chunk::Chunk
     },
     AppState,
     Entity::*,
     Movement::DirectionState,
     Settings::Settings,
     ObjType::Collision,
+    UserSystem::User
 };
 
 pub struct WorldSystem;
@@ -49,6 +49,7 @@ impl Plugin for WorldSystem {
             )
             .add_systems(OnEnter(AppState::Game), (Self::setup, Self::init_world))
             .init_resource::<WorldRes>()
+            .init_resource::<Chunk>()
             .add_systems(
                 Update,
                 (
@@ -148,11 +149,6 @@ impl WorldSystem {
                 shoot_cooldown: 0.1,
                 shoot_timer: 0.,
         });
-
-        // Стены
-        // commands
-        //     .spawn(RigidBody::Fixed)
-        // .insert(Collider::cuboid(5., 5.));
 
         // не переходить часто с главного меню в игру и на оборот, дублируются!
         commands
@@ -420,14 +416,14 @@ impl WorldRes {
     }
 }
 
-#[derive(Component, Resource)]
-struct Chunk {
-    pub chunk_pos: IVec2,
-    pub entity: Entity,
-}
+// #[derive(Component, Resource)]
+// struct Chunk {
+//     pub chunk_pos: IVec2,
+//     pub entity: Entity,
+// }
 
-impl Chunk {
-    pub fn new(chunk_pos: IVec2, entity: Entity) -> Self {
-        Self { chunk_pos, entity }
-    }
-}
+// impl Chunk {
+//     pub fn new(chunk_pos: IVec2, entity: Entity) -> Self {
+//         Self { chunk_pos, entity }
+//     }
+// }

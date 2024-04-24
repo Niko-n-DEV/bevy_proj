@@ -46,6 +46,13 @@ impl WorldTaskManager {
     /// Функция для загрузки и расположения объектов
     pub fn load_object() {}
 
+    pub fn place_object(
+        position: IVec2,
+        object: Entity
+    ) {
+
+    }
+
     /// Функция для загрузки и расположения ентити
     pub fn load_entity() {}
 

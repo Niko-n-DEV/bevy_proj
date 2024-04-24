@@ -6,7 +6,11 @@ use bevy::prelude::*;
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
-use crate::core::{player::PlayerEntity::User, Movement::DirectionState};
+use crate::core::{
+    //player::PlayerEntity::User,
+    UserSystem::User,
+    Movement::DirectionState
+};
 
 /// Компонент отвечающий за [Здоровье]
 #[derive(Component, Reflect)]
@@ -80,6 +84,9 @@ pub enum EntityNeutrality {
 pub enum HumonoidType {
     Human,
 }
+
+#[derive(Component)]
+pub struct Body;
 
 #[derive(Component, Default)]
 pub enum EntityGender {

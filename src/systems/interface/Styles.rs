@@ -7,6 +7,7 @@ pub const PRESSED_BUTTON_COLOR: Color = Color::rgb(0.29, 0.29, 0.29);
 #[allow(unused)]
 pub const DARK_GRAY_COLOR: Color = Color::rgb(0.12, 0.12, 0.12);
 pub const DARK_LGRAY_COLOR: Color = Color::rgb(0.15, 0.15, 0.15);
+pub const DARK_LLGRAY_COLOR: Color = Color::rgb(0.20, 0.20, 0.20);
 
 #[allow(unused)]
 pub const GREEN_BUTTON_COLOR: Color = Color::rgb(0.31, 0.79, 0.47);

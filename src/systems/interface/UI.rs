@@ -1,10 +1,13 @@
-#![allow(unused)]
-use bevy::{app::AppExit, prelude::*, window::PrimaryWindow};
+//#![allow(unused)]
+use bevy::{app::AppExit, prelude::*}; //, window::PrimaryWindow};
 
 use bevy_simple_text_input::{TextInputBundle, TextInputInactive, TextInputPlugin};
 
 use crate::core::{
     entities::EntitySystem::EnemySpawner,
+    Entity::EntityBase,
+    world::World::WorldSystem,
+    UserSystem::User,
     AppState, 
     interface::Styles::*
 };
@@ -14,7 +17,19 @@ use crate::core::{
 pub struct MainMenu {}
 
 #[derive(Component)]
+pub struct MainMenuPanel {}
+
+#[derive(Component)]
 pub struct PlayButton {}
+
+#[derive(Component)]
+pub struct SettingsButton {}
+
+#[derive(Event)]
+pub struct SettingsToggle;
+
+#[derive(Component)]
+pub struct SettingsWindow;
 
 #[derive(Component)]
 pub struct QuitButton {}
@@ -27,21 +42,31 @@ pub struct GameUI;
 #[derive(Component, Resource)]
 pub struct GameUIRes {
     pub debug_toggle: bool,
+    pub settings_toggle: bool
 }
 
 impl Default for GameUIRes {
     fn default() -> Self {
         Self {
             debug_toggle: false,
+            settings_toggle: false
         }
     }
 }
 
 #[derive(Component)]
+pub struct CMDline;
+// ==============================
+
+// Debug UI components =====
+#[derive(Component)]
 pub struct DebugInfoPanel;
 
 #[derive(Component)]
-pub struct CMDline;
+pub struct DebugPositionText;
+
+#[derive(Component)]
+pub struct DebugPositionTileText;
 
 const BORDER_COLOR_ACTIVE: Color = Color::rgb(0.75, 0.52, 0.99);
 const BORDER_COLOR_INACTIVE: Color = Color::rgb(0.25, 0.25, 0.25);
@@ -60,18 +85,28 @@ pub struct UI;
 impl Plugin for UI {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(OnEnter(AppState::MainMenu), Self::spawn_main_menu)
-            
+            // Init resources
             .init_resource::<GameUIRes>()
+            // Init events
+            .add_event::<SettingsToggle>()
+            // Init Plugins
             .add_plugins(TextInputPlugin)
+            // Init Systems
+            .add_systems(OnEnter(AppState::MainMenu), Self::spawn_main_menu)
             .add_systems(
                 Update,
                 (
+                    // In Menu
                     Self::interact_with_play_button.run_if(in_state(AppState::MainMenu)),
+                    Self::interact_with_settings_button.run_if(in_state(AppState::MainMenu)),
+                    Self::toggle_settings_window.run_if(in_state(AppState::MainMenu)),
                     Self::interact_with_quit_button.run_if(in_state(AppState::MainMenu)),
+                    // In Game
                     Self::interact_with_to_menu_button.run_if(in_state(AppState::Game)),
                     Self::debug_toggle.run_if(in_state(AppState::Game)),
+                    // In Game with Debug
                     interact_with_toggle_spawners_button.run_if(check_debug_toggle),
+                    update_position_text.run_if(check_debug_toggle),
                     focus.run_if(in_state(AppState::Game)),
                 ),
             )
@@ -97,24 +132,64 @@ impl UI {
                 NodeBundle {
                     style: Style {
                         height: Val::Percent(100.0),
-                        width: Val::Px(290.0),
-                        justify_self: JustifySelf::End,
-                        flex_direction: FlexDirection::Column,
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
+                        width: Val::Percent(100.0),
                         ..default()
                     },
-                    background_color: DARK_LGRAY_COLOR.into(),
                     ..default()
                 },
                 MainMenu {},
                 Name::new("Main Menu UI"),
             ))
             .with_children(|parent| {
-                // === Title ===
-
-                // === Play Button ===
-                parent
+                parent.spawn((
+                    NodeBundle {
+                        style: Style {
+                            left: Val::Percent(80.0),
+                            height: Val::Percent(100.0),
+                            width: Val::Percent(20.0),
+                            justify_self: JustifySelf::End,
+                            flex_direction: FlexDirection::Column,
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        background_color: DARK_LGRAY_COLOR.into(),
+                        ..default()
+                    },
+                    MainMenuPanel {},
+                    Name::new("Main Menu Panel"),
+                ))
+                .with_children(|parent| {
+                    // === Title ===
+    
+                    // === Play Button ===
+                    parent
+                        .spawn((
+                            ButtonBundle {
+                                style: button_container_style(75.0, 200.0),
+                                border_color: Color::BLACK.into(),
+                                background_color: NORMAL_BUTTON_COLOR.into(),
+                                ..default()
+                            },
+                            PlayButton {},
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn(TextBundle {
+                                text: Text {
+                                    sections: vec![TextSection::new(
+                                        "Play",
+                                        TextStyle {
+                                            font_size: 28.0,
+                                            ..default()
+                                        },
+                                    )],
+                                    ..default()
+                                },
+                                ..default()
+                            });
+                        });
+                    // === Settings Button ===
+                    parent
                     .spawn((
                         ButtonBundle {
                             style: button_container_style(75.0, 200.0),
@@ -122,13 +197,13 @@ impl UI {
                             background_color: NORMAL_BUTTON_COLOR.into(),
                             ..default()
                         },
-                        PlayButton {},
+                        SettingsButton {},
                     ))
                     .with_children(|parent| {
                         parent.spawn(TextBundle {
                             text: Text {
                                 sections: vec![TextSection::new(
-                                    "Play",
+                                    "Settings",
                                     TextStyle {
                                         font_size: 28.0,
                                         ..default()
@@ -139,32 +214,33 @@ impl UI {
                             ..default()
                         });
                     });
-                // === Quit Button ===
-                parent
-                    .spawn((
-                        ButtonBundle {
-                            style: button_container_style(75.0, 200.0),
-                            border_color: Color::BLACK.into(),
-                            background_color: NORMAL_BUTTON_COLOR.into(),
-                            ..default()
-                        },
-                        QuitButton {},
-                    ))
-                    .with_children(|parent| {
-                        parent.spawn(TextBundle {
-                            text: Text {
-                                sections: vec![TextSection::new(
-                                    "Quit",
-                                    TextStyle {
-                                        font_size: 28.0,
-                                        ..default()
-                                    },
-                                )],
+                    // === Quit Button ===
+                    parent
+                        .spawn((
+                            ButtonBundle {
+                                style: button_container_style(75.0, 200.0),
+                                border_color: Color::BLACK.into(),
+                                background_color: NORMAL_BUTTON_COLOR.into(),
                                 ..default()
                             },
-                            ..default()
+                            QuitButton {},
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn(TextBundle {
+                                text: Text {
+                                    sections: vec![TextSection::new(
+                                        "Quit",
+                                        TextStyle {
+                                            font_size: 28.0,
+                                            ..default()
+                                        },
+                                    )],
+                                    ..default()
+                                },
+                                ..default()
+                            });
                         });
-                    });
+                });
             })
             .id();
         main_menu_entity
@@ -313,6 +389,72 @@ impl UI {
         }
     }
 
+    pub fn interact_with_settings_button(
+        mut button_query: Query<
+            (&Interaction, &mut BackgroundColor),
+            (Changed<Interaction>, With<SettingsButton>),
+        >,
+        mut press_button: EventWriter<SettingsToggle>, 
+    ) {
+        if let Ok((interaction, mut background_color)) = button_query.get_single_mut() {
+            match *interaction {
+                Interaction::Pressed => {
+                    *background_color = PRESSED_BUTTON_COLOR.into();
+                    press_button.send(SettingsToggle);
+                }
+                Interaction::Hovered => {
+                    *background_color = HOVERED_BUTTON_COLOR.into();
+                }
+                Interaction::None => {
+                    *background_color = NORMAL_BUTTON_COLOR.into();
+                }
+            }
+        }
+    }
+
+    fn toggle_settings_window(
+        mut commands: Commands,
+        parent_query: Query<Entity, With<MainMenu>>,
+        child_query: Query<Entity, With<SettingsWindow>>,
+        mut parent_res: ResMut<GameUIRes>,
+        event: EventReader<SettingsToggle>,
+    ) {
+        if event.is_empty() {
+            return;
+        }
+
+        if !parent_res.settings_toggle {
+            if let Ok(parent) = parent_query.get_single() {
+                commands.entity(parent).with_children(|parent| {
+                    parent
+                        .spawn((
+                            NodeBundle {
+                                style: Style {
+                                    position_type: PositionType::Absolute,
+                                    left: Val::Percent(15.0),
+                                    width: Val::Percent(50.0),
+                                    height: Val::Percent(50.0),
+                                    align_self: AlignSelf::Center,
+                                    ..default()
+                                },
+                                background_color: DARK_LLGRAY_COLOR.into(),
+                                ..default() 
+                            }, 
+                            SettingsWindow
+                        ))
+                        .insert(Name::new("Settings"));
+                });
+
+                parent_res.settings_toggle = true;
+            }
+        } else {
+            if let Ok(child) = child_query.get_single() {
+                commands.entity(child).despawn_recursive();
+                parent_res.settings_toggle = false;
+            }
+        }
+    }
+
     pub fn interact_with_quit_button(
         mut app_exit_event_writer: EventWriter<AppExit>,
         mut button_query: Query<
@@ -366,11 +508,11 @@ impl UI {
         mut commands: Commands,
         parent_query: Query<Entity, With<GameUI>>,
         child_query: Query<Entity, With<DebugInfoPanel>>,
-        mut parent_state: ResMut<GameUIRes>,
+        mut parent_res: ResMut<GameUIRes>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
         if keyboard_input.just_released(KeyCode::F5) {
-            if !parent_state.debug_toggle {
+            if !parent_res.debug_toggle {
                 if let Ok(parent) = parent_query.get_single() {
                     commands.entity(parent).with_children(|parent| {
                         parent
@@ -380,7 +522,6 @@ impl UI {
                                         position_type: PositionType::Absolute,
                                         width: Val::Percent(20.0),
                                         height: Val::Percent(75.0),
-                                        align_items: AlignItems::Center,
                                         align_self: AlignSelf::Center,
                                         padding: UiRect::all(Val::Px(10.0)),
                                         ..default()
@@ -391,42 +532,98 @@ impl UI {
                                 DebugInfoPanel
                             ))
                             .with_children(|parent| {
-                                // === Toggle spawners button ===
+                                // === Positon text ===
                                 parent
-                                .spawn((
-                                    ButtonBundle {
-                                        style: button_container_style(25.0, 60.0),
-                                        border_color: Color::BLACK.into(),
-                                        background_color: NORMAL_BUTTON_COLOR.into(),
+                                .spawn((TextBundle {
+                                    text: Text {
+                                        sections: vec![TextSection::new(
+                                            "Pos:",
+                                            TextStyle {
+                                                font_size: 11.0,
+                                                ..default()
+                                            },
+                                        )],
                                         ..default()
                                     },
-                                    ToggleSpawnersButton {},
-                                ))
-                                .with_children(|parent| {
-                                    parent.spawn(TextBundle {
-                                        text: Text {
-                                            sections: vec![TextSection::new(
-                                                "Spawner",
-                                                TextStyle {
-                                                    font_size: 11.0,
-                                                    ..default()
-                                                },
-                                            )],
+                                    style: Style {
+                                        display: Display::Grid,
+                                        position_type: PositionType::Absolute,
+                                        ..default()
+                                    },
+                                    ..default()
+                                },
+                                DebugPositionText
+                                ));
+                                // === Positon Tile text ===
+                                parent
+                                .spawn((TextBundle {
+                                    text: Text {
+                                        sections: vec![TextSection::new(
+                                            "PosT:",
+                                            TextStyle {
+                                                font_size: 11.0,
+                                                ..default()
+                                            },
+                                        )],
+                                        ..default()
+                                    },
+                                    style: Style {
+                                        display: Display::Grid,
+                                        position_type: PositionType::Absolute,
+                                        top: Val::Percent(5.0),
+                                        ..default()
+                                    },
+                                    ..default()
+                                },
+                                DebugPositionTileText
+                                ));
+                                // === Button panel ===
+                                parent
+                                .spawn(NodeBundle {
+                                    style: Style {
+                                        align_self: AlignSelf::End,
+                                        ..default()
+                                    },
+                                    background_color: DARK_LLGRAY_COLOR.into(),
+                                    ..default()
+                                }).with_children(|parent| {
+                                    // === Toggle spawners button ===
+                                    parent
+                                    .spawn((
+                                        ButtonBundle {
+                                            style: button_container_style(25.0, 60.0),
+                                            border_color: Color::BLACK.into(),
+                                            background_color: NORMAL_BUTTON_COLOR.into(),
                                             ..default()
                                         },
-                                        ..default()
+                                        ToggleSpawnersButton {},
+                                    ))
+                                    .with_children(|parent| {
+                                        parent.spawn(TextBundle {
+                                            text: Text {
+                                                sections: vec![TextSection::new(
+                                                    "Spawner",
+                                                    TextStyle {
+                                                        font_size: 11.0,
+                                                        ..default()
+                                                    },
+                                                )],
+                                                ..default()
+                                            },
+                                            ..default()
+                                        });
                                     });
                                 });
                             })
                             .insert(Name::new("Debug"));
                     });
 
-                    parent_state.debug_toggle = true;
+                    parent_res.debug_toggle = true;
                 }
             } else {
                 if let Ok(child) = child_query.get_single() {
                     commands.entity(child).despawn_recursive();
-                    parent_state.debug_toggle = false;
+                    parent_res.debug_toggle = false;
                 }
             }
         }
@@ -476,35 +673,69 @@ pub fn interact_with_toggle_spawners_button(
     }
 }
 
-/// Функция для перехода на главную игровую сцену |
-/// Функция для смения набора компонентов, меняя состояние приложение на `AppState::Game`
-pub fn transition_to_game_state(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    app_state: Res<State<AppState>>,
-    mut app_state_next_state: ResMut<NextState<AppState>>,
+pub fn update_position_text(
+    mut text: Query<&mut Text, (With<DebugPositionText>, Without<DebugPositionTileText>)>,
+    mut text_t: Query<&mut Text, (With<DebugPositionTileText>, Without<DebugPositionText>)>,
+    player: Query<&EntityBase, With<User>>
 ) {
-    if keyboard_input.just_pressed(KeyCode::Enter) {
-        if app_state.get() != &AppState::Game {
-            app_state_next_state.set(AppState::Game);
-            println!("Entered AppState::Game");
-        }
+    if text.is_empty() || player.is_empty() {
+        return;
+    }
+
+    let player_pos = player.single();
+
+    if let Ok(mut text) = text.get_single_mut() {
+        let (pos_x, pos_y) = (player_pos.position.0.x, player_pos.position.0.y);
+        text.sections = vec![TextSection::new(
+            format!("Pos: {pos_x} / {pos_y}"),
+            TextStyle {
+                font_size: 11.0,
+                ..default()
+            },
+        )]
+    }
+
+    if let Ok(mut text_t) = text_t.get_single_mut() {
+        let pos = WorldSystem::get_currect_chunk_tile(player_pos.position.0.truncate().as_ivec2());
+        text_t.sections = vec![TextSection::new(
+            format!("PosT: {} / {}", pos.x, pos.y),
+            TextStyle {
+                font_size: 11.0,
+                ..default()
+            },
+        )]
     }
 }
 
-/// Функция для перехода в Главное Меню |
-/// Функция для смения набора компонентов, меняя состояние приложение на `AppState::MainMenu`
-pub fn translation_to_main_menu(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    app_state: Res<State<AppState>>,
-    mut app_state_reverse: ResMut<NextState<AppState>>,
-) {
-    if keyboard_input.just_pressed(KeyCode::Escape) {
-        if app_state.get() != &AppState::MainMenu {
-            app_state_reverse.set(AppState::MainMenu);
-            println!("Entered AppState::MainMenu")
-        }
-    }
-}
+// /// Функция для перехода на главную игровую сцену |
+// /// Функция для смения набора компонентов, меняя состояние приложение на `AppState::Game`
+// pub fn transition_to_game_state(
+//     keyboard_input: Res<ButtonInput<KeyCode>>,
+//     app_state: Res<State<AppState>>,
+//     mut app_state_next_state: ResMut<NextState<AppState>>,
+// ) {
+//     if keyboard_input.just_pressed(KeyCode::Enter) {
+//         if app_state.get() != &AppState::Game {
+//             app_state_next_state.set(AppState::Game);
+//             println!("Entered AppState::Game");
+//         }
+//     }
+// }
+
+// /// Функция для перехода в Главное Меню |
+// /// Функция для смения набора компонентов, меняя состояние приложение на `AppState::MainMenu`
+// pub fn translation_to_main_menu(
+//     keyboard_input: Res<ButtonInput<KeyCode>>,
+//     app_state: Res<State<AppState>>,
+//     mut app_state_reverse: ResMut<NextState<AppState>>,
+// ) {
+//     if keyboard_input.just_pressed(KeyCode::Escape) {
+//         if app_state.get() != &AppState::MainMenu {
+//             app_state_reverse.set(AppState::MainMenu);
+//             println!("Entered AppState::MainMenu")
+//         }
+//     }
+// }
 
 /// focus для CMDline
 fn focus(
@@ -526,12 +757,12 @@ fn focus(
     }
 }
 
-/// Фунция выхода
-pub fn exit_game(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut app_exit_event_writer: EventWriter<AppExit>,
-) {
-    if keyboard_input.just_pressed(KeyCode::F4) {
-        app_exit_event_writer.send(AppExit);
-    }
-}
+// /// Фунция выхода
+// pub fn exit_game(
+//     keyboard_input: Res<ButtonInput<KeyCode>>,
+//     mut app_exit_event_writer: EventWriter<AppExit>,
+// ) {
+//     if keyboard_input.just_pressed(KeyCode::F4) {
+//         app_exit_event_writer.send(AppExit);
+//     }
+// }

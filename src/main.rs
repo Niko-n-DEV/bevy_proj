@@ -26,11 +26,12 @@ mod core {
 
 use crate::core::{
     entities::EntitySystem::EntitySystem,
-    player::PlayerEntity::UserPlugin,
+    player::PlayerEntity::PlayerPlugin,
     resource::ResourcePlugin,
     world::World::WorldSystem,
     Camera::CameraController,
     interface::UI::UI,
+    UserSystem::UserPlugin
 };
 
 use bevy::{input::common_conditions::input_toggle_active, window::WindowResolution};
@@ -84,9 +85,9 @@ fn main() {
         // Инициализация загрузки ресурсов приложения
         .add_plugins(ResourcePlugin)
         // Инициализация плагина камеры и пользовательского интерфейса
-        .add_plugins((CameraController, UI))
+        .add_plugins((CameraController, UI, UserPlugin))
         // Инициализация плагина игрока и [Test] Системы Мира
-        .add_plugins((EntitySystem, UserPlugin, WorldSystem)) //, TileMapPlugin))
+        .add_plugins((EntitySystem, PlayerPlugin, WorldSystem)) //, TileMapPlugin))
         // Инициализация StartUP функции setup
         .add_systems(Startup, setup)
         .run();

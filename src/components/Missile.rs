@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 /* Потом переделаю под снаряды */
-use crate::core::{player::PlayerEntity::User, Entity::EntityBase};
+use crate::core::{
+    //player::PlayerEntity::User, 
+    Entity::EntityBase,
+    UserSystem::User
+};
 
 pub const BULLET_LIFETIME: f32 = 10.0;
 pub const BULLET_SPEED: f32 = 3000.;
