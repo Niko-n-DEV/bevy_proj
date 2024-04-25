@@ -20,17 +20,8 @@ use crate::core::{
 // Основной компонент камеры
 // Определить параметр зацепа к объекту (option)
 #[derive(Component)]
-pub struct CameraX;
-
-#[derive(Resource)]
-pub struct CameraXRes {
-    pub player_fixed: bool,
-}
-
-impl Default for CameraXRes {
-    fn default() -> Self {
-        Self { player_fixed: true }
-    }
+pub struct UserCamera {
+    pub player_fixed: bool
 }
 
 // ===== Base =====
@@ -41,15 +32,11 @@ impl Plugin for CameraController {
         app
             .add_plugins(PanCamPlugin::default())
             .add_systems(Startup, Self::setup_camera)
-            .init_resource::<CameraXRes>()
-            .add_systems(
-                Update,
-                Self::camera_follow_player.run_if(in_state(AppState::Game)),
-            )
-            .add_systems(
-                Update,
-                Self::toggle_camera_fix.run_if(in_state(AppState::Game)),
-            );
+            .add_systems(OnEnter(AppState::Game), Self::toggle_camera_options)
+            .add_systems(Update, Self::camera_follow_player.run_if(in_state(AppState::Game)))
+            .add_systems(Update, Self::toggle_camera_fix.run_if(in_state(AppState::Game)))
+            .add_systems(OnExit(AppState::Game), Self::toggle_camera_options)
+        ;
     }
 }
 
@@ -58,20 +45,30 @@ impl CameraController {
         commands
             .spawn((
                 Camera2dBundle::default(),
-                CameraX,
-                //CameraChunkUpdater::new(1.3, 2.2),
+                UserCamera {
+                    player_fixed: false
+                }
             ))
             .insert(PanCam {
+                enabled: false,
                 grab_buttons: vec![],
                 zoom_to_cursor: false,
                 ..default()
             });
     }
 
+    /// Переключает возможности камеры PanCam (Приближение и т.д.) при переходе между сценами.
+    fn toggle_camera_options(
+        mut cam: Query<&mut PanCam>
+    ) {
+        if let Ok(mut cam) = cam.get_single_mut() {
+            cam.enabled = !cam.enabled;
+        }
+    }
+
     fn camera_follow_player(
         player_query: Query<&Transform, With<User>>,
-        mut camera_query: Query<&mut Transform, (With<Camera2d>, Without<User>)>,
-        camera_res: Res<CameraXRes>,
+        mut camera_query: Query<(&mut Transform, &UserCamera), (With<Camera2d>, Without<User>)>
     ) {
         if player_query.is_empty() || camera_query.is_empty() {
             return;
@@ -80,29 +77,28 @@ impl CameraController {
         let mut camera_transform = camera_query.single_mut();
         let player_transform = player_query.single().translation;
 
-        if camera_res.player_fixed {
+        if camera_transform.1.player_fixed {
             let (x, y) = (player_transform.x, player_transform.y);
-            camera_transform.translation = camera_transform.translation.lerp(vec3(x, y, 0.0), 0.1);
+            camera_transform.0.translation = camera_transform.0.translation.lerp(vec3(x, y, 0.0), 0.1);
         }
     }
 
     fn toggle_camera_fix(
-        mut camera_res: ResMut<CameraXRes>,
-        mut cam: Query<&mut PanCam>,
+        mut cam: Query<(&mut PanCam, &mut UserCamera)>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
         if keyboard_input.just_released(KeyCode::F1) {
             let mut cam = cam.single_mut();
-            if camera_res.player_fixed {
-                cam.grab_buttons = vec![MouseButton::Middle];
-                cam.zoom_to_cursor = true;
+            if cam.1.player_fixed {
+                cam.0.grab_buttons = vec![MouseButton::Middle];
+                cam.0.zoom_to_cursor = true;
 
-                camera_res.player_fixed = false
+                cam.1.player_fixed = false
             } else {
-                cam.grab_buttons = vec![];
-                cam.zoom_to_cursor = false;
+                cam.0.grab_buttons = vec![];
+                cam.0.zoom_to_cursor = false;
                 
-                camera_res.player_fixed = true
+                cam.1.player_fixed = true
             }
         }
     }

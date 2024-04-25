@@ -1,34 +1,50 @@
-//#![allow(unused)] // Удалить потом
-use bevy::prelude::{*, World};
-use bevy_rapier2d::{prelude::{Collider, Velocity, *}, rapier::dynamics::RigidBodyDamping};
+use bevy::prelude::{
+    *, 
+    World
+};
+use bevy_rapier2d::{
+    prelude::{
+        Collider, 
+        Velocity, 
+        *
+    }, 
+    rapier::dynamics::RigidBodyDamping
+};
 
 use std::collections::HashMap;
 
 use bevy_entitiles::EntiTilesPlugin;
 
 use crate::core::{
-    entities::EntitySystem::EnemySpawner,
-    items::Weapon::GunController,
-    player::PlayerEntity::PlayerAttach,
+    entities::EntitySystem::EnemySpawner, 
+    items::{
+        ItemType::{
+            Ammo, 
+            Item, 
+            ItemType, 
+            Pickupable,
+            Material
+        }, 
+        Weapon::GunController
+    }, 
+    player::PlayerEntity::PlayerAttach, 
     resource::graphic::Atlas::{
-        DirectionAtlas, TestTextureAtlas
-    },
+        DirectionAtlas, 
+        TestTextureAtlas
+    }, 
     world::{
-        WorldTaskManager,
-        {
-            TileMap,
-            TileMap::{
-                LoadChunkPos, 
-                DischargeChunkPos
-            }
-        },
-        chunk::Chunk::Chunk
-    },
-    AppState,
-    Entity::*,
-    Movement::DirectionState,
-    Settings::Settings,
-    ObjType::Collision,
+        chunk::Chunk::Chunk, 
+        TileMap::{
+            self, 
+            DischargeChunkPos, 
+            LoadChunkPos
+        }, WorldTaskManager
+    }, 
+    AppState, 
+    Container::Container, 
+    Entity::*, 
+    Movement::DirectionState, 
+    Settings::Settings, 
     UserSystem::User
 };
 
@@ -90,7 +106,7 @@ impl WorldSystem {
     fn init_world(
         mut commands: Commands,
         handle: Res<TestTextureAtlas>,
-        handle_dir: Res<DirectionAtlas>,
+        handle_dir: Res<DirectionAtlas>
     ) {
         /*
             Тут будет непосредственно инициализация мира, где будет размещение игровой сетки, основных его компонентов и сущностей.
@@ -101,13 +117,14 @@ impl WorldSystem {
 
         // Спавн спрайта, являющийся игроком
         let (texture, atlas) = DirectionAtlas::set_sprite("human", &handle_dir);
-        commands.spawn((
+        let entity = commands.spawn((
             EntityBase {
                 speed: Speed(50., 150., 25.),
                 health: Health(2.),
                 position: Position(Vec3::new(64., 64., 0.)),
                 direction: DirectionState::South,
                 movable: true,
+                ..default()
             },
             SpriteSheetBundle {
                 texture,
@@ -116,14 +133,24 @@ impl WorldSystem {
             },
             EntityType::Humonoid(HumonoidType::Human),
             EntityNeutrality::Neutral,
-            User { ..default() },
             Name::new("Player"),
         ))
         .insert(Velocity::zero())
         .insert(RigidBody::Dynamic)
         .insert(Collider::round_cuboid(2., 2., 0.01))
         .insert(LockedAxes::ROTATION_LOCKED)
+        .id()
         ;//.insert(Ccd::enabled());
+
+        commands.entity(entity)
+        .insert(User {
+            control_entity: Some(entity),
+            ..default()
+        })
+        .insert(Container {
+            ..default()
+        })
+        ;
 
         // Спавн оружия и соединение с игроком
         commands
@@ -146,11 +173,31 @@ impl WorldSystem {
                 offset: Vec2::new(0., -3.),
             })
             .insert(GunController {
-                shoot_cooldown: 0.1,
+                shoot_cooldown: 0.5,
                 shoot_timer: 0.,
         });
 
-        // не переходить часто с главного меню в игру и на оборот, дублируются!
+        // Спавн подбираемого предмета
+        commands
+            .spawn(SpriteSheetBundle {
+                texture: handle.image.clone().unwrap(),
+                atlas: TextureAtlas {
+                    layout: handle.layout.clone().unwrap(),
+                    index: TestTextureAtlas::get_index("bullet", &handle)
+                },
+                transform: Transform {
+                    translation: Vec3::new(64., 64., 0.),
+                    ..default()
+                },
+                ..default()
+            })
+            .insert(Pickupable {
+                item: ItemType::Item(Item::Ammo),
+                count: 16
+            })
+            .insert(Name::new("Item"));
+
+        // Точка спавна для спавна "болванчиков", которые двигаются к игроку
         commands
             .spawn(SpriteSheetBundle {
                 texture: handle.image.clone().unwrap(),
@@ -166,9 +213,10 @@ impl WorldSystem {
             })
             .insert(EnemySpawner {
                 is_active: false,
-                cooldown: 1.,
+                cooldown: 5.,
                 timer: 1.,
             });
+
     }
 
     /// Функция для инициализации загрузки чанков вокруг игрока в пределах установленной прогрузки.

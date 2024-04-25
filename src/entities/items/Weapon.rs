@@ -3,12 +3,20 @@ use bevy::prelude::*;
 use crate::core::{
     player::PlayerEntity::PlayerAttach,
     resource::graphic::Atlas::TestTextureAtlas,
-    UserSystem::CursorPosition,
+    UserSystem::{
+        CursorPosition,
+        User
+    },
     Missile::{
         Bullet, 
         BULLET_LIFETIME, 
         BULLET_SPEED
     },
+    Container::Container,
+    items::ItemType::{
+        ItemType,
+        Item
+    }
 };
 
 #[derive(Component)]
@@ -25,6 +33,7 @@ pub fn gun_controls(
         &mut Sprite,
         &mut PlayerAttach,
     )>,
+    mut user_container: Query<&mut Container, With<User>>,
     cursor: Res<CursorPosition>,
     time: Res<Time>,
     _buttons: Res<ButtonInput<MouseButton>>,
@@ -32,6 +41,12 @@ pub fn gun_controls(
     _asset_server: Res<AssetServer>,
     handle: Res<TestTextureAtlas>,
 ) {
+    if gun_query.is_empty() && user_container.is_empty() {
+        return;
+    }
+
+    let mut container = user_container.single_mut();
+
     for (mut gun_controller, mut transform, mut sprite, mut attach) in gun_query.iter_mut() {
         gun_controller.shoot_timer -= time.delta_seconds();
 
@@ -54,6 +69,23 @@ pub fn gun_controls(
             if _buttons.pressed(MouseButton::Right) {
                 attach.offset = Vec2::new(0., -2.);
                 if _buttons.pressed(MouseButton::Left) {
+                    
+                    let mut ammo_found = false;
+                    for slot in container.slots.iter_mut() {
+                        if slot.item_stack.item_type == ItemType::Item(Item::Ammo) {
+                            if slot.item_stack.count != 0 {
+                                ammo_found = true;
+                                slot.item_stack.count -= 1;
+                            } else {
+                                slot.item_stack.item_type = ItemType::None;
+                                return;
+                            }
+                        }
+                    }
+                    if !ammo_found {
+                        return;
+                    }
+
                     let mut spawn_transform = Transform::from_scale(Vec3::splat(1.0));
                     spawn_transform.translation = transform.translation;
                     spawn_transform.rotation = Quat::from_axis_angle(Vec3::new(0., 0., 1.), angle);

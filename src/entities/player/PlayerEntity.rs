@@ -21,7 +21,12 @@ use crate::core::{
     Missile::*,
     Movement::DirectionState,
     world::World::WorldSystem,
-    UserSystem::User
+    UserSystem::User,
+    items::ItemType::{
+        Pickupable,
+        ItemType
+    },
+    Container::Container
 };
 
 //
@@ -34,6 +39,8 @@ impl Plugin for PlayerPlugin {
         app
             // Передвижение игрока
             .add_systems(Update, Self::player_movement.run_if(in_state(AppState::Game)))
+            // Подбирание игроком предметов поддающиеся к подниманию
+            .add_systems(Update, Self::player_pickup.run_if(in_state(AppState::Game)))
             // [Test] Обновление системы управления оружием
             .add_systems(Update, gun_controls.run_if(in_state(AppState::Game)))
             // [Test] Соединение оружия и игрока
@@ -45,9 +52,9 @@ impl Plugin for PlayerPlugin {
 impl PlayerPlugin {
     /// Передвижение игрока
     fn player_movement(
-        mut entity_query: Query<(&mut Transform, &mut EntityBase, &mut Velocity, Entity), With<User>>,
-        keyboard_input: Res<ButtonInput<KeyCode>>,
-        mut move_event: EventWriter<MovementEntity>
+        mut entity_query:   Query<(&mut Transform, &mut EntityBase, &mut Velocity, Entity), With<User>>,
+        keyboard_input:     Res<ButtonInput<KeyCode>>,
+        mut move_event:     EventWriter<MovementEntity>
     ) {
         if entity_query.is_empty() {
             return;
@@ -82,6 +89,42 @@ impl PlayerPlugin {
             }
         }
     }
+
+    fn player_pickup(
+        mut commands:       Commands,
+        keyboard_input:     Res<ButtonInput<KeyCode>>,
+        mut user_query:     Query<(&Transform, &EntityBase, &mut Container), With<User>>,
+        pickupable_quety:   Query<(Entity, &Transform, &Pickupable), Without<User>>
+    ) {
+        if pickupable_quety.is_empty() {
+            return;
+        }
+
+        let (user_transform, user, mut container) = user_query.single_mut();
+
+        if keyboard_input.just_pressed(KeyCode::Space) {
+            for (entity, transform, pick) in pickupable_quety.iter() {
+                if user.interaction_radius > Vec3::distance(transform.translation, user_transform.translation) {
+                    for slot in container.slots.iter_mut() {
+                        // Добавление в имеющийся стак, если подбираемый предмет уже есть
+                        if slot.item_stack.item_type == pick.item {
+                            slot.item_stack.count += pick.count as usize;
+
+                            commands.entity(entity).despawn_recursive();
+                            return;
+                        }
+                        // Добавление в пустой слот
+                        if slot.item_stack.item_type == ItemType::None {
+                            slot.item_stack.item_type = pick.item;
+                            slot.item_stack.count = pick.count as usize;
+                            commands.entity(entity).despawn_recursive();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 // По идее это внутренний компонент инвентаря игрока, но пока что он не реализован
@@ -97,8 +140,8 @@ pub struct PlayerAttach {
 // Используется для применение этих данных объектам, для их привязки к игроку.
 
 pub fn attach_objects(
-    player_query: Query<(&User, &mut Transform), Without<PlayerAttach>>,
-    mut objects_query: Query<(&PlayerAttach, &mut Transform), Without<User>>,
+    player_query:       Query<(&User, &mut Transform), Without<PlayerAttach>>,
+    mut objects_query:  Query<(&PlayerAttach, &mut Transform), Without<User>>,
 ) {
     if let Ok((_, player_transform)) = player_query.get_single() {
         for (attach, mut transform) in objects_query.iter_mut() {

@@ -36,13 +36,15 @@ impl Plugin for UIPlugin {
             // GameUI
             .add_systems(OnEnter(AppState::Game), GameUI::GameUI::spawn_game_ui)
             .add_systems(Update, (
+                GameUI::BarGui::build_gui.run_if(in_state(AppState::Game)),
                 GameUI::interact_with_to_menu_button.run_if(in_state(AppState::Game)),
                 GameUI::focus.run_if(in_state(AppState::Game))
             ))
+            // GameUI === DEBUG
             .add_systems(Update, (
                 GameUI::debug_toggle.run_if(in_state(AppState::Game)),
-                GameUI::update_position_text.run_if(GameUI::check_debug_toggle),
-                GameUI::interact_with_toggle_spawners_button.run_if(GameUI::check_debug_toggle)
+                GameUI::update_position_text.run_if(GameUI::check_debug_toggle).run_if(in_state(AppState::Game)),
+                GameUI::interact_with_toggle_spawners_button.run_if(GameUI::check_debug_toggle).run_if(in_state(AppState::Game))
             ))
             .add_systems(OnExit(AppState::Game), GameUI::GameUI::despawn_game_ui)
         ;

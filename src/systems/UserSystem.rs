@@ -26,7 +26,7 @@ use crate::core::{
     Movement::DirectionState,
     world::World::WorldSystem,
     world::chunk::Chunk::Chunk,
-    Camera::CameraX
+    Camera::UserCamera
 };
 
 
@@ -58,6 +58,13 @@ impl User {
             false
         }
     }
+
+    pub fn set_entity_to_control(
+        user: &mut User,
+        entity: Entity
+    ) {
+        user.control_entity = Some(entity);
+    }
 }
 
 // Поместить сюда UserPlugin
@@ -85,7 +92,7 @@ pub struct CursorPosition(pub Vec2);
 pub fn cursor_track(
     mut cursor_pos: ResMut<CursorPosition>,
     window:         Query<&Window, With<PrimaryWindow>>,
-    camera:         Query<(&Camera, &GlobalTransform), With<CameraX>>,
+    camera:         Query<(&Camera, &GlobalTransform), With<UserCamera>>,
 ) {
     let (camera, camera_transform) = camera.single();
     let window = window.single();

@@ -14,8 +14,10 @@ use bevy_simple_text_input::{TextInputBundle, TextInputInactive};
 // ==============================
 // 
 // ==========  GameUI  ==========
-#[derive(Component)]
-pub struct GameUI;
+#[derive(Component, Resource)]
+pub struct GameUI {
+    pub bargui_is_open: bool
+}
 
 #[derive(Component, Resource)]
 pub struct GameUIRes {
@@ -53,6 +55,11 @@ pub struct CMDline;
 // ==========
 #[derive(Component)]
 pub struct BarGui;
+
+#[derive(Component)]
+pub struct HealthBarGui;
+#[derive(Component)]
+pub struct AmmoBarGui;
 
 // ========== DEBUG ==========
 // ========== Panel
@@ -97,7 +104,9 @@ impl GameUI {
                     },
                     ..default()
                 },
-                GameUI,
+                GameUI {
+                    bargui_is_open: false
+                },
                 Interaction::None,
                 Name::new("Game UI"),
             ))
@@ -159,24 +168,6 @@ impl GameUI {
                             Name::new("CMDline"),
                             TextInputBundle::default().with_inactive(true),
                             CMDline,
-                        ));
-                        // === BarGui ===
-                        parent.spawn((
-                            NodeBundle {
-                                style: Style {
-                                    position_type: PositionType::Absolute,
-                                    left: Val::Percent(33.0),
-                                    bottom: Val::Percent(0.0),
-                                    width: Val::Percent(33.0),
-                                    height: Val::Percent(200.0),
-                                    align_self: AlignSelf::Center,
-                                    ..default()
-                                },
-                                background_color: NORMAL_BUTTON_COLOR.into(),
-                                ..default()
-                            },
-                            Name::new("BarGui"),
-                            BarGui
                         ));
                     });
             })
@@ -263,7 +254,6 @@ pub fn debug_toggle(
     if keyboard_input.just_pressed(KeyCode::F3) {
         if let Ok(parent) = parent_query.get_single() {
             if !parent_res.debug_toggle {
-                println!("да");
                 commands.entity(parent).with_children(|parent| {
                     parent
                         .spawn((
@@ -279,7 +269,8 @@ pub fn debug_toggle(
                                 background_color: DARK_LGRAY_COLOR.into(),
                                 ..default() 
                             }, 
-                            DebugInfoPanel
+                            DebugInfoPanel,
+                            Name::new("DebugMenu")
                         ))
                         .with_children(|parent| {
                             // === Positon text ===
@@ -302,7 +293,8 @@ pub fn debug_toggle(
                                 },
                                 ..default()
                             },
-                            DebugPositionText
+                            DebugPositionText,
+                            Name::new("Text - Position")
                             ));
                             // === Positon Tile text ===
                             parent
@@ -325,18 +317,23 @@ pub fn debug_toggle(
                                 },
                                 ..default()
                             },
-                            DebugPositionTileText
+                            DebugPositionTileText,
+                            Name::new("Text - PositionFixed")
                             ));
                             // === Button panel ===
                             parent
-                            .spawn(NodeBundle {
+                            .spawn((NodeBundle {
                                 style: Style {
+                                    width: Val::Percent(100.0),
+                                    height: Val::Percent(30.0),
                                     align_self: AlignSelf::End,
                                     ..default()
                                 },
                                 background_color: DARK_LLGRAY_COLOR.into(),
                                 ..default()
-                            }).with_children(|parent| {
+                            },
+                            Name::new("Button Debug Panel")
+                            )).with_children(|parent| {
                                 // === Toggle spawners button ===
                                 parent
                                 .spawn((
@@ -370,7 +367,6 @@ pub fn debug_toggle(
     
                 parent_res.debug_toggle = true;
             } else {
-                println!("нет");
                 if let Ok(child) = child_query.get_single() {
                     commands.entity(child).despawn_recursive();
                     parent_res.debug_toggle = false;
@@ -381,7 +377,7 @@ pub fn debug_toggle(
     }
 }
 
-// ==========
+// ========== DEBUG
 // Обновление данных о местоположении игрока
 // ==========
 pub fn update_position_text(
@@ -390,7 +386,6 @@ pub fn update_position_text(
     player: Query<&EntityBase, With<User>>
 ) {
     if text.is_empty() || player.is_empty() {
-        println!("skip");
         return;
     }
 
@@ -419,7 +414,7 @@ pub fn update_position_text(
     }
 }
 
-// ==========
+// ========== DEBUG
 // Функционал переключения спавн поинтов
 // ==========
 pub fn interact_with_toggle_spawners_button(
@@ -455,3 +450,95 @@ pub fn interact_with_toggle_spawners_button(
         }
     }
 }
+
+// ==============================
+// 
+// ==========  BARGUI  ==========
+impl BarGui {
+    /// Функция для создания пользовательского интерфейса
+    /// 
+    /// Для имеющигося под контролем пользовательского юнита
+    pub fn build_gui(
+        mut commands: Commands,
+        mut game_ui: Query<(Entity, &mut GameUI), (With<GameUI>, Without<BarGui>)>,
+        bar_gui: Query<Entity, (With<BarGui>, Without<GameUI>)>,
+        user: Query<&User>
+    ) {
+        if (game_ui.is_empty() && bar_gui.is_empty()) || user.is_empty() {
+            return;
+        }
+
+        if let Ok(mut parent) = game_ui.get_single_mut() {
+            let user = user.single();
+            if !parent.1.bargui_is_open && user.control_entity != None {
+                commands.entity(parent.0).with_children(|parent| {
+                    // === BarGui ===
+                    parent.spawn((
+                        NodeBundle {
+                            style: Style {
+                                position_type: PositionType::Absolute,
+                                left: Val::Percent(33.0),
+                                bottom: Val::Percent(0.0),
+                                width: Val::Percent(33.0),
+                                height: Val::Percent(12.5),
+                                align_self: AlignSelf::Center,
+                                ..default()
+                            },
+                            background_color: NORMAL_BUTTON_COLOR.into(),
+                            ..default()
+                        },
+                        Name::new("BarGui"),
+                        BarGui
+                    )).with_children(|parent| {
+                        parent.spawn((TextBundle {
+                            text: Text {
+                                sections: vec![TextSection::new(
+                                    "Health:",
+                                    TextStyle {
+                                        font_size: 11.0,
+                                        ..default()
+                                    },
+                                )],
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        HealthBarGui
+                        ));
+                        parent.spawn((TextBundle {
+                            text: Text {
+                                sections: vec![TextSection::new(
+                                    "AMMO:",
+                                    TextStyle {
+                                        font_size: 11.0,
+                                        ..default()
+                                    },
+                                )],
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        AmmoBarGui
+                        ));
+                    });
+                });
+                parent.1.bargui_is_open = true;
+            } else {
+                if user.control_entity == None {
+                    if let Ok(child) = bar_gui.get_single() {
+                        commands.entity(child).despawn_recursive();
+                        parent.1.bargui_is_open = false;
+                    }
+                }
+                
+            }
+        }
+    }
+}
+
+// ========== BARGUI
+// Обновление информации о здоровье и кол-ва патронов в инвентаре
+// ==========
+// pub fn update_player_info() {
+
+// }

@@ -21,6 +21,7 @@ use crate::
         //ObjType::Collision,
         Movement::DirectionState,
         Missile::{update_bullet_hits, update_bullets},
+        Container::Container,
         AppState
     };
 
@@ -126,9 +127,13 @@ pub struct EntitySystem;
 impl Plugin for EntitySystem {
     fn build(&self, app: &mut App) {
         app
+            // Init Register
             .register_type::<EntityBase>()
+            .register_type::<Container>()
+            // Init Events
             .add_event::<DirectionChangeEvent>()
             .add_event::<MovementEntity>()
+            // Init Systems
             .add_systems(
                 Update,
                 (
@@ -157,6 +162,8 @@ impl Plugin for EntitySystem {
         ;
     }
 }
+
+
 
 // Перенести в world, т.к. эdSAтот компонет спавнера
 /// Удаление спавнера врагов при выходе из сцены игры

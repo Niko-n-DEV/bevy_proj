@@ -4,7 +4,10 @@ use bevy::prelude::*;
 use crate::core::{
     resource::graphic::Atlas::TestTextureAtlas,
     AppState,
-    ItemType::{ItemType, Pickupable},
+    items::ItemType::{
+        ItemType,
+        Pickupable
+    }
 };
 
 use serde::Deserialize;
@@ -109,15 +112,15 @@ impl WorldObject {
         }
     }
 
-    pub fn as_pickup(&self) -> Option<Pickupable> {
-        if self.as_harvest().is_some() {
-            return None;
-        }
-        match self {
-            WorldObject::Item(item) => Some(Pickupable { item: *item }),
-            _ => None,
-        }
-    }
+    // pub fn as_pickup(&self) -> Option<Pickupable> {
+    //     if self.as_harvest().is_some() {
+    //         return None;
+    //     }
+    //     match self {
+    //         WorldObject::Item(item) => Some(Pickupable { item: *item, count: *count }),
+    //         _ => None,
+    //     }
+    // }
 }
 
 impl Default for WorldObject {

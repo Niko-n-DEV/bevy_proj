@@ -45,6 +45,7 @@ pub struct EntityBase {
     pub position: Position,
     pub direction: DirectionState,
     pub movable: bool,
+    pub interaction_radius: f32
 }
 
 impl Default for EntityBase {
@@ -55,6 +56,7 @@ impl Default for EntityBase {
             position: Position(Vec3::ZERO),
             direction: DirectionState::South,
             movable: true,
+            interaction_radius: 10.0
         }
     }
 }
