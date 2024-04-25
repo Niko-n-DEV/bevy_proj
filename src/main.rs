@@ -30,7 +30,8 @@ use crate::core::{
     resource::ResourcePlugin,
     world::World::WorldSystem,
     Camera::CameraController,
-    interface::UI::UI,
+    //interface::UI::UI,
+    interface::UIPlugin,
     UserSystem::UserPlugin
 };
 
@@ -85,7 +86,7 @@ fn main() {
         // Инициализация загрузки ресурсов приложения
         .add_plugins(ResourcePlugin)
         // Инициализация плагина камеры и пользовательского интерфейса
-        .add_plugins((CameraController, UI, UserPlugin))
+        .add_plugins((CameraController, UIPlugin, UserPlugin))
         // Инициализация плагина игрока и [Test] Системы Мира
         .add_plugins((EntitySystem, PlayerPlugin, WorldSystem)) //, TileMapPlugin))
         // Инициализация StartUP функции setup

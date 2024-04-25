@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="v9HclS9J_wwdK3H5lna0" name="Страница 1">
-        <mxGraphModel dx="2452" dy="333" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2000" math="0" shadow="0">
+        <mxGraphModel dx="2565" dy="416" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2000" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -1390,20 +1390,32 @@
                 <mxCell id="493" value="Settings" style="swimlane;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="-1590" y="1418" width="210" height="200" as="geometry"/>
                 </mxCell>
-                <mxCell id="494" value="Manual&lt;br&gt;Movement" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                <mxCell id="494" value="Manual&lt;br&gt;Movement" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="-1340" y="930" width="70" height="29" as="geometry"/>
                 </mxCell>
-                <mxCell id="495" value="" style="endArrow=none;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="271" target="494">
+                <mxCell id="495" value="" style="endArrow=none;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;" parent="1" source="271" target="494" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
                         <mxPoint x="-1300" y="980" as="sourcePoint"/>
                         <mxPoint x="-1250" y="930" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="496" value="" style="endArrow=none;dashed=1;html=1;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="436" target="494">
+                <mxCell id="496" value="" style="endArrow=none;dashed=1;html=1;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;" parent="1" source="436" target="494" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
                         <mxPoint x="-1440" y="930" as="sourcePoint"/>
                         <mxPoint x="-1390" y="880" as="targetPoint"/>
                     </mxGeometry>
+                </mxCell>
+                <mxCell id="497" value="UI" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="1395" y="838" width="25" height="22" as="geometry"/>
+                </mxCell>
+                <mxCell id="498" value="Menu" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="1382.5" y="880" width="50" height="22" as="geometry"/>
+                </mxCell>
+                <mxCell id="499" value="Logo" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="1310" y="879.5" width="40" height="23" as="geometry"/>
+                </mxCell>
+                <mxCell id="500" value="Game" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="1460" y="880" width="50" height="22" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
