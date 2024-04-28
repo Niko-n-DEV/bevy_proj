@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 pub mod GameUI;
-pub mod LogoUi;
+//pub mod LogoUi;
 pub mod MenuUI;
 pub mod Styles;
 pub mod UI;
@@ -37,6 +37,7 @@ impl Plugin for UIPlugin {
             .add_systems(OnEnter(AppState::Game), GameUI::GameUI::spawn_game_ui)
             .add_systems(Update, (
                 GameUI::BarGui::build_gui.run_if(in_state(AppState::Game)),
+                GameUI::BarGui::update_player_info.run_if(in_state(AppState::Game)),
                 GameUI::interact_with_to_menu_button.run_if(in_state(AppState::Game)),
                 GameUI::focus.run_if(in_state(AppState::Game))
             ))

@@ -5,4 +5,3 @@ use bevy::prelude::*;
 pub mod Container;
 pub mod Missile;
 pub mod Movement;
-pub mod Registry; 

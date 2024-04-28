@@ -17,8 +17,56 @@ pub const INVENTORY_ITEM_SIZE: usize = 16;
 #[derive(Component, Default, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
 pub struct Container {
-    //pub items: Vec<Option<InventoryItemSlot>>,
     pub slots: [InventoryItemSlot; 6]
+}
+
+impl Container {
+    pub fn find_in_container(
+        &self, 
+        item_type: ItemType
+    ) -> Option<&InventoryItemSlot> {
+        for slot in &self.slots {
+            if slot.item_stack.item_type == item_type {
+                return Some(slot);
+            }
+        }
+        None
+    }
+
+    pub fn find_mut_in_container(
+        &mut self, 
+        item_type: ItemType
+    ) -> Option<&mut InventoryItemSlot> {
+        for slot in &mut self.slots {
+            if slot.item_stack.item_type == item_type {
+                return Some(slot);
+            }
+        }
+        None
+    }
+
+    pub fn take_in_container(
+        &mut self,
+        item_type: ItemType,
+        count: usize
+    ) -> Option<ItemStack> {
+        if let Some(slot) = self.find_mut_in_container(item_type) {
+            if slot.item_stack.count >= count {
+                slot.item_stack.count -= count;
+                return Some(ItemStack {
+                    item_type: slot.item_stack.item_type,
+                    count,
+                });
+            }
+            let taken_count = slot.item_stack.count;
+            slot.item_stack.count = 0;
+            return Some(ItemStack {
+                    item_type: slot.item_stack.item_type,
+                    count: taken_count,
+                });
+        }
+        None
+    }
 }
 
 #[derive(Component, Default, InspectorOptions, Reflect)]

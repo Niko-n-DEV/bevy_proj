@@ -1,4 +1,5 @@
 pub mod graphic;
+pub mod Registry;
 
 use bevy::prelude::*;
 

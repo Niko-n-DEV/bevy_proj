@@ -6,6 +6,8 @@ use crate::core::{
     Entity::EntityBase,
     entities::EntitySystem::EnemySpawner,
     UserSystem::User,
+    Container::Container,
+    items::ItemType::*,
     AppState
 };
 
@@ -88,12 +90,18 @@ pub struct ToggleSpawnersButton {}
 
 impl GameUI {
     /// Функция для размещения игрового интерфейса.
-    pub fn spawn_game_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
+    pub fn spawn_game_ui(
+        mut commands: Commands, 
+        asset_server: Res<AssetServer>
+    ) {
         Self::build_game_ui(&mut commands, &asset_server);
     }
 
     /// Функция для размещения игрового интерфейса.
-    fn build_game_ui(commands: &mut Commands, _asset_server: &Res<AssetServer>) -> Entity {
+    fn build_game_ui(
+        commands:       &mut Commands, 
+        _asset_server:  &Res<AssetServer>
+    ) -> Entity {
         let gameui_entity = commands
             .spawn((
                 NodeBundle {
@@ -175,6 +183,21 @@ impl GameUI {
         gameui_entity
     }
 
+    #[allow(unused)]
+    pub fn bargui_is_open(
+        game_ui: Query<&GameUI, With<GameUI>>
+    ) -> bool {
+        if game_ui.is_empty() {
+            false;
+        }
+
+        if let Ok(game_ui) = game_ui.get_single() {
+            game_ui.bargui_is_open
+        } else {
+            false
+        }
+    }
+
     /// Функция для выгрузки игрового интерфейса и его дочерних элементов.
     pub fn despawn_game_ui(mut commands: Commands, game_ui_query: Query<Entity, With<GameUI>>) {
         if let Ok(game_ui_entity) = game_ui_query.get_single() {
@@ -245,10 +268,10 @@ pub fn check_debug_toggle(
 
 /// Функция для включения режим откладки
 pub fn debug_toggle(
-    mut commands: Commands,
-    parent_query: Query<Entity, With<GameUI>>,
+    mut commands:   Commands,
+    parent_query:   Query<Entity, With<GameUI>>,
     mut parent_res: ResMut<GameUIRes>,
-    child_query: Query<Entity, With<DebugInfoPanel>>,
+    child_query:    Query<Entity, With<DebugInfoPanel>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::F3) {
@@ -381,9 +404,9 @@ pub fn debug_toggle(
 // Обновление данных о местоположении игрока
 // ==========
 pub fn update_position_text(
-    mut text: Query<&mut Text, (With<DebugPositionText>, Without<DebugPositionTileText>)>,
+    mut text:   Query<&mut Text, (With<DebugPositionText>, Without<DebugPositionTileText>)>,
     mut text_t: Query<&mut Text, (With<DebugPositionTileText>, Without<DebugPositionText>)>,
-    player: Query<&EntityBase, With<User>>
+    player:     Query<&EntityBase, With<User>>
 ) {
     if text.is_empty() || player.is_empty() {
         return;
@@ -459,10 +482,10 @@ impl BarGui {
     /// 
     /// Для имеющигося под контролем пользовательского юнита
     pub fn build_gui(
-        mut commands: Commands,
-        mut game_ui: Query<(Entity, &mut GameUI), (With<GameUI>, Without<BarGui>)>,
-        bar_gui: Query<Entity, (With<BarGui>, Without<GameUI>)>,
-        user: Query<&User>
+        mut commands:   Commands,
+        mut game_ui:    Query<(Entity, &mut GameUI), (With<GameUI>, Without<BarGui>)>,
+        bar_gui:        Query<Entity, (With<BarGui>, Without<GameUI>)>,
+        user:           Query<&User>
     ) {
         if (game_ui.is_empty() && bar_gui.is_empty()) || user.is_empty() {
             return;
@@ -491,6 +514,10 @@ impl BarGui {
                         BarGui
                     )).with_children(|parent| {
                         parent.spawn((TextBundle {
+                            style: Style {
+                                position_type: PositionType::Absolute,
+                                ..default()
+                            },
                             text: Text {
                                 sections: vec![TextSection::new(
                                     "Health:",
@@ -506,6 +533,11 @@ impl BarGui {
                         HealthBarGui
                         ));
                         parent.spawn((TextBundle {
+                            style: Style {
+                                position_type: PositionType::Absolute,
+                                top: Val::Percent(10.0),
+                                ..default()
+                            },
                             text: Text {
                                 sections: vec![TextSection::new(
                                     "AMMO:",
@@ -534,11 +566,48 @@ impl BarGui {
             }
         }
     }
+
+    // ========== BARGUI
+    // Обновление информации о здоровье и кол-ва патронов в инвентаре
+    // ==========
+    pub fn update_player_info(
+        game_ui:      Query<&GameUI, With<GameUI>>,
+        mut text_h:   Query<&mut Text, (With<HealthBarGui>, Without<AmmoBarGui>)>,
+        mut text_a:   Query<&mut Text, (With<AmmoBarGui>, Without<HealthBarGui>)>,
+        player:       Query<(&EntityBase, &Container), With<User>>
+    ) {
+        if text_h.is_empty() && text_a.is_empty() {
+            return;
+        }
+
+        if let Ok(game_ui) = game_ui.get_single() {
+            if game_ui.bargui_is_open {
+                if let Ok(player) = player.get_single() {
+                    if let Ok(mut text) = text_h.get_single_mut() {
+                        let health = player.0.health.0;
+                        text.sections = vec![TextSection::new(
+                            format!("Health: {health}"),
+                            TextStyle {
+                                font_size: 11.0,
+                                ..default()
+                            },
+                        )]
+                    }
+            
+                    if let Ok(mut text) = text_a.get_single_mut() {
+                        if let Some(ammo) = player.1.find_in_container(ItemType::Item(Item::Ammo)) {
+                            let count = ammo.item_stack.count;
+                            text.sections = vec![TextSection::new(
+                                format!("AMMO: {count}"),
+                                TextStyle {
+                                    font_size: 11.0,
+                                    ..default()
+                                },
+                            )]
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
-
-// ========== BARGUI
-// Обновление информации о здоровье и кол-ва патронов в инвентаре
-// ==========
-// pub fn update_player_info() {
-
-// }

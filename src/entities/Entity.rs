@@ -45,7 +45,8 @@ pub struct EntityBase {
     pub position: Position,
     pub direction: DirectionState,
     pub movable: bool,
-    pub interaction_radius: f32
+    pub interaction_radius: f32,
+    pub entity_type: EntityType
 }
 
 impl Default for EntityBase {
@@ -56,7 +57,8 @@ impl Default for EntityBase {
             position: Position(Vec3::ZERO),
             direction: DirectionState::South,
             movable: true,
-            interaction_radius: 10.0
+            interaction_radius: 10.0,
+            entity_type: EntityType::None
         }
     }
 }
@@ -68,9 +70,11 @@ pub enum EntityState {
     Move,
 }
 
-#[derive(Component)]
+#[derive(Component, Clone, PartialEq, Eq, Hash, Reflect)]
 pub enum EntityType {
+    None,
     Humonoid(HumonoidType),
+    Animal
 }
 
 #[derive(Component, Default)]
@@ -82,7 +86,7 @@ pub enum EntityNeutrality {
 }
 
 
-#[derive(Component)]
+#[derive(Component, Clone, PartialEq, Eq, Hash, Reflect)]
 pub enum HumonoidType {
     Human,
 }
