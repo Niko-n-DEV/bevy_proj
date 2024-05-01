@@ -137,11 +137,11 @@ impl Plugin for EntitySystem {
             .add_systems(
                 Update,
                 (
-                    handle_direction_changed_events.run_if(in_state(AppState::Game)),
                     handle_move.run_if(in_state(AppState::Game)),
-                    inertia_attenuation.run_if(in_state(AppState::Game))
+                    handle_direction_changed_events.run_if(in_state(AppState::Game)).after(handle_move)
                 )
             )
+            .add_systems(PostUpdate, inertia_attenuation.run_if(in_state(AppState::Game)))
             // [Test] Обновление системы просчёта пуль и попадений
             .add_systems(
                 Update,
@@ -244,13 +244,14 @@ fn determine_direction(vector: Vec3) -> DirectionState {
 
     if angle > 45.0 && angle <= 135.0 {
         return DirectionState::North;
-    } else if angle > 135.0 && angle <= 225.0 {
-        return DirectionState::West;
-    } else if angle > 225.0 && angle <= 315.0 {
-        return DirectionState::South;
-    } else {
-        return DirectionState::East;
     }
+    if angle > 135.0 && angle <= 225.0 {
+        return DirectionState::West;
+    }
+    if angle > 225.0 && angle <= 315.0 {
+        return DirectionState::South;
+    }
+    DirectionState::East
 }
 
 /// Функция для определения коллизии в стороне направления движения

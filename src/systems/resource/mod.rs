@@ -8,6 +8,7 @@ use crate::core::{
         Atlas::{DirectionAtlas, TestTextureAtlas},
         Graphic::*,
     },
+    Settings::Settings,
     AppState,
 };
 
@@ -28,6 +29,15 @@ impl Plugin for ResourcePlugin {
             .add_systems(OnEnter(AppState::ResourceLoading), setup_ex)
             // - Загрузка DLC
             // Инициализация загрузки пользовательских ресурсов (Текстуры, аддоны)
+            
+            // Init Resource
+            .add_systems(OnEnter(AppState::MainMenu), Self::setup)
         ;
+    }
+}
+
+impl ResourcePlugin {
+    fn setup(mut commands: Commands) {
+        commands.insert_resource(Settings::load())
     }
 }

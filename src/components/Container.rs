@@ -33,6 +33,7 @@ impl Container {
         None
     }
 
+    /// Взять весь слот
     pub fn find_mut_in_container(
         &mut self, 
         item_type: ItemType
@@ -45,6 +46,7 @@ impl Container {
         None
     }
 
+    /// Взять определённое кол-во из слота
     pub fn take_in_container(
         &mut self,
         item_type: ItemType,
@@ -69,14 +71,14 @@ impl Container {
     }
 }
 
-#[derive(Component, Default, InspectorOptions, Reflect)]
+#[derive(Component, Default, InspectorOptions, Clone, Copy, Reflect)]
 #[reflect(Component, InspectorOptions)]
 pub struct InventoryItemSlot {
     pub item_stack: ItemStack,
     pub slot: usize,
 }
 
-#[derive(Component, Default, InspectorOptions, Reflect)]
+#[derive(Component, Default, InspectorOptions, Clone, Copy, Reflect)]
 #[reflect(Component, InspectorOptions)]
 pub struct ItemStack {
     pub item_type: ItemType,

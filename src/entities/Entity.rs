@@ -63,8 +63,18 @@ impl Default for EntityBase {
     }
 }
 
+#[derive(Bundle)]
+pub struct EntityFounder {
+    pub health: Health,
+    pub speed: Speed,
+    pub position: Position,
+    pub direction: DirectionState,
+    pub entity_type: EntityType
+}
+
 #[derive(Component, Default)]
 pub enum EntityState {
+    Fixed,
     #[default]
     Idle,
     Move,

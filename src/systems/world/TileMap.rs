@@ -74,7 +74,7 @@ pub fn fill_chunk(
     for tilem_pos in tilem_pos.read() {
         for x in tilem_pos.0.x*16..tilem_pos.0.x*16+16 {
             for y in tilem_pos.0.y*16..tilem_pos.0.y*16+16 {
-                if x == 1 || y == 1 {
+                if x == 0 || y == 0 {
                     storage.set(
                         &mut commands,
                         IVec2 { x, y },
@@ -97,9 +97,9 @@ pub fn fill_chunk(
 pub struct DischargeChunkPos(pub IVec2);
 
 pub fn clear_chunk(
-    mut commands: Commands,
-    mut tilem: Query<(Entity, &mut TilemapStorage), With<TileM>>,
-    mut tilem_pos: EventReader<DischargeChunkPos>
+    mut commands:   Commands,
+    mut tilem:      Query<(Entity, &mut TilemapStorage), With<TileM>>,
+    mut tilem_pos:  EventReader<DischargeChunkPos>
 ) {
     if tilem_pos.is_empty() {
         return;
@@ -121,7 +121,7 @@ pub fn clear_chunk(
 
 pub fn toggle(
     mut tilemaps_query: Query<&mut Visibility, With<TilemapStorage>>,
-    input: Res<ButtonInput<KeyCode>>,
+        input:          Res<ButtonInput<KeyCode>>,
 ) {
     if input.just_pressed(KeyCode::Space) {
         for mut visibility in tilemaps_query.iter_mut() {

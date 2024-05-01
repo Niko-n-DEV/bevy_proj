@@ -1,7 +1,6 @@
 #![allow(unused)]
 use bevy::{
     prelude::*, 
-    render::camera::RenderTarget, 
     window::PrimaryWindow
 };
 use bevy_rapier2d::prelude::*;
@@ -9,21 +8,9 @@ use bevy_rapier2d::prelude::*;
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
-#[allow(unused_imports)]
 use crate::core::{
-    entities::EntitySystem::{
-        update_enemies, 
-        update_spawning, 
-        DirectionChangeEvent, 
-        EnemySpawner,
-        MovementEntity
-    },
-    items::Weapon::*,
-    resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
+    resource::graphic::Atlas::TestTextureAtlas,
     AppState,
-    Entity::{EntityBase, Position},
-    Missile::*,
-    Movement::DirectionState,
     world::World::WorldSystem,
     world::chunk::Chunk::Chunk,
     Camera::UserCamera
@@ -90,9 +77,9 @@ pub struct CursorPosition(pub Vec2);
 
 /// Получение координат чанка по глобальной координатной системе
 pub fn cursor_track(
-    mut cursor_pos: ResMut<CursorPosition>,
-    window:         Query<&Window, With<PrimaryWindow>>,
-    camera:         Query<(&Camera, &GlobalTransform), With<UserCamera>>,
+    mut cursor_pos:     ResMut<CursorPosition>,
+        window:         Query<&Window, With<PrimaryWindow>>,
+        camera:         Query<(&Camera, &GlobalTransform), With<UserCamera>>,
 ) {
     let (camera, camera_transform) = camera.single();
     let window = window.single();
@@ -125,9 +112,9 @@ pub fn update_select_box(
         &Camera,
         &GlobalTransform
     )>,
-    mut select_box: ResMut<SelectBox>,
-    mouse_input:    Res<ButtonInput<MouseButton>>,
-    windows:        Query<&Window, With<PrimaryWindow>>
+    mut select_box:     ResMut<SelectBox>,
+        mouse_input:    Res<ButtonInput<MouseButton>>,
+        windows:        Query<&Window, With<PrimaryWindow>>
 ) {
     let (_, camera, global_transform) = query.single_mut();
 
@@ -165,7 +152,7 @@ pub fn update_select_box(
 }
 
 // Test
-    /// Установка стены
+/// Установка стены
 fn place_wall(
     mut commands:   Commands,
     cursor:         Res<CursorPosition>,
@@ -174,8 +161,8 @@ fn place_wall(
     handle:         Res<TestTextureAtlas>,
     mut chunk_res:  ResMut<Chunk>
 ) {
-    let cursor_pos = cursor.0;
     if keyboard_input.just_pressed(KeyCode::KeyE) {
+        let cursor_pos = cursor.0;
         let tiled_pos = WorldSystem::get_currect_chunk_tile(cursor_pos.as_ivec2());
         if !chunk_res.objects.contains_key(&tiled_pos) {
             let wall = commands

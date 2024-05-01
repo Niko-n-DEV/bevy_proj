@@ -53,9 +53,20 @@ pub struct WorldSystem;
 impl Plugin for WorldSystem {
     fn build(&self, app: &mut App) {
         app
+            // Init Plugins
             .add_plugins(EntiTilesPlugin)
+            .add_plugins((
+                // Физика
+                RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
+                RapierDebugRenderPlugin::default()
+            ))
+            // Init Event
             .add_event::<LoadChunkPos>()
             .add_event::<DischargeChunkPos>()
+            // Init Resource
+            .init_resource::<WorldRes>()
+            .init_resource::<Chunk>()
+            // Init Systems
             .add_systems(
                 OnEnter(AppState::LoadingInGame),
                 (
@@ -63,9 +74,11 @@ impl Plugin for WorldSystem {
                     TileMap::setup
                 )
             )
-            .add_systems(OnEnter(AppState::Game), (Self::setup, Self::init_world))
-            .init_resource::<WorldRes>()
-            .init_resource::<Chunk>()
+            .add_systems(OnEnter(AppState::Game), 
+            (
+                Self::setup, 
+                Self::init_world.after(Self::setup)
+            ))
             .add_systems(
                 Update,
                 (
@@ -88,14 +101,13 @@ impl Plugin for WorldSystem {
 impl WorldSystem {
 
     fn setup(
-        mut commands: Commands, 
-        asset_server: Res<AssetServer>, 
-        mut world: ResMut<WorldRes>,
-        mut physics: ResMut<RapierConfiguration>
+        mut commands:   Commands, 
+        asset_server:   Res<AssetServer>,
+        settings:       Res<Settings>,
+        mut world:      ResMut<WorldRes>,
+        mut physics:    ResMut<RapierConfiguration>
     ) {
-        let settings = Settings::load();
         world.player_render_distance = settings.rendering_distance;
-        settings.save();
 
         physics.gravity = Vec2::ZERO;
     }
@@ -104,9 +116,9 @@ impl WorldSystem {
     /// 
     /// Установка как задачи процессы загрузки ресурсов и прогрузки отдельных комплексных компонентов.
     fn init_world(
-        mut commands: Commands,
-        handle: Res<TestTextureAtlas>,
-        handle_dir: Res<DirectionAtlas>
+        mut commands:   Commands,
+        handle:         Res<TestTextureAtlas>,
+        handle_dir:     Res<DirectionAtlas>
     ) {
         /*
             Тут будет непосредственно инициализация мира, где будет размещение игровой сетки, основных его компонентов и сущностей.
@@ -221,13 +233,13 @@ impl WorldSystem {
 
     /// Функция для инициализации загрузки чанков вокруг игрока в пределах установленной прогрузки.
     fn load_chunk_around(
-        mut commands: Commands,
-        asset_server: Res<AssetServer>,
-        mut worldres: ResMut<WorldRes>,
-        handle: Res<TestTextureAtlas>,
-        player_query: Query<(&mut Transform, &mut User)>,
-        mut chunk_load: EventWriter<LoadChunkPos>,
-        mut chunk_upload: EventWriter<DischargeChunkPos>
+        mut commands:       Commands,
+        asset_server:       Res<AssetServer>,
+        mut worldres:       ResMut<WorldRes>,
+        handle:             Res<TestTextureAtlas>,
+        player_query:       Query<(&mut Transform, &mut User)>,
+        mut chunk_load:     EventWriter<LoadChunkPos>,
+        mut chunk_upload:   EventWriter<DischargeChunkPos>
     ) {
         /*
                 По сути потоковая функция, которая будет прогружать территорию
@@ -339,11 +351,11 @@ impl WorldSystem {
     // TEST
     // ==============================
     fn create_chunk(
-        commands: &mut Commands,
-        asset_server: &Res<AssetServer>,
-        world_res: &mut ResMut<WorldRes>,
-        handle: &Res<TestTextureAtlas>,
-        pos: IVec2,
+        commands:       &mut Commands,
+        asset_server:   &Res<AssetServer>,
+        world_res:      &mut ResMut<WorldRes>,
+        handle:         &Res<TestTextureAtlas>,
+        pos:            IVec2
     ) -> Entity {
         let chunk = commands
             .spawn(SpriteSheetBundle {
@@ -385,15 +397,12 @@ impl WorldSystem {
     ///
     /// Определяется по данной позиции и делением на общий размер чанка
     pub fn get_current_chunk(input_var: IVec2) -> IVec2 {
-        //let result: IVec2 = IVec2::new(input_var.x / 256, input_var.y / 256);
         let result = Self::get_format_current_chunk(input_var);
-        //println!("{} | {}", result, input_var);
         result
     }
 
     /// Функция для форматирования значения чанков по координатной системе
     pub fn get_format_current_chunk(input_var: IVec2) -> IVec2 {
-        //IVec2::new(input_var.x / 256 + if input_var.x % 256 < 0 { -1 } else { 0 }, input_var.y / 256 + if input_var.y % 256 < 0 { -1 } else { 0 }) // Godot version, incurrent
         let mut chunk_x = input_var.x / 256;
         let mut chunk_y = input_var.y / 256;
         if input_var.x < 0 {
