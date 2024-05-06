@@ -1,4 +1,8 @@
 use bevy::prelude::*;
+use bevy_egui::{
+    egui,
+    EguiContexts
+};
 
 use crate::core::{
     interface::{
@@ -55,31 +59,6 @@ pub struct HealthBarGui;
 
 #[derive(Component)]
 pub struct AmmoBarGui;
-
-// ========== DEBUG ==========
-// ========== Panel
-// Панель дабага
-// ==========
-#[derive(Component)]
-pub struct DebugInfoPanel;
-
-// ========== Text
-// Текст для отображения информации о местоположении по точным координатам
-// ==========
-#[derive(Component)]
-pub struct DebugPositionText;
-
-// ========== Text
-// Текст для отображения информации о местоположении по фиксировано по клеткам координат
-// ==========
-#[derive(Component)]
-pub struct DebugPositionTileText;
-
-// ========== Button
-// Кнопка для переключения спавн поинтов
-// ==========
-#[derive(Component)]
-pub struct ToggleSpawnersButton {}
 
 impl GameUI {
     /// Функция для размещения игрового интерфейса.
@@ -250,228 +229,48 @@ impl GameUI {
     }
 }
 
+// ========== DEBUG ==========
+pub struct DebugInfoPanel;
+
 impl DebugInfoPanel {
     // ==========
     // Функционал для открытия дебага
     // ==========
-    /// Проверка, включен ли дебаг мод
-    pub fn check_debug_toggle(
-        check_ui: Query<&GameUI, With<GameUI>>,
-    ) -> bool {
-        if check_ui.is_empty() {
-            return false;
-        }
-
-        if let Ok(game_ui) = check_ui.get_single() {
-            game_ui.debug_toggle
-        } else {
-            false
-        }
-    }
-
-    /// Функция для включения режим откладки
-    pub fn debug_toggle(
-        mut commands:           Commands,
-        mut parent_query:       Query<(Entity, &mut GameUI), With<GameUI>>,
-            child_query:        Query<Entity, With<DebugInfoPanel>>,
-            keyboard_input:     Res<ButtonInput<KeyCode>>,
+    pub fn toggle_debug_window(
+        mut parent_query:   Query<&mut GameUI, With<GameUI>>,
+        mut contexts:       EguiContexts,
+        mut spawners:       Query<&mut EnemySpawner, With<EnemySpawner>>,
+            player:         Query<&EntityBase, With<User>>,
+            keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
-        if keyboard_input.just_pressed(KeyCode::F3) {
-            if let Ok(mut parent) = parent_query.get_single_mut() {
-                if !parent.1.debug_toggle {
-                    commands.entity(parent.0).with_children(|parent| {
-                        parent
-                            .spawn((
-                                NodeBundle {
-                                    style: Style {
-                                        position_type: PositionType::Absolute,
-                                        width: Val::Percent(20.0),
-                                        height: Val::Percent(75.0),
-                                        align_self: AlignSelf::Center,
-                                        padding: UiRect::all(Val::Px(10.0)),
-                                        ..default()
-                                    },
-                                    background_color: DARK_LGRAY_COLOR.into(),
-                                    ..default() 
-                                }, 
-                                DebugInfoPanel,
-                                Name::new("DebugMenu")
-                            ))
-                            .with_children(|parent| {
-                                // === Positon text ===
-                                parent
-                                .spawn((TextBundle {
-                                    text: Text {
-                                        sections: vec![TextSection::new(
-                                            "Pos:",
-                                            TextStyle {
-                                                font_size: 11.0,
-                                                ..default()
-                                            },
-                                        )],
-                                        ..default()
-                                    },
-                                    style: Style {
-                                        display: Display::Grid,
-                                        position_type: PositionType::Absolute,
-                                        ..default()
-                                    },
-                                    ..default()
-                                },
-                                DebugPositionText,
-                                Name::new("Text - Position")
-                                ));
-                                // === Positon Tile text ===
-                                parent
-                                .spawn((TextBundle {
-                                    text: Text {
-                                        sections: vec![TextSection::new(
-                                            "PosT:",
-                                            TextStyle {
-                                                font_size: 11.0,
-                                                ..default()
-                                            },
-                                        )],
-                                        ..default()
-                                    },
-                                    style: Style {
-                                        display: Display::Grid,
-                                        position_type: PositionType::Absolute,
-                                        top: Val::Percent(5.0),
-                                        ..default()
-                                    },
-                                    ..default()
-                                },
-                                DebugPositionTileText,
-                                Name::new("Text - PositionFixed")
-                                ));
-                                // === Button panel ===
-                                parent
-                                .spawn((NodeBundle {
-                                    style: Style {
-                                        width: Val::Percent(100.0),
-                                        height: Val::Percent(30.0),
-                                        align_self: AlignSelf::End,
-                                        ..default()
-                                    },
-                                    background_color: DARK_LLGRAY_COLOR.into(),
-                                    ..default()
-                                },
-                                Name::new("Button Debug Panel")
-                                )).with_children(|parent| {
-                                    // === Toggle spawners button ===
-                                    parent
-                                    .spawn((
-                                        ButtonBundle {
-                                            style: button_container_style(25.0, 60.0),
-                                            border_color: Color::BLACK.into(),
-                                            background_color: NORMAL_BUTTON_COLOR.into(),
-                                            ..default()
-                                        },
-                                        ToggleSpawnersButton {},
-                                    ))
-                                    .with_children(|parent| {
-                                        parent.spawn(TextBundle {
-                                            text: Text {
-                                                sections: vec![TextSection::new(
-                                                    "Spawner",
-                                                    TextStyle {
-                                                        font_size: 11.0,
-                                                        ..default()
-                                                    },
-                                                )],
-                                                ..default()
-                                            },
-                                            ..default()
-                                        });
-                                    });
-                                });
-                            })
-                            .insert(Name::new("Debug"));
-                    });
-        
-                    parent.1.debug_toggle = true;
-                } else {
-                    if let Ok(child) = child_query.get_single() {
-                        commands.entity(child).despawn_recursive();
-                        parent.1.debug_toggle = false;
-                    }
-                }
+        if parent_query.is_empty() || player.is_empty() || spawners.is_empty() {
+            return;
+        }
+
+        if let Ok(mut game_ui) = parent_query.get_single_mut() {
+            if keyboard_input.just_pressed(KeyCode::F3) {
+                game_ui.debug_toggle = !game_ui.debug_toggle
             }
-            
-        }
-    }
 
-    // ========== DEBUG
-    // Обновление данных о местоположении игрока
-    // ==========
-    pub fn update_position_text(
-        mut text:       Query<&mut Text, (With<DebugPositionText>, Without<DebugPositionTileText>)>,
-        mut text_t:     Query<&mut Text, (With<DebugPositionTileText>, Without<DebugPositionText>)>,
-            player:     Query<&EntityBase, With<User>>
-    ) {
-        if text.is_empty() || player.is_empty() {
-            return;
-        }
+            if game_ui.debug_toggle {
+                let player_pos = player.single();
 
-        let player_pos = player.single();
+                egui::Window::new("Debug")
+                    .show(contexts.ctx_mut(), |ui| {
+                        ui.label("Position");
+                        ui.vertical(|ui| {
+                            ui.label(format!("Pos: {}", player_pos.position.0));
+                            ui.label(format!("Pos_T: {}", WorldSystem::get_currect_chunk_tile(player_pos.position.0.truncate().as_ivec2())))
+                        });
 
-        if let Ok(mut text) = text.get_single_mut() {
-            let (pos_x, pos_y) = (player_pos.position.0.x, player_pos.position.0.y);
-            text.sections = vec![TextSection::new(
-                format!("Pos: {pos_x} / {pos_y}"),
-                TextStyle {
-                    font_size: 11.0,
-                    ..default()
-                },
-            )]
-        }
-
-        if let Ok(mut text_t) = text_t.get_single_mut() {
-            let pos = WorldSystem::get_currect_chunk_tile(player_pos.position.0.truncate().as_ivec2());
-            text_t.sections = vec![TextSection::new(
-                format!("PosT: {} / {}", pos.x, pos.y),
-                TextStyle {
-                    font_size: 11.0,
-                    ..default()
-                },
-            )]
-        }
-    }
-
-    // ========== DEBUG
-    // Функционал переключения спавн поинтов
-    // ==========
-    pub fn interact_with_toggle_spawners_button(
-        mut button_query: Query<
-            (&Interaction, &mut BackgroundColor),
-            (Changed<Interaction>, With<ToggleSpawnersButton>),
-        >,
-        mut spawners: Query<(Entity, &mut EnemySpawner), With<EnemySpawner>>
-    ) {
-        if spawners.is_empty() && button_query.is_empty() {
-            return;
-        }
-
-        if let Ok((interaction, mut background_color)) = button_query.get_single_mut() {
-            match *interaction {
-                Interaction::Pressed => {
-                    *background_color = PRESSED_BUTTON_COLOR.into();
-
-                    for (_, mut spawner) in spawners.iter_mut() {
-                        if spawner.is_active {
-                            spawner.is_active = false
-                        } else {
-                            spawner.is_active = true
-                        }
-                    }
-                }
-                Interaction::Hovered => {
-                    *background_color = HOVERED_BUTTON_COLOR.into();
-                }
-                Interaction::None => {
-                    *background_color = NORMAL_BUTTON_COLOR.into();
-                }
+                        ui.horizontal(|ui| {
+                            if ui.button("Spawners").clicked() {
+                                for mut spawner in spawners.iter_mut() {
+                                    spawner.is_active = !spawner.is_active
+                                }
+                            }
+                        });
+                    });
             }
         }
     }
@@ -575,6 +374,7 @@ impl BarGui {
     pub fn spawn_inventory_ui(
         mut commands:   Commands,
         mut bar_gui:    Query<(Entity, &mut BarGui), With<BarGui>>,
+        mut event:      EventWriter<InvSlotsBuild>,
             game_ui:    Query<&GameUI, With<GameUI>>,
     ) {
         if bar_gui.is_empty() {
@@ -589,7 +389,6 @@ impl BarGui {
                             parent.spawn((NodeBundle {
                                 style: Style {
                                     display: Display::Grid,
-                                    //position_type: PositionType::Absolute,
                                     left: Val::Percent(-32.0),
                                     width: Val::Percent(32.0),
                                     height: Val::Percent(100.0),
@@ -611,16 +410,15 @@ impl BarGui {
                                 ..default()
                             },
                             InventoryGui {
-                                slots: [InventorySlot::default(); 12]
+                                slots: [InventorySlot::default(); 9]
                             },
                             Name::new("Inventory")
-                            )).with_children(|parent| {
+                            )).with_children(|slots| {
+                                let mut slot_entities = Vec::new();
                                 for i in 0..9 {
-                                    parent.spawn(NodeBundle {
+                                    let slot = slots.spawn(NodeBundle {
                                         style: Style {
                                             display: Display::Grid,
-                                            // width: Val::Percent(100.0),
-                                            // height: Val::Percent(100.0),
                                             border: UiRect { 
                                                 left: Val::Px(2.), 
                                                 right: Val::Px(2.), 
@@ -634,9 +432,12 @@ impl BarGui {
                                         border_color: Color::rgba(0., 0., 0., 0.4).into(),
                                         ..default()
                                     })
-                                    .insert(InventorySlot::new(i))
-                                    .insert(Name::new(format!("Slot {i}")));
+                                    .insert(Name::new(format!("Slot {i}")))
+                                    .id();
+                                    
+                                    slot_entities.push(slot);
                                 }
+                                event.send(InvSlotsBuild(slot_entities));
                             });
                         });
                         bar_gui.1.inventory_open = !bar_gui.1.inventory_open;
@@ -646,76 +447,86 @@ impl BarGui {
         }
     }
 
-    #[allow(unused)]
+    pub fn build_inv_slots(
+        mut inventory:  Query<(Entity, &mut InventoryGui), With<InventoryGui>>,
+        mut event:      EventReader<InvSlotsBuild>
+    ) {
+        if event.is_empty() || inventory.is_empty() {
+            return;
+        }
+
+        if let Ok(mut inv) = inventory.get_single_mut() {
+            for event in event.read() {
+                for (i, entity) in event.0.iter().enumerate() {
+                    inv.1.slots[i] = InventorySlot::new(Some(i), Some(*entity))
+                }
+            }
+        }
+    }
+
     pub fn update_inventory_ui(
-        mut commands:       Commands,
-        mut inventoty_gui:  Query<(Entity, &mut InventoryGui), With<InventoryGui>>,
-        mut inventoty:      Query<&mut Container, With<User>>
+        mut commands:           Commands,
+        mut inventoty_gui:      Query<(Entity, &mut InventoryGui), With<InventoryGui>>,
+        mut inventoty:          Query<&mut Container, With<User>>
     ) {
         if inventoty_gui.is_empty() || inventoty.is_empty() {
             return;
         }
 
-        if let Ok(mut inv_gui) = inventoty_gui.get_single_mut() {
-            if let Ok(inv) = inventoty.get_single_mut() {
-                for i in 0..inv.slots.len() {
-                    let slot = &mut inv.slots[i].clone();
-
-                    if slot.item_stack.item_type != ItemType::None {
-                        commands.entity(inv_gui.0).with_children(|parent| {
-                            parent.spawn(NodeBundle {
-                                style: Style {
-                                    width: Val::Percent(33.0),
-                                    height: Val::Percent(33.0),
-                                    border: UiRect {
-                                        left: Val::Px(2.), 
-                                        right: Val::Px(2.), 
-                                        top: Val::Px(2.), 
-                                        bottom: Val::Px(2.) 
+        if let Ok((_, mut inv_gui)) = inventoty_gui.get_single_mut() {
+            if let Ok(mut inv_container) = inventoty.get_single_mut() {
+                for i in 0..inv_gui.slots.len() {
+                    if i >= inv_container.slots.len() {
+                        break;
+                    }
+    
+                    // Получаем слот инвентаря и его UI аналог
+                    let inv_slot = &mut inv_container.slots[i];
+                    let inv_gui_slot = &mut inv_gui.slots[i];
+    
+                    // Если слот инвентаря не пустой, обновляем информацию в UI
+                    if inv_slot.item_stack.item_type != ItemType::None {
+                        // Если слот UI уже содержит информацию о том же предмете, пропускаем обновление
+                        if let Some(contain) = &inv_gui_slot.contain {
+                            if contain.item_stack.item_type == inv_slot.item_stack.item_type {
+                                continue;
+                            }
+                        }
+    
+                        // Очищаем дочерние элементы UI слота
+                        if let Some(entity) = inv_gui_slot.entity {
+                            commands.entity(entity).clear_children();
+                        }
+    
+                        // Обновляем UI слота с новыми данными из инвентаря
+                        if let Some(entity) = inv_gui_slot.entity {
+                            commands.entity(entity).with_children(|parent| {
+                                parent.spawn(TextBundle {
+                                    text: Text {
+                                        sections: vec![TextSection::new(
+                                            "TEST",
+                                            TextStyle {
+                                                font_size: 11.0,
+                                                ..Default::default()
+                                            },
+                                        )],
+                                        ..Default::default()
                                     },
-                                    ..default()
-                                },
-                                background_color: Color::rgb(0.30, 0.30, 0.30).into(),
-                                border_color: Color::rgba(0., 0., 0., 0.4).into(),
-                                ..default()
-                            }).with_children(|parent| {
-                                if let Some(item) = inv.find_in_container(slot.item_stack.item_type) {
-                                    let count = item.item_stack.count;
-                                    parent.spawn(TextBundle {
-                                        text: Text {
-                                            sections: vec![TextSection::new(
-                                                format!("{count}"),
-                                                TextStyle {
-                                                    font_size: 6.0,
-                                                    ..default()
-                                                },
-                                            )],
-                                            ..default()
-                                        },
-                                        ..default()
-                                    });
-                                }
+                                    ..Default::default()
+                                });
                             });
-                        });
+                        }
+    
+                        // Обновляем информацию UI слота инвентаря
+                        inv_gui_slot.contain = Some(*inv_slot);
                     } else {
-                        commands.entity(inv_gui.0).with_children(|parent| {
-                            parent.spawn(NodeBundle {
-                                style: Style {
-                                    width: Val::Percent(33.0),
-                                    height: Val::Percent(33.0),
-                                    border: UiRect {
-                                        left: Val::Px(2.), 
-                                        right: Val::Px(2.), 
-                                        top: Val::Px(2.), 
-                                        bottom: Val::Px(2.) 
-                                    },
-                                    ..default()
-                                },
-                                background_color: Color::rgb(0.30, 0.30, 0.30).into(),
-                                border_color: Color::rgba(0., 0., 0., 0.4).into(),
-                                ..default()
-                            });
-                        });
+                        // Если слот инвентаря пустой, очищаем UI слота
+                        if let Some(entity) = inv_gui_slot.entity {
+                            commands.entity(entity).clear_children();
+                        }
+    
+                        // Очищаем информацию UI слота инвентаря
+                        inv_gui_slot.contain = None;
                     }
                 }
             }
@@ -765,15 +576,8 @@ impl BarGui {
             }
         }
     }
-
-    // ///Обновление инвентаря
-    // pub fn update_inventory(
-    //     inventory_query: Query<&Container, With<User>>
-    // ) {
-    //     if inventory_query.is_empty() {
-    //         return;
-    //     }
-
-        
-    // }
 }
+
+
+#[derive(Event)]
+pub struct InvSlotsBuild(pub Vec<Entity>);

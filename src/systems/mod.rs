@@ -5,4 +5,5 @@ pub mod resource;
 pub mod world;
 
 pub mod Camera;
+pub mod PlayerSystem;
 pub mod UserSystem;

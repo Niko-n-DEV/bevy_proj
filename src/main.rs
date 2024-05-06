@@ -25,11 +25,11 @@ mod core {
 
 use crate::core::{
     entities::EntitySystem::EntitySystem,
-    player::PlayerEntity::PlayerPlugin,
     resource::ResourcePlugin,
     world::World::WorldSystem,
     Camera::CameraController,
     interface::UIPlugin,
+    PlayerSystem::PlayerPlugin,
     UserSystem::UserPlugin
 };
 

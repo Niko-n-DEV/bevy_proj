@@ -95,7 +95,6 @@ impl MainMenu {
                 ))
                 .with_children(|parent| {
                     // === Title ===
-    
                     // === Play Button ===
                     parent
                         .spawn((

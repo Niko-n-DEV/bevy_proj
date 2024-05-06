@@ -57,7 +57,7 @@ pub fn update_bullet_hits(
     for (transform, entity) in bullet_query.iter() {
         bullet_list.push(BulletInfo {
             translation: Vec3::new(transform.translation.x, transform.translation.y, 0.),
-            entity: entity,
+            entity,
         });
     }
     

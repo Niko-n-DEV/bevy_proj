@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 //use bevy_inspector_egui::prelude::ReflectInspectorOptions;
-use bevy_inspector_egui::InspectorOptions;
+//use bevy_inspector_egui::InspectorOptions;
 
 #[allow(unused_imports)]
 use crate::core::{
@@ -29,9 +29,6 @@ use crate::core::{
     Container::Container
 };
 
-//
-// Всё это под вырез, т.к. будет переносится в Entity System с взаимодействием с Entity, а player будет как свойство для entity
-//
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
@@ -50,11 +47,11 @@ impl Plugin for PlayerPlugin {
 }
 
 impl PlayerPlugin {
-    /// Передвижение игрока
+    
     fn player_movement(
-        mut entity_query:   Query<(&mut Transform, &mut EntityBase, &mut Velocity, Entity), With<User>>,
-        keyboard_input:     Res<ButtonInput<KeyCode>>,
-        mut move_event:     EventWriter<MovementEntity>
+        mut entity_query:       Query<(&mut Transform, &mut EntityBase, &mut Velocity, Entity), With<User>>,
+        mut move_event:         EventWriter<MovementEntity>,
+            keyboard_input:     Res<ButtonInput<KeyCode>>
     ) {
         if entity_query.is_empty() {
             return;
@@ -104,7 +101,7 @@ impl PlayerPlugin {
 
         if keyboard_input.just_pressed(KeyCode::Space) {
             for (entity, transform, pick) in pickupable_quety.iter() {
-                if user.interaction_radius > Vec3::distance(transform.translation, user_transform.translation) {
+                if user.interaction_radius > Vec3::distance(transform.translation, user_transform.translation) { 
                     for slot in container.slots.iter_mut() {
                         // Добавление в имеющийся стак, если подбираемый предмет уже есть
                         if slot.item_stack.item_type == pick.item {
@@ -117,6 +114,7 @@ impl PlayerPlugin {
                         if slot.item_stack.item_type == ItemType::None {
                             slot.item_stack.item_type = pick.item;
                             slot.item_stack.count = pick.count as usize;
+                            
                             commands.entity(entity).despawn_recursive();
                             return;
                         }
@@ -127,9 +125,9 @@ impl PlayerPlugin {
     }
 }
 
-// По идее это внутренний компонент инвентаря игрока, но пока что он не реализован
-#[derive(Component, InspectorOptions)]
-pub struct Inventory {}
+#[allow(unused)]
+#[derive(Component)]
+pub struct ItemCursorPick;
 
 #[derive(Component)]
 pub struct PlayerAttach {

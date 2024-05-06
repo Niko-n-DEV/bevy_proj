@@ -9,10 +9,8 @@ pub mod World;
 use bevy::prelude::*;
 
 use crate::core::{
-    Entity::{
-        EntityBase,
-        EntityObject
-    },
+    Entity::EntityBase,
+    Object::EntityObject,
     world::TileMap::TileM,
     AppState
 };

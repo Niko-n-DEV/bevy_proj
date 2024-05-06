@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::core::{
-    player::PlayerEntity::PlayerAttach,
+    PlayerSystem::PlayerAttach,
     resource::graphic::Atlas::TestTextureAtlas,
     UserSystem::{
         CursorPosition,

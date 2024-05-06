@@ -7,7 +7,7 @@ use crate::core::Entity::EntityType;
 
 //pub type EntityRegistry = HashMap<EntityType, Vec<String>>;
 
-
+#[derive(Resource)]
 pub struct Registry {
     pub entity_registry: HashMap<String, EntityType>    // Хэш-таблица с регистрируемыми сущностями
     // Хэш-таблица с 

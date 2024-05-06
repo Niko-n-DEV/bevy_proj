@@ -19,7 +19,11 @@ impl Plugin for UIPlugin {
         app
             // Init resources
             .init_resource::<Console::Console>()
+            // Register Types (Inspector)
+            .register_type::<Inventory::InventoryGui>()
+            .register_type::<Inventory::InventorySlot>()
             // Init events
+            .add_event::<GameUI::InvSlotsBuild>()
             // Init Plugins
             .add_plugins(TextInputPlugin)
             // Init Systems ==========
@@ -38,16 +42,14 @@ impl Plugin for UIPlugin {
             .add_systems(Update, (
                 GameUI::BarGui::build_gui.run_if(in_state(AppState::Game)),
                 GameUI::BarGui::spawn_inventory_ui.run_if(in_state(AppState::Game)).after(GameUI::BarGui::build_gui),
+                GameUI::BarGui::build_inv_slots.run_if(in_state(AppState::Game)).after(GameUI::BarGui::spawn_inventory_ui),
+                GameUI::BarGui::update_inventory_ui.run_if(in_state(AppState::Game)),
                 GameUI::BarGui::update_player_info.run_if(in_state(AppState::Game)),
                 GameUI::GameUI::interact_with_to_menu_button.run_if(in_state(AppState::Game)),
                 GameUI::GameUI::focus.run_if(in_state(AppState::Game))
             ))
             // GameUI === DEBUG
-            .add_systems(Update, (
-                GameUI::DebugInfoPanel::debug_toggle.run_if(in_state(AppState::Game)),
-                GameUI::DebugInfoPanel::update_position_text.run_if(GameUI::DebugInfoPanel::check_debug_toggle).run_if(in_state(AppState::Game)),
-                GameUI::DebugInfoPanel::interact_with_toggle_spawners_button.run_if(GameUI::DebugInfoPanel::check_debug_toggle).run_if(in_state(AppState::Game))
-            ))
+            .add_systems(Update, GameUI::DebugInfoPanel::toggle_debug_window.run_if(in_state(AppState::Game)))
             // GameUI === Console
             .add_systems(Update, Console::toggle_console.run_if(in_state(AppState::Game)))
             .add_systems(OnExit(AppState::Game), GameUI::GameUI::despawn_game_ui)

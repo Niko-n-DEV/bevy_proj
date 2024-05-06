@@ -1,25 +1,52 @@
 #![allow(unused)]
 use bevy::prelude::*;
 
+use bevy_inspector_egui::prelude::ReflectInspectorOptions;
+use bevy_inspector_egui::InspectorOptions;
+
 use crate::core::{
     Container::InventoryItemSlot
 };
 
-#[derive(Component)]
+#[derive(Component, InspectorOptions, Reflect)]
+#[reflect(Component, InspectorOptions)]
 pub struct InventoryGui {
-    pub slots: [InventorySlot; 12]
+    pub slots: [InventorySlot; 9]
 }
 
-#[derive(Component, Default, Clone, Copy)]
+impl InventoryGui {
+    pub fn get_slot(&self, slot_id: usize) -> Option<InventorySlot> {
+        if slot_id < self.slots.len() {
+            Some(self.slots[slot_id])
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Component, Clone, Copy, InspectorOptions, Reflect)]
+#[reflect(Component, InspectorOptions)]
 pub struct InventorySlot {
-    pub id: usize,
+    pub id: Option<usize>,
+    pub entity: Option<Entity>,
     pub contain: Option<InventoryItemSlot>
 }
 
 impl InventorySlot {
-    pub fn new(id: usize) -> Self {
+    pub fn new(id: Option<usize>, entity: Option<Entity>) -> Self {
         Self { 
             id,
+            entity,
+            contain: None
+        }
+    }
+}
+
+impl Default for InventorySlot {
+    fn default() -> Self {
+        Self {
+            id: None,
+            entity: None,
             contain: None
         }
     }

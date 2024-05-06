@@ -27,7 +27,7 @@ use crate::core::{
         }, 
         Weapon::GunController
     }, 
-    player::PlayerEntity::PlayerAttach, 
+    PlayerSystem::PlayerAttach, 
     resource::graphic::Atlas::{
         DirectionAtlas, 
         TestTextureAtlas
@@ -42,7 +42,8 @@ use crate::core::{
     }, 
     AppState, 
     Container::Container, 
-    Entity::*, 
+    Entity::*,
+    Object::*,
     Movement::DirectionState, 
     Settings::Settings, 
     UserSystem::User
@@ -58,7 +59,10 @@ impl Plugin for WorldSystem {
             .add_plugins((
                 // Физика
                 RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
-                RapierDebugRenderPlugin::default()
+                RapierDebugRenderPlugin {
+                    enabled: false,
+                    ..default()
+                }
             ))
             // Init Event
             .add_event::<LoadChunkPos>()
@@ -101,11 +105,11 @@ impl Plugin for WorldSystem {
 impl WorldSystem {
 
     fn setup(
-        mut commands:   Commands, 
-        asset_server:   Res<AssetServer>,
-        settings:       Res<Settings>,
-        mut world:      ResMut<WorldRes>,
-        mut physics:    ResMut<RapierConfiguration>
+        mut commands:       Commands, 
+            asset_server:   Res<AssetServer>,
+            settings:       Res<Settings>,
+        mut world:          ResMut<WorldRes>,
+        mut physics:        ResMut<RapierConfiguration>
     ) {
         world.player_render_distance = settings.rendering_distance;
 
@@ -116,9 +120,9 @@ impl WorldSystem {
     /// 
     /// Установка как задачи процессы загрузки ресурсов и прогрузки отдельных комплексных компонентов.
     fn init_world(
-        mut commands:   Commands,
-        handle:         Res<TestTextureAtlas>,
-        handle_dir:     Res<DirectionAtlas>
+        mut commands:       Commands,
+            handle:         Res<TestTextureAtlas>,
+            handle_dir:     Res<DirectionAtlas>
     ) {
         /*
             Тут будет непосредственно инициализация мира, где будет размещение игровой сетки, основных его компонентов и сущностей.
@@ -151,18 +155,14 @@ impl WorldSystem {
         .insert(RigidBody::Dynamic)
         .insert(Collider::round_cuboid(2., 2., 0.01))
         .insert(LockedAxes::ROTATION_LOCKED)
-        .id()
-        ;//.insert(Ccd::enabled());
+        .id();
 
         commands.entity(entity)
         .insert(User {
             control_entity: Some(entity),
             ..default()
         })
-        .insert(Container {
-            ..default()
-        })
-        ;
+        .insert(Container::default());
 
         // Спавн оружия и соединение с игроком
         commands
@@ -178,51 +178,56 @@ impl WorldSystem {
                 },
                 ..default()
             })
-            .insert(
-                EntityObject::default()
-            )
+            .insert(EntityObject::default())
             .insert(PlayerAttach {
                 offset: Vec2::new(0., -3.),
             })
             .insert(GunController {
                 shoot_cooldown: 0.5,
                 shoot_timer: 0.,
-        });
+            });
 
         // Спавн подбираемого предмета
         commands
-            .spawn(SpriteSheetBundle {
-                texture: handle.image.clone().unwrap(),
-                atlas: TextureAtlas {
-                    layout: handle.layout.clone().unwrap(),
-                    index: TestTextureAtlas::get_index("bullet", &handle)
-                },
-                transform: Transform {
-                    translation: Vec3::new(64., 64., 0.),
+            .spawn((
+                EntityObject {
                     ..default()
                 },
-                ..default()
-            })
+                SpriteSheetBundle {
+                    texture: handle.image.clone().unwrap(),
+                    atlas: TextureAtlas {
+                        layout: handle.layout.clone().unwrap(),
+                        index: TestTextureAtlas::get_index("bullet", &handle)
+                    },
+                    transform: Transform {
+                        translation: Vec3::new(64., 64., 0.),
+                        ..default()
+                    },
+                    ..default()
+                }
+            ))
             .insert(Pickupable {
                 item: ItemType::Item(Item::Ammo),
-                count: 16
+                count: 32
             })
             .insert(Name::new("Item"));
 
         // Точка спавна для спавна "болванчиков", которые двигаются к игроку
         commands
-            .spawn(SpriteSheetBundle {
-                texture: handle.image.clone().unwrap(),
-                atlas: TextureAtlas {
-                    layout: handle.layout.clone().unwrap(),
-                    index: TestTextureAtlas::get_index("test_square", &handle),
-                },
-                transform: Transform {
-                    translation: Vec3::new(256.0, 256.0, 0.0),
+            .spawn((
+                SpriteSheetBundle {
+                    texture: handle.image.clone().unwrap(),
+                    atlas: TextureAtlas {
+                        layout: handle.layout.clone().unwrap(),
+                        index: TestTextureAtlas::get_index("test_square", &handle),
+                    },
+                    transform: Transform {
+                        translation: Vec3::new(256.0, 256.0, 0.0),
+                        ..default()
+                    },
                     ..default()
-                },
-                ..default()
-            })
+                }
+            ))
             .insert(EnemySpawner {
                 is_active: false,
                 cooldown: 5.,
@@ -234,25 +239,23 @@ impl WorldSystem {
     /// Функция для инициализации загрузки чанков вокруг игрока в пределах установленной прогрузки.
     fn load_chunk_around(
         mut commands:       Commands,
-        asset_server:       Res<AssetServer>,
+            asset_server:   Res<AssetServer>,
         mut worldres:       ResMut<WorldRes>,
-        handle:             Res<TestTextureAtlas>,
-        player_query:       Query<(&mut Transform, &mut User)>,
+            handle:         Res<TestTextureAtlas>,
+            player_query:   Query<(&mut Transform, &mut User)>,
         mut chunk_load:     EventWriter<LoadChunkPos>,
         mut chunk_upload:   EventWriter<DischargeChunkPos>
     ) {
         /*
-                По сути потоковая функция, которая будет прогружать территорию
-                Небольшой черновик работы функции.
-                Отправляется от сущности "Игрок", вычисляется где он находиться и прогружает во круг чанки, если они находяться в зоне прогрузки.
-
-                Изберательная прогрузка: У игрока есть некая зона, в пределах которой не прогружается далее территория, если зайти за предел радиуса допуска, то происходит загрузка.
-                Та некая зона появляется, если стоять на месте некоторое время (зона афк))
-        d
-                При процессе загрузки чанков, сначала происходит проверка [check_exists_chunk], есть ли чанк, если нету происходит генерация [generate_chunk], если же чанк был найден, происходит загрузка чанка [load_chunk], создавая экземпляр
-                сцены в res//, с именем, который является его номером по координатной сетке (0_0 | 0_1 | 1_0 и т.д.). Сам чанк, сохраняется и выгружается из файла, который представляет собой своеобразный сжатый "архив",
-                хронящий информацию о 32x32 чанках по координатной сетке, т.е. есть "архив" в нём 32x32 чанка, он занимает положение в мире 0_0 и т.д.
-                */
+            По сути потоковая функция, которая будет прогружать территорию
+            Небольшой черновик работы функции.
+            Отправляется от сущности "Игрок", вычисляется где он находиться и прогружает во круг чанки, если они находяться в зоне прогрузки.
+            Изберательная прогрузка: У игрока есть некая зона, в пределах которой не прогружается далее территория, если зайти за предел радиуса допуска, то происходит загрузка.
+            Та некая зона появляется, если стоять на месте некоторое время (зона афк))
+            При процессе загрузки чанков, сначала происходит проверка [check_exists_chunk], есть ли чанк, если нету происходит генерация [generate_chunk], если же чанк был найден, происходит загрузка чанка [load_chunk], создавая экземпляр
+            сцены в res//, с именем, который является его номером по координатной сетке (0_0 | 0_1 | 1_0 и т.д.). Сам чанк, сохраняется и выгружается из файла, который представляет собой своеобразный сжатый "архив",
+            хронящий информацию о 32x32 чанках по координатной сетке, т.е. есть "архив" в нём 32x32 чанка, он занимает положение в мире 0_0 и т.д.
+        */
 
         for (transform, _player) in &player_query {
             let player_translation = transform.translation.truncate().as_ivec2();
@@ -282,11 +285,6 @@ impl WorldSystem {
                 for y in (player_chunk_y - worldres.player_render_distance)
                     ..=(player_chunk_y + worldres.player_render_distance)
                 {
-                    //let distance = ((player_chunk_x - x).abs() + (player_chunk_y - y).abs()).max(1);
-                    // if distance <= world.player_render_distance {
-                    //     let chunk_pos = IVec2::new(x, y);
-                    //     loaded_chunks_new.push(chunk_pos);
-                    // }
                     let chunk_pos = IVec2::new(x, y);
                     loaded_chunks_new.push(chunk_pos);
                 }
@@ -472,15 +470,3 @@ impl WorldRes {
         WorldRes { ..default() }
     }
 }
-
-// #[derive(Component, Resource)]
-// struct Chunk {
-//     pub chunk_pos: IVec2,
-//     pub entity: Entity,
-// }
-
-// impl Chunk {
-//     pub fn new(chunk_pos: IVec2, entity: Entity) -> Self {
-//         Self { chunk_pos, entity }
-//     }
-// }

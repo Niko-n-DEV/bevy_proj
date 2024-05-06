@@ -41,8 +41,8 @@ pub fn setup(mut commands: Commands, assets_server: Res<AssetServer>) {
         texture: TilemapTexture::new(
             assets_server.load("core/textures/terrain/tiles_test.png"),
             TilemapTextureDescriptor::new(
-                UVec2 { x: 64, y: 64 },         // Это размер атласа
-                UVec2 { x: 16, y: 16 },    // Это размер клетки
+                UVec2 { x: 128, y: 128 },         // Это размер атласа
+                UVec2 { x: 32, y: 32 },    // Это размер клетки
                 FilterMode::Nearest,
             ),
             TilemapRotation::None,
@@ -78,13 +78,13 @@ pub fn fill_chunk(
                     storage.set(
                         &mut commands,
                         IVec2 { x, y },
-                        TileBuilder::new().with_layer(1, TileLayer::no_flip(1)),
+                        TileBuilder::new().with_layer(1, TileLayer::no_flip(8)),
                     );
                 } else {
                     storage.set(
                         &mut commands,
                         IVec2 { x, y },
-                        TileBuilder::new().with_layer(1, TileLayer::no_flip(6)),
+                        TileBuilder::new().with_layer(1, TileLayer::no_flip(4)),
                     );
                 }
                 
@@ -123,7 +123,7 @@ pub fn toggle(
     mut tilemaps_query: Query<&mut Visibility, With<TilemapStorage>>,
         input:          Res<ButtonInput<KeyCode>>,
 ) {
-    if input.just_pressed(KeyCode::Space) {
+    if input.just_pressed(KeyCode::F2) {
         for mut visibility in tilemaps_query.iter_mut() {
             *visibility = match *visibility {
                 Visibility::Inherited => Visibility::Hidden,
