@@ -77,14 +77,14 @@ impl Plugin for UserPlugin {
             .add_systems(PreUpdate, cursor_track.run_if(in_state(AppState::Game)))
             .add_systems(Update, 
                 (
-                    place_wall.run_if(in_state(AppState::Game)),
-                    delete_wall.run_if(in_state(AppState::Game)),
-                    select_object.run_if(in_state(AppState::Game)),
-                    selector_update.run_if(in_state(AppState::Game)),
-                    selector_remove.run_if(in_state(AppState::Game)),
-                    attach_to_select.run_if(in_state(AppState::Game)),
-                    spawn_bullets.run_if(in_state(AppState::Game))
-                )
+                    place_wall,
+                    delete_wall,
+                    select_object,
+                    selector_update,
+                    selector_remove,
+                    attach_to_select,
+                    spawn_bullets
+                ).run_if(in_state(AppState::Game))
             )
         ;
     }
@@ -356,7 +356,7 @@ fn place_wall(
                         index: TestTextureAtlas::get_index("wall", &handle),
                     },
                     transform: Transform {
-                        translation: Vec3::new(tiled_pos.x as f32 * 16. + 8., tiled_pos.y as f32 * 16. + 8., 0.),
+                        translation: Vec3::new(tiled_pos.x as f32 * 16. + 8., tiled_pos.y as f32 * 16. + 8., 0.8),
                         ..default()
                     },
                     ..default()
@@ -411,7 +411,7 @@ fn spawn_bullets(
                         index: TestTextureAtlas::get_index("bullet", &handle)
                     },
                     transform: Transform {
-                        translation: Vec3::new(tiled_pos.x as f32 * 16. + 8., tiled_pos.y as f32 * 16. + 8., 0.),
+                        translation: Vec3::new(tiled_pos.x as f32 * 16. + 8., tiled_pos.y as f32 * 16. + 8., 0.3),
                         ..default()
                     },
                     ..default()

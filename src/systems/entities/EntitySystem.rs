@@ -52,7 +52,7 @@ pub fn update_spawning(
             if spawner.timer <= 0. {
 
                 spawner.timer = spawner.cooldown;
-                let pos = trans.translation;
+                let pos = Vec3::new(trans.translation.x, trans.translation.y, 0.5);
 
                 commands
                     .spawn(SpriteSheetBundle {
@@ -68,7 +68,7 @@ pub fn update_spawning(
                         ..default()
                     })
                     .insert(EntityBase {
-                        health: Health(2.0),
+                        health: Health(50.0),
                         direction: DirectionState::South,
                         //velocity: Velocity(Vec3::ZERO),
                         movable: true,
@@ -81,7 +81,7 @@ pub fn update_spawning(
                     ))
                     .insert(Velocity::zero())
                     .insert(RigidBody::Dynamic)
-                    .insert(Collider::round_cuboid(2., 2., 0.01))
+                    .insert(Collider::round_cuboid(2., 2., 0.001))
                     .insert(LockedAxes::ROTATION_LOCKED);
             }
         }
@@ -137,26 +137,26 @@ impl Plugin for EntitySystem {
             .add_systems(
                 Update,
                 (
-                    handle_move.run_if(in_state(AppState::Game)),
-                    handle_direction_changed_events.run_if(in_state(AppState::Game)).after(handle_move)
-                )
+                    handle_move,
+                    handle_direction_changed_events.after(handle_move)
+                ).run_if(in_state(AppState::Game))
             )
             .add_systems(PostUpdate, inertia_attenuation.run_if(in_state(AppState::Game)))
             // [Test] Обновление системы просчёта пуль и попадений
             .add_systems(
                 Update,
                 (
-                    update_bullets.run_if(in_state(AppState::Game)),
-                    update_bullet_hits.run_if(in_state(AppState::Game)),
-                ),
+                    update_bullets,
+                    update_bullet_hits
+                ).run_if(in_state(AppState::Game))
             )
             // [Test] Обновление системы просчёта врагов и их спавна
             .add_systems(
                 Update,
                 (
-                    update_enemies.run_if(in_state(AppState::Game)),
-                    update_spawning.run_if(in_state(AppState::Game)),
-                ),
+                    update_enemies,
+                    update_spawning
+                ).run_if(in_state(AppState::Game))
             )
             .add_systems(OnExit(AppState::Game), delete_enemy_spawner)
         ;
@@ -206,7 +206,6 @@ fn handle_move(
         if let Ok((mut entity_base, mut transform, mut _vel)) = query.get_mut(event.0) {
             if event.1 != Vec3::ZERO {
                 dir_event.send(DirectionChangeEvent(event.0, determine_direction(event.1)));
-                //vel.linvel = Vec2::ZERO;
                 transform.translation = transform.translation + time.delta_seconds() * event.2 * event.1;
                 entity_base.position = Position(transform.translation);
             } else {
@@ -254,19 +253,7 @@ fn determine_direction(vector: Vec3) -> DirectionState {
     DirectionState::East
 }
 
-/// Функция для определения коллизии в стороне направления движения
-// fn collision_check(
-//     target_pos: Transform,
-//     mut collision_query: Query<&Transform, With<Collision>>
-// ) -> bool {
-//     for collision_transform in collision_query.iter() {
-//         //let collision = collide();
-//     }
-//     true
-// }
-
 // Direction texture updater
-
 #[derive(Event)]
 pub struct DirectionChangeEvent(pub Entity, pub DirectionState);
 
@@ -298,22 +285,18 @@ fn handle_direction_changed_events(
                 DirectionState::North => {
                     _entity_base.direction = DirectionState::North;
                     atlas.index = index_atlas + 1;
-                    // info!("Hi - North")
                 }
                 DirectionState::South => {
                     _entity_base.direction = DirectionState::South;
                     atlas.index = index_atlas;
-                    // info!("Hi - South")
                 }
                 DirectionState::West => {
                     _entity_base.direction = DirectionState::West;
                     atlas.index = index_atlas + 3;
-                    // info!("Hi - West")
                 }
                 DirectionState::East => {
                     _entity_base.direction = DirectionState::East;
                     atlas.index = index_atlas + 2;
-                    // info!("Hi - East")
                 }
                 DirectionState::None => {
                     _entity_base.direction = DirectionState::None;

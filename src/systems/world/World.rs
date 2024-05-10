@@ -86,11 +86,11 @@ impl Plugin for WorldSystem {
             .add_systems(
                 Update,
                 (
-                    Self::load_chunk_around.run_if(in_state(AppState::Game)),
-                    TileMap::toggle.run_if(in_state(AppState::Game)),
-                    TileMap::fill_chunk.run_if(in_state(AppState::Game)),
-                    TileMap::clear_chunk.run_if(in_state(AppState::Game))
-                )
+                    Self::load_chunk_around,
+                    TileMap::toggle,
+                    TileMap::fill_chunk,
+                    TileMap::clear_chunk
+                ).run_if(in_state(AppState::Game))
             )
             .add_systems(OnExit(AppState::Game), (
                 WorldTaskManager::despawn_entities,
@@ -134,9 +134,10 @@ impl WorldSystem {
         // Спавн спрайта, являющийся игроком
         let (texture, atlas) = DirectionAtlas::set_sprite("human", &handle_dir);
         let entity = commands.spawn((
+            RigidBody::Dynamic,
             EntityBase {
-                speed: Speed(50., 150., 25.),
-                health: Health(2.),
+                speed: Speed(50., 75., 25.),
+                health: Health(100.),
                 position: Position(Vec3::new(64., 64., 0.)),
                 direction: DirectionState::South,
                 movable: true,
@@ -145,6 +146,10 @@ impl WorldSystem {
             SpriteSheetBundle {
                 texture,
                 atlas,
+                transform: Transform {
+                    translation: Vec3::new(0.0, 0.0, 0.5),
+                    ..default()
+                },
                 ..default()
             },
             EntityType::Humonoid(HumonoidType::Human),
@@ -152,8 +157,7 @@ impl WorldSystem {
             Name::new("Player"),
         ))
         .insert(Velocity::zero())
-        .insert(RigidBody::Dynamic)
-        .insert(Collider::round_cuboid(2., 2., 0.01))
+        .insert(Collider::round_cuboid(2., 2., 0.001))
         .insert(LockedAxes::ROTATION_LOCKED)
         .id();
 
@@ -173,7 +177,7 @@ impl WorldSystem {
                     index: TestTextureAtlas::get_index("gun", &handle),
                 },
                 transform: Transform {
-                    translation: Vec3::splat(0.),
+                    translation: Vec3::new(0., 0., 0.5),
                     ..default()
                 },
                 ..default()
@@ -200,7 +204,7 @@ impl WorldSystem {
                         index: TestTextureAtlas::get_index("bullet", &handle)
                     },
                     transform: Transform {
-                        translation: Vec3::new(64., 64., 0.),
+                        translation: Vec3::new(64., 64., 0.3),
                         ..default()
                     },
                     ..default()
@@ -222,7 +226,7 @@ impl WorldSystem {
                         index: TestTextureAtlas::get_index("test_square", &handle),
                     },
                     transform: Transform {
-                        translation: Vec3::new(256.0, 256.0, 0.0),
+                        translation: Vec3::new(256.0, 256.0, 0.2),
                         ..default()
                     },
                     ..default()

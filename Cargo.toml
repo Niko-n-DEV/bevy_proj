@@ -12,11 +12,10 @@ features = [
 
 [dependencies]
 tracy-client = { version = "0.17.0", default-features = false, features = ["enable"] }
-bevy_rapier2d = "0.25.0"
+bevy_rapier2d = "0.26.0"
 bevy_egui = "0.27"
 bevy-inspector-egui = "0.24.0"
 iyes_perf_ui = "0.2.3"
-bevy_simple_text_input = "0.6.0"
 # belly = { git = "https://github.com/jkb0o/belly/", branch = "main" }
 bevy_pancam = "0.11.1"
 bevy_pixel_camera = "0.13.0"

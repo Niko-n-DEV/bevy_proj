@@ -11,7 +11,7 @@ use crate::core::{
 #[derive(Component, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
 pub struct InventoryGui {
-    pub slots: [InventorySlot; 9]
+    pub slots: [InventorySlot; 12]
 }
 
 impl InventoryGui {

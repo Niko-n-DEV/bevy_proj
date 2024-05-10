@@ -18,8 +18,6 @@ use crate::core::{
     AppState
 };
 
-use bevy_simple_text_input::{TextInputBundle, TextInputInactive};
-
 // ==============================
 // 
 // ==========  GameUI  ==========
@@ -35,30 +33,6 @@ pub struct GameUI {
 // ==========
 #[derive(Component)]
 pub struct BackToMenuButton;
-
-const BORDER_COLOR_ACTIVE: Color    = Color::rgb(0.75, 0.52, 0.99);
-const BORDER_COLOR_INACTIVE: Color  = Color::rgb(0.25, 0.25, 0.25);
-const BACKGROUND_COLOR: Color       = Color::rgb(0.15, 0.15, 0.15);
-
-// ========== TextLine
-// Поле ввода
-// ==========
-#[derive(Component)]
-pub struct CMDline;
-
-// ========== Panel
-// Панель пользовательского интерфейса для отображения информации и быстрого взаимодействия с персонажем
-// ==========
-#[derive(Component)]
-pub struct BarGui {
-    pub inventory_open: bool
-}
-
-#[derive(Component)]
-pub struct HealthBarGui;
-
-#[derive(Component)]
-pub struct AmmoBarGui;
 
 impl GameUI {
     /// Функция для размещения игрового интерфейса.
@@ -79,7 +53,7 @@ impl GameUI {
                 NodeBundle {
                     style: Style {
                         height: Val::Percent(100.),
-                        width: Val::Percent(100.),
+                        width:  Val::Percent(100.),
                         ..default()
                     },
                     ..default()
@@ -87,7 +61,7 @@ impl GameUI {
                 GameUI {
                     bargui_is_open: false,
                     console_toggle: false,
-                    debug_toggle: false
+                    debug_toggle:   false
                 },
                 Interaction::None,
                 Name::new("Game UI"),
@@ -97,11 +71,11 @@ impl GameUI {
                 parent
                     .spawn(NodeBundle {
                         style: Style {
-                            width: Val::Percent(100.0),
-                            height: Val::Percent(5.0),
-                            align_items: AlignItems::Center,
-                            align_self: AlignSelf::End,
-                            padding: UiRect::all(Val::Px(10.0)),
+                            width:          Val::Percent(100.0),
+                            height:         Val::Percent(5.0),
+                            align_items:    AlignItems::Center,
+                            align_self:     AlignSelf::End,
+                            padding:        UiRect::all(Val::Px(10.0)),
                             ..default()
                         },
                         background_color: DARK_LGRAY_COLOR.into(),
@@ -112,9 +86,9 @@ impl GameUI {
                         parent
                             .spawn((
                                 ButtonBundle {
-                                    style: button_container_style(25.0, 45.0),
-                                    border_color: Color::BLACK.into(),
-                                    background_color: NORMAL_BUTTON_COLOR.into(),
+                                    style:              button_container_style(25.0, 45.0),
+                                    border_color:       Color::BLACK.into(),
+                                    background_color:   NORMAL_BUTTON_COLOR.into(),
                                     ..default()
                                 },
                                 BackToMenuButton {},
@@ -134,42 +108,10 @@ impl GameUI {
                                     ..default()
                                 });
                             });
-                        // === CMDline ===
-                        parent.spawn((
-                            NodeBundle {
-                                style: Style {
-                                    width: Val::Px(200.0),
-                                    border: UiRect::all(Val::Px(5.0)),
-                                    padding: UiRect::all(Val::Px(5.0)),
-                                    ..default()
-                                },
-                                border_color: BORDER_COLOR_ACTIVE.into(),
-                                background_color: BACKGROUND_COLOR.into(),
-                                ..default()
-                            },
-                            Name::new("CMDline"),
-                            TextInputBundle::default().with_inactive(true),
-                            CMDline,
-                        ));
                     });
             })
             .id();
         gameui_entity
-    }
-
-    #[allow(unused)]
-    pub fn bargui_is_open(
-        game_ui: Query<&GameUI, With<GameUI>>
-    ) -> bool {
-        if game_ui.is_empty() {
-            false;
-        }
-
-        if let Ok(game_ui) = game_ui.get_single() {
-            game_ui.bargui_is_open
-        } else {
-            false
-        }
     }
 
     /// Функция для выгрузки игрового интерфейса и его дочерних элементов.
@@ -189,6 +131,10 @@ impl GameUI {
         >,
         mut app_state_next_state: ResMut<NextState<AppState>>,
     ) {
+        if button_query.is_empty() {
+            return;
+        }
+
         if let Ok((interaction, mut background_color)) = button_query.get_single_mut() {
             match *interaction {
                 Interaction::Pressed => {
@@ -200,29 +146,6 @@ impl GameUI {
                 }
                 Interaction::None => {
                     *background_color = NORMAL_BUTTON_COLOR.into();
-                }
-            }
-        }
-    }
-
-    // ==========
-    // Функционал фокуса для текстовой линии
-    // ==========
-    /// focus для CMDline
-    pub fn focus(
-        query: Query<(Entity, &Interaction), Changed<Interaction>>,
-        mut text_input_query: Query<(Entity, &mut TextInputInactive, &mut BorderColor)>,
-    ) {
-        for (interaction_entity, interaction) in &query {
-            if *interaction == Interaction::Pressed {
-                for (entity, mut inactive, mut border_color) in &mut text_input_query {
-                    if entity == interaction_entity {
-                        inactive.0 = false;
-                        *border_color = BORDER_COLOR_ACTIVE.into();
-                    } else {
-                        inactive.0 = true;
-                        *border_color = BORDER_COLOR_INACTIVE.into();
-                    }
                 }
             }
         }
@@ -279,6 +202,27 @@ impl DebugInfoPanel {
 // ==============================
 // 
 // ==========  BARGUI  ==========
+
+// ========== Panel
+// Панель пользовательского интерфейса для отображения информации и быстрого взаимодействия с персонажем
+// ==========
+#[derive(Component)]
+pub struct BarGui {
+    pub inventory_open: bool
+}
+
+#[derive(Component)]
+pub struct HealthBarLine;
+
+#[derive(Component)]
+pub struct HealthBarNum;
+
+#[derive(Component)]
+pub struct AmmoBarGui;
+
+#[derive(Component)]
+pub struct ToggleInvVisibleButton;
+
 impl BarGui {
     /// Функция для создания пользовательского интерфейса
     /// 
@@ -301,12 +245,14 @@ impl BarGui {
                     parent.spawn((
                         NodeBundle {
                             style: Style {
-                                position_type: PositionType::Absolute,
-                                left: Val::Percent(45.0),
-                                bottom: Val::Percent(0.0),
-                                width: Val::Percent(25.0),
-                                height: Val::Percent(14.0),
-                                align_self: AlignSelf::Center,
+                                position_type:  PositionType::Absolute,
+                                left:           Val::Percent(42.0),
+                                bottom:         Val::Percent(0.0),
+                                width:          Val::Percent(25.0),
+                                height:         Val::Percent(14.0),
+                                max_height:     Val::Px(100.0),
+                                max_width:      Val::Px(300.0),
+                                align_self:     AlignSelf::Center,
                                 ..default()
                             },
                             background_color: DARK_LLGRAY_COLOR.into(),
@@ -317,45 +263,115 @@ impl BarGui {
                             inventory_open: false
                         }
                     )).with_children(|parent| {
-                        parent.spawn((TextBundle {
-                            style: Style {
-                                position_type: PositionType::Absolute,
+                        // === Health Bar
+                        parent.spawn((
+                            NodeBundle {
+                                style: Style {
+                                    position_type: PositionType::Absolute,
+                                    bottom: Val::Px(101.0),
+                                    width:  Val::Px(125.0),
+                                    height: Val::Px(15.0),
+                                    align_items: AlignItems::Center,
+                                    padding: UiRect::all(Val::Px(4.0)),
+                                    ..default()
+                                },
+                                background_color: Color::rgb(0.18, 0.18, 0.18).into(),
                                 ..default()
                             },
-                            text: Text {
-                                sections: vec![TextSection::new(
-                                    "Health:",
-                                    TextStyle {
-                                        font_size: 11.0,
+                            Name::new("HealthBar")
+                        )).with_children(|parent| {
+                            // === Line Health
+                            parent.spawn((
+                                NodeBundle {
+                                    style: Style {
+                                        height: Val::Px(7.0),
+                                        width:  Val::Px(90.0),
                                         ..default()
                                     },
-                                )],
-                                ..default()
-                            },
-                            ..default()
-                        },
-                        HealthBarGui
-                        ));
-                        parent.spawn((TextBundle {
-                            style: Style {
-                                position_type: PositionType::Absolute,
-                                top: Val::Percent(10.0),
-                                ..default()
-                            },
-                            text: Text {
-                                sections: vec![TextSection::new(
-                                    "AMMO:",
-                                    TextStyle {
-                                        font_size: 11.0,
+                                    background_color: Color::rgb(0.79, 0.15, 0.15).into(),
+                                    ..default()
+                                },
+                                HealthBarLine
+                            ));
+
+                            // === Text Health
+                            parent.spawn((
+                                TextBundle {
+                                    style: Style {
+                                        position_type: PositionType::Absolute,
+                                        left: Val::Percent(80.0),
                                         ..default()
                                     },
-                                )],
+                                    text: Text {
+                                        sections: vec![TextSection::new(
+                                            "%",
+                                            TextStyle {
+                                                font_size: 11.0,
+                                                ..default()
+                                            },
+                                        )],
+                                        ..default()
+                                    },
+                                    ..default()
+                                },
+                                HealthBarNum
+                            ));
+                        });
+
+                        // === Ammo Bar
+                        parent.spawn((
+                            TextBundle {
+                                style: Style {
+                                    position_type:  PositionType::Absolute,
+                                    top:            Val::Percent(10.0),
+                                    ..default()
+                                },
+                                text: Text {
+                                    sections: vec![TextSection::new(
+                                        "AMMO:",
+                                        TextStyle {
+                                            font_size: 11.0,
+                                            ..default()
+                                        },
+                                    )],
+                                    ..default()
+                                },
                                 ..default()
                             },
-                            ..default()
-                        },
-                        AmmoBarGui
+                            AmmoBarGui
                         ));
+
+                        // === Options Bar
+                        parent.spawn(
+                            NodeBundle {
+                                style: Style {
+                                    position_type: PositionType::Absolute,
+                                    left:   Val::Px(-40.0),
+                                    width:  Val::Px(40.0),
+                                    height: Val::Px(100.0),
+                                    border: UiRect { 
+                                        left:   Val::Px(2.), 
+                                        right:  Val::Px(2.), 
+                                        top:    Val::Px(2.), 
+                                        bottom: Val::Px(2.) 
+                                    },
+                                    ..default()
+                                },
+                                background_color:   Color::rgb(0.25, 0.25, 0.25).into(),
+                                border_color:       Color::rgb(0.30, 0.30, 0.30).into(),
+                                ..default()
+                            }
+                        ).with_children(|parent| {
+                            parent.spawn((
+                                ButtonBundle {
+                                    style:              button_container_style(25.0, 45.0),
+                                    border_color:       Color::rgb(0.20, 0.20, 0.20).into(),
+                                    background_color:   Color::rgb(0.35, 0.35, 0.35).into(),
+                                    ..default()
+                                },
+                                ToggleInvVisibleButton
+                            ));
+                        });
                     });
                 });
                 parent.1.bargui_is_open = true;
@@ -366,7 +382,6 @@ impl BarGui {
                         parent.1.bargui_is_open = false;
                     }
                 }
-                
             }
         }
     }
@@ -388,48 +403,49 @@ impl BarGui {
                         commands.entity(bar_gui.0).with_children(|parent| {
                             parent.spawn((NodeBundle {
                                 style: Style {
-                                    display: Display::Grid,
-                                    left: Val::Percent(-32.0),
-                                    width: Val::Percent(32.0),
-                                    height: Val::Percent(100.0),
+                                    display:    Display::Grid,
+                                    left:       Val::Px(-176.0),
+                                    bottom:     Val::Px(2.0),
+                                    width:      Val::Px(136.0),
+                                    height:     Val::Px(104.0),
                                     border: UiRect { 
-                                        left: Val::Px(3.), 
-                                        right: Val::Px(3.), 
-                                        top: Val::Px(3.), 
-                                        bottom: Val::Px(3.) 
+                                        left:   Val::Px(4.), 
+                                        right:  Val::Px(4.), 
+                                        top:    Val::Px(4.), 
+                                        bottom: Val::Px(4.) 
                                     },
-                                    grid_template_columns: vec![GridTrack::px(32.), GridTrack::px(32.), GridTrack::px(32.)],
+                                    grid_template_columns: vec![GridTrack::px(32.), GridTrack::px(32.), GridTrack::px(32.), GridTrack::px(32.)],
                                     grid_template_rows: vec![
                                         GridTrack::px(32.),
                                         GridTrack::px(32.)
                                     ],
                                     ..default()
                                 },
-                                background_color: Color::rgb(0.25, 0.25, 0.25).into(),
-                                border_color: Color::rgba(0., 0., 0., 0.5).into(),
+                                background_color:   Color::rgb(0.13, 0.13, 0.13).into(),
+                                border_color:       Color::rgb(0.19, 0.19, 0.19).into(),
                                 ..default()
                             },
                             InventoryGui {
-                                slots: [InventorySlot::default(); 9]
+                                slots: [InventorySlot::default(); 12]
                             },
                             Name::new("Inventory")
                             )).with_children(|slots| {
                                 let mut slot_entities = Vec::new();
-                                for i in 0..9 {
+                                for i in 0..12 {
                                     let slot = slots.spawn(NodeBundle {
                                         style: Style {
                                             display: Display::Grid,
                                             border: UiRect { 
-                                                left: Val::Px(2.), 
-                                                right: Val::Px(2.), 
-                                                top: Val::Px(2.), 
-                                                bottom: Val::Px(2.) 
+                                                left:   Val::Px(5.), 
+                                                right:  Val::Px(5.), 
+                                                top:    Val::Px(5.), 
+                                                bottom: Val::Px(5.) 
                                             },
                                             aspect_ratio: Some(1.0),
                                             ..default()
                                         },
-                                        background_color: Color::rgb(0.30, 0.30, 0.30).into(),
-                                        border_color: Color::rgba(0., 0., 0., 0.4).into(),
+                                        background_color:   Color::rgb(0.24, 0.24, 0.24).into(),
+                                        border_color:       Color::rgb(0.13, 0.13, 0.13).into(),
                                         ..default()
                                     })
                                     .insert(Name::new(format!("Slot {i}")))
@@ -533,16 +549,50 @@ impl BarGui {
         }
     }
 
+    pub fn interact_with_to_inv_visible_button(
+        mut button_query: Query<
+            (&Interaction, &mut BackgroundColor),
+            (Changed<Interaction>, With<ToggleInvVisibleButton>),
+        >,
+        mut inventory: Query<&mut Visibility, With<InventoryGui>>,
+    ) {
+        if button_query.is_empty() || inventory.is_empty() {
+            return;
+        }
+
+        if let Ok((interaction, mut background_color)) = button_query.get_single_mut() {
+            match *interaction {
+                Interaction::Pressed => {
+                    *background_color = PRESSED_BUTTON_COLOR.into();
+                    if let Ok(mut inventory) = inventory.get_single_mut() {
+                        *inventory = match *inventory {
+                            Visibility::Inherited => Visibility::Hidden,
+                            Visibility::Hidden => Visibility::Visible,
+                            Visibility::Visible => Visibility::Hidden,
+                        }
+                    }
+                }
+                Interaction::Hovered => {
+                    *background_color = HOVERED_BUTTON_COLOR.into();
+                }
+                Interaction::None => {
+                    *background_color = Color::rgb(0.35, 0.35, 0.35).into();
+                }
+            }
+        }
+    }
+
     // ========== BARGUI
     // Обновление информации о здоровье и кол-ва патронов в инвентаре
     // ==========
     pub fn update_player_info(
             game_ui:    Query<&GameUI, With<GameUI>>,
-        mut text_h:     Query<&mut Text, (With<HealthBarGui>, Without<AmmoBarGui>)>,
-        mut text_a:     Query<&mut Text, (With<AmmoBarGui>, Without<HealthBarGui>)>,
+        mut line_h:     Query<&mut Style, (With<HealthBarLine>, Without<HealthBarNum>)>,
+        mut text_h:     Query<&mut Text, (With<HealthBarNum>, Without<HealthBarLine>)>,
+        mut text_a:     Query<&mut Text, (With<AmmoBarGui>, (Without<HealthBarLine>, Without<HealthBarNum>))>,
             player:     Query<(&EntityBase, &Container), With<User>>
     ) {
-        if text_h.is_empty() && text_a.is_empty() {
+        if (text_h.is_empty() && line_h.is_empty()) && text_a.is_empty() {
             return;
         }
 
@@ -552,12 +602,16 @@ impl BarGui {
                     if let Ok(mut text) = text_h.get_single_mut() {
                         let health = player.0.health.0;
                         text.sections = vec![TextSection::new(
-                            format!("Health: {health}"),
+                            format!("{health}%"),
                             TextStyle {
                                 font_size: 11.0,
                                 ..default()
                             },
-                        )]
+                        )];
+                        
+                        if let Ok(mut line) = line_h.get_single_mut() {
+                            line.width = Val::Px(health * 0.9)
+                        }
                     }
             
                     if let Ok(mut text) = text_a.get_single_mut() {

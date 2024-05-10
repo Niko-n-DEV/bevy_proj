@@ -12,23 +12,6 @@ use crate::core::{
 #[derive(Resource, Default)]
 pub struct ResourceFolder(Handle<LoadedFolder>, Handle<LoadedFolder>);
 
-// pub struct Graphic;
-
-// impl Plugin for Graphic {
-//     fn build(&self, app: &mut App) {
-//         app
-//             // Взятие ресурсов из assets
-//             .add_systems(OnEnter(AppState::ResourceCheck), load_resource_folder)
-//             // Ну, атлас, да
-//             .insert_resource(TestTextureAtlas::default())
-//             .insert_resource(DirectionAtlas::default())
-//             // Проверка ресурсов на зависимости (Непонятно как оно точно работает)
-//             .add_systems(Update,check_textures.run_if(in_state(AppState::ResourceCheck)))
-//             .add_systems(OnEnter(AppState::ResourceLoading), setup_ex)
-//             ;
-//     }
-// }
-
 /// функция для загрузки ресурсов из определённой папки, по умолчанию эта папка - assets, и всё его содержимое
 pub fn load_resource_folder(mut commands: Commands, asset_server: Res<AssetServer>) {
     info!("Insert resources");
@@ -54,7 +37,6 @@ pub fn check_textures(
 
 pub fn setup_ex(
     mut commands: Commands,
-    // asset_server: Res<AssetServer>,
     resource_handle: Res<ResourceFolder>,
     mut handle_cust_atlas: ResMut<TestTextureAtlas>,
     mut handle_dir_atlas: ResMut<DirectionAtlas>,

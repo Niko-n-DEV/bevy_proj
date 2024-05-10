@@ -68,9 +68,8 @@ pub fn update_bullet_hits(
             if Vec3::distance(
                 bullet_list[i as usize].translation,
                 Vec3::new(transform.translation.x, transform.translation.y, 0.),
-            ) <= 36.
-            {
-                enemy.health.0 -= 1.;
+            ) <= 36. {
+                enemy.health.0 -= 25.;
 
                 commands.entity(bullet_list[i as usize].entity).despawn();
 

@@ -35,11 +35,13 @@ pub struct CameraController;
 impl Plugin for CameraController {
     fn build(&self, app: &mut App) {
         app
+            // Init Plugins
             .add_plugins(PanCamPlugin::default())
             .add_plugins(PixelCameraPlugin)
+            // Init Systems
             .add_systems(Startup, Self::setup_camera)
             .add_systems(OnEnter(AppState::Game), Self::toggle_camera_options)
-            .add_systems(Update, Self::camera_follow_player.run_if(in_state(AppState::Game)))
+            .add_systems(PostUpdate, Self::camera_follow_player.run_if(in_state(AppState::Game)))
             .add_systems(Update, Self::toggle_camera_fix.run_if(in_state(AppState::Game)))
             .add_systems(OnExit(AppState::Game), Self::toggle_camera_options)
         ;
@@ -51,10 +53,6 @@ impl CameraController {
         commands
             .spawn((
                 Camera2dBundle::default(),
-                // PixelZoom::FitSize {
-                //     width: 320,
-                //     height: 180,
-                // },
                 PixelViewport,
                 UserCamera {
                     player_fixed: false
@@ -78,8 +76,8 @@ impl CameraController {
     }
 
     fn camera_follow_player(
-        player_query: Query<&Transform, With<User>>,
-        mut camera_query: Query<(&mut Transform, &UserCamera), (With<Camera2d>, Without<User>)>
+        mut camera_query: Query<(&mut Transform, &UserCamera), (With<Camera2d>, Without<User>)>,
+            player_query: Query<&Transform, With<User>>
     ) {
         if player_query.is_empty() || camera_query.is_empty() {
             return;
@@ -95,8 +93,8 @@ impl CameraController {
     }
 
     fn toggle_camera_fix(
-        mut cam_query: Query<(&mut PanCam, &mut UserCamera)>,
-        keyboard_input: Res<ButtonInput<KeyCode>>,
+        mut cam_query:      Query<(&mut PanCam, &mut UserCamera)>,
+            keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
         if keyboard_input.just_released(KeyCode::F1) {
             if let Ok(mut cam) = cam_query.get_single_mut() {

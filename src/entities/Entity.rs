@@ -52,7 +52,7 @@ pub struct EntityBase {
 impl Default for EntityBase {
     fn default() -> Self {
         Self {
-            speed: Speed(50., 150., 25.),
+            speed: Speed(50., 75., 25.),
             health: Health(1.),
             position: Position(Vec3::ZERO),
             direction: DirectionState::South,

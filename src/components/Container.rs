@@ -7,7 +7,11 @@ use bevy_inspector_egui::InspectorOptions;
 use crate::core::{
     AppState,
     // Debug::{GameError, GameErrorType},
-    items::ItemType::{ItemAndCount, ItemType},
+    items::ItemType::{
+        ItemAndCount,
+        ItemType,
+        Pickupable
+    },
 };
 
 
@@ -44,6 +48,47 @@ impl Container {
             }
         }
         None
+    }
+
+    /// Добавляет в инвентарь предмет в первый же свободный слот.
+    pub fn add_in_container(
+        &mut self,
+            item: ItemType,
+            count: usize
+    ) -> bool {
+
+        for slot in &mut self.slots {
+            // Добавление в имеющийся стак, если подбираемый предмет уже есть
+            if slot.item_stack.item_type == item {
+                slot.item_stack.count += count;
+
+                return true;
+            }
+            // Добавление в пустой слот
+            if slot.item_stack.item_type == ItemType::None {
+                slot.item_stack.item_type = item;
+                slot.item_stack.count = count;
+                
+                return true;
+            }
+        }
+        
+        false
+    }
+
+    /// Добавляет в инвентарь предмет в определённый слот
+    pub fn place_in_container(
+        &mut self,
+            item: ItemType,
+            count: usize,
+            slot: usize
+    ) {
+        if self.slots[slot].item_stack.item_type == ItemType::None {
+            self.slots[slot].item_stack.item_type = item;
+            self.slots[slot].item_stack.count = count;
+        } else {
+            println!("В слоте уже что-то есть")
+        }
     }
 
     /// Взять определённое кол-во из слота

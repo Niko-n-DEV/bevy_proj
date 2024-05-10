@@ -2,26 +2,49 @@
 use bevy::prelude::*;
 use std::collections::HashMap;
 
-#[derive(Component, Resource)]
-pub struct ItemsAtlas {
-    pub layout: Option<Handle<TextureAtlasLayout>>,
-    pub image: Option<Handle<Image>>,
-    pub ids: Option<HashMap<String, usize>>,
+#[derive(Resource)]
+pub struct AtlasRes {
+    pub items:      Option<ItemsAtlas>,
+    pub material:   Option<MaterialAtlas>,
+    pub terrain:    Option<TerrainAtlas>,
+    pub objects:    Option<ObjectAtlas>,
+    pub entity:     Option<DirectionAtlas>,
+    pub test:       Option<TestTextureAtlas>
 }
 
-#[derive(Component, Resource)]
+impl AtlasRes {
+    pub fn init() -> Self {
+        Self {
+            items:      Some(ItemsAtlas::default()),
+            material:   Some(MaterialAtlas::default()),
+            terrain:    Some(TerrainAtlas::default()),
+            objects:    Some(ObjectAtlas::default()),
+            entity:     Some(DirectionAtlas::default()),
+            test:       Some(TestTextureAtlas::default()),
+        }
+    }
+}
+
+#[derive(Resource, Default)]
+pub struct ItemsAtlas {
+    pub layout: Option<Handle<TextureAtlasLayout>>,
+    pub image:  Option<Handle<Image>>,
+    pub ids:    Option<HashMap<String, usize>>,
+}
+
+#[derive(Resource, Default)]
 pub struct MaterialAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
-    pub image: Option<Handle<Image>>,
-    pub ids: Option<HashMap<String, usize>>,
+    pub image:  Option<Handle<Image>>,
+    pub ids:    Option<HashMap<String, usize>>,
 }
 
 // Атлас для хранения текстур местности
-#[derive(Component, Resource)]
+#[derive(Resource, Default)]
 pub struct TerrainAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
-    pub image: Option<Handle<Image>>,
-    pub ids: Option<HashMap<String, usize>>,
+    pub image:  Option<Handle<Image>>,
+    pub ids:    Option<HashMap<String, usize>>,
 }
 
 impl TerrainAtlas {
@@ -48,36 +71,19 @@ impl TerrainAtlas {
     }
 }
 
-#[derive(Component, Resource)]
-pub struct VehicleAtlas {
-    pub layout: Option<Handle<TextureAtlasLayout>>,
-    pub image: Option<Handle<Image>>,
-    pub ids: Option<HashMap<String, usize>>,
-}
-
-#[derive(Component, Resource)]
+#[derive(Resource, Default)]
 pub struct ObjectAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
-    pub image: Option<Handle<Image>>,
-    pub ids: Option<HashMap<String, usize>>,
+    pub image:  Option<Handle<Image>>,
+    pub ids:    Option<HashMap<String, usize>>,
 }
 
 // [Test]
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct TestTextureAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
-    pub image: Option<Handle<Image>>,
-    pub ids: Option<HashMap<String, usize>>,
-}
-
-impl Default for TestTextureAtlas {
-    fn default() -> Self {
-        Self {
-            layout: None,
-            image: None,
-            ids: None,
-        }
-    }
+    pub image:  Option<Handle<Image>>,
+    pub ids:    Option<HashMap<String, usize>>,
 }
 
 impl TestTextureAtlas {
@@ -116,16 +122,16 @@ pub enum OrientationState {
 #[derive(Resource, Component)]
 pub struct DirectionAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
-    pub image: Option<Handle<Image>>,
-    pub ids: Option<HashMap<String, usize>>,
+    pub image:  Option<Handle<Image>>,
+    pub ids:    Option<HashMap<String, usize>>,
 }
 
 impl Default for DirectionAtlas {
     fn default() -> Self {
         Self {
             layout: None,
-            image: None,
-            ids: None,
+            image:  None,
+            ids:    None,
         }
     }
 }
@@ -149,6 +155,13 @@ impl DirectionAtlas {
         };
 
         (texture, atlas)
+    }
+
+    pub fn create_canvas(
+        mut commands: Commands,
+        // кол-во entity и их текстур
+    ) {
+        // Создание холста атласа по кол-ву ентити 
     }
 }
 

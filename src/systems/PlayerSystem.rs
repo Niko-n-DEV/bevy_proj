@@ -101,23 +101,9 @@ impl PlayerPlugin {
 
         if keyboard_input.just_pressed(KeyCode::Space) {
             for (entity, transform, pick) in pickupable_quety.iter() {
-                if user.interaction_radius > Vec3::distance(transform.translation, user_transform.translation) { 
-                    for slot in container.slots.iter_mut() {
-                        // Добавление в имеющийся стак, если подбираемый предмет уже есть
-                        if slot.item_stack.item_type == pick.item {
-                            slot.item_stack.count += pick.count as usize;
-
-                            commands.entity(entity).despawn_recursive();
-                            return;
-                        }
-                        // Добавление в пустой слот
-                        if slot.item_stack.item_type == ItemType::None {
-                            slot.item_stack.item_type = pick.item;
-                            slot.item_stack.count = pick.count as usize;
-                            
-                            commands.entity(entity).despawn_recursive();
-                            return;
-                        }
+                if user.interaction_radius > Vec3::distance(transform.translation, user_transform.translation) {
+                    if container.add_in_container(pick.item, pick.count) {
+                        commands.entity(entity).despawn_recursive();
                     }
                 }
             }
