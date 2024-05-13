@@ -2,9 +2,25 @@
 use std::{collections::HashMap, path::Path};
 
 use bevy::{asset::LoadedFolder, prelude::*, render::texture::ImageSampler};
+use bevy_egui::egui::TextBuffer;
 
 use crate::core::{
-    resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
+    resource::{
+        graphic::Atlas::{
+            AtlasRes,
+            DirectionAtlas, 
+            TestTextureAtlas
+        },
+        Registry::{
+            Registry,
+            EntityRegistry,
+            TestRegistry
+        }
+    },
+    Entity::{
+        EntityType,
+        HumonoidType
+    },
     AppState,
 };
 
@@ -24,9 +40,9 @@ pub fn load_resource_folder(mut commands: Commands, asset_server: Res<AssetServe
 
 /// Проверка чего-то с каждым обновлением
 pub fn check_textures(
-    mut next_state: ResMut<NextState<AppState>>,
-    resource_folder: Res<ResourceFolder>,
-    mut events: EventReader<AssetEvent<LoadedFolder>>,
+    mut next_state:         ResMut<NextState<AppState>>,
+        resource_folder:    Res<ResourceFolder>,
+    mut events:             EventReader<AssetEvent<LoadedFolder>>,
 ) {
     for event in events.read() {
         if event.is_loaded_with_dependencies(&resource_folder.0) {
@@ -36,19 +52,23 @@ pub fn check_textures(
 }
 
 pub fn setup_ex(
-    mut commands: Commands,
-    resource_handle: Res<ResourceFolder>,
-    mut handle_cust_atlas: ResMut<TestTextureAtlas>,
-    mut handle_dir_atlas: ResMut<DirectionAtlas>,
-    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
-    loaded_folders: Res<Assets<LoadedFolder>>,
-    mut textures: ResMut<Assets<Image>>,
-    mut next_state: ResMut<NextState<AppState>>,
+    mut commands:           Commands,
+        resource_handle:    Res<ResourceFolder>,
+    mut handle_cust_atlas:  ResMut<TestTextureAtlas>,
+    mut handle_dir_atlas:   ResMut<DirectionAtlas>,
+    mut register:           ResMut<Registry>,
+    mut atlas:              ResMut<AtlasRes>,
+    mut texture_atlases:    ResMut<Assets<TextureAtlasLayout>>,
+        loaded_folders:     Res<Assets<LoadedFolder>>,
+    mut textures:           ResMut<Assets<Image>>,
+    mut next_state:         ResMut<NextState<AppState>>,
 ) {
+    // ==============================
     // Сборка текстур в единый атлас
+    // ==============================
     let loaded_folder = loaded_folders.get(&resource_handle.0).unwrap();
 
-    let (texture_atlas_nearest, nearest_texture, _hash) = create_texture_atlas(
+    let (texture_atlas_nearest, nearest_texture, _hash_t) = create_texture_atlas(
         &loaded_folder,
         Some(UVec2::splat(1)),
         Some(ImageSampler::nearest()),
@@ -65,11 +85,13 @@ pub fn setup_ex(
         ..default()
     });
 
-    handle_cust_atlas.layout = Some(atlas_nearest_handle);
-    handle_cust_atlas.image = Some(nearest_texture);
-    handle_cust_atlas.ids = Some(_hash);
+    handle_cust_atlas.layout =  Some(atlas_nearest_handle.clone());
+    handle_cust_atlas.image =   Some(nearest_texture.clone());
+    handle_cust_atlas.ids =     Some(_hash_t.clone());
 
+    // ==============================
     // Сборка атласов в единый атлас
+    // ==============================
     let loaded_folder = loaded_folders.get(&resource_handle.1).unwrap();
     let (texture_atlas_dir_atlases, nearest_texture_atlases, _hash) = load_and_index_atlas(
         &loaded_folder,
@@ -80,9 +102,23 @@ pub fn setup_ex(
 
     let atlas_dir_nearest_handle = texture_atlases.add(texture_atlas_dir_atlases);
 
-    handle_dir_atlas.layout = Some(atlas_dir_nearest_handle);
-    handle_dir_atlas.image = Some(nearest_texture_atlases);
-    handle_dir_atlas.ids = Some(_hash);
+    handle_dir_atlas.layout =   Some(atlas_dir_nearest_handle.clone());
+    handle_dir_atlas.image =    Some(nearest_texture_atlases.clone());
+    handle_dir_atlas.ids =      Some(_hash.clone());
+
+    // ==============================
+    // Test
+    // ==============================
+    atlas.entity.layout =   Some(atlas_dir_nearest_handle);
+    atlas.entity.image =    Some(nearest_texture_atlases);
+    atlas.entity.ids =      Some(_hash);
+
+    atlas.test.layout =  Some(atlas_nearest_handle);
+    atlas.test.image =   Some(nearest_texture);
+    atlas.test.ids =     Some(_hash_t);
+    // ==============================
+    // 
+    // ==============================
 
     next_state.set(AppState::MainMenu);
     info!("State: MainMenu")
@@ -90,10 +126,10 @@ pub fn setup_ex(
 
 /// Создание атласа текстур с заданными настройками заполнения и выборки из отдельных спрайтов в данной папке
 fn create_texture_atlas(
-    folder: &LoadedFolder,
-    padding: Option<UVec2>,
-    sampling: Option<ImageSampler>,
-    textures: &mut ResMut<Assets<Image>>,
+    folder:     &LoadedFolder,
+    padding:    Option<UVec2>,
+    sampling:   Option<ImageSampler>,
+    textures:   &mut ResMut<Assets<Image>>,
 ) -> (TextureAtlasLayout, Handle<Image>, HashMap<String, usize>) {
     let mut textures_ids: HashMap<String, usize> = HashMap::new();
     // Скорее всего создаётся полотно, в которое будет помещаться текстуры
@@ -151,10 +187,10 @@ const SPRITE_SHEET_W: usize = 16; // размер одного фрагмент�
 const SPRITE_SHEET_H: usize = 16; // размер одного фрагмента по высоте
 /// Индексирование атласа, путём его разбиения на сетку.
 fn load_and_index_atlas(
-    folder: &LoadedFolder,
-    padding: Option<UVec2>,
-    sampling: Option<ImageSampler>,
-    textures: &mut ResMut<Assets<Image>>,
+    folder:     &LoadedFolder,
+    padding:    Option<UVec2>,
+    sampling:   Option<ImageSampler>,
+    textures:   &mut ResMut<Assets<Image>>,
 ) -> (TextureAtlasLayout, Handle<Image>, HashMap<String, usize>) {
     let mut texture_atlas_builder =
         TextureAtlasBuilder::default().padding(padding.unwrap_or_default());

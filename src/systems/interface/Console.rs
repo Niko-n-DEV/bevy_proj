@@ -5,7 +5,9 @@ use bevy_egui::{
 };
 
 use crate::core::{
-    interface::GameUI::GameUI,
+    interface::GameUI::GameUI, 
+    ItemType::*, 
+    Container::Container, 
     UserSystem::User
 };
 
@@ -39,7 +41,7 @@ pub fn toggle_console(
                             ui.text_edit_singleline(&mut console.line_input);
 
                             if ui.button(">").clicked() || 
-                            (keyboard_input.just_pressed(KeyCode::Enter) || keyboard_input.just_pressed(KeyCode::NumpadEnter)) {
+                            (keyboard_input.just_pressed(KeyCode::NumpadEnter)) {
                                 if !console.line_input.is_empty() {
                                     let text = console.line_input.clone();
                                     event.send(ConsoleInput(text.clone()));
@@ -76,8 +78,8 @@ pub fn toggle_console(
 pub struct ConsoleInput(pub String);
 
 pub fn cmd_execute(
-    mut _commands:   Commands,
-    mut player:     Query<&mut Transform, With<User>>,
+    mut _commands:  Commands,
+    mut player:     Query<(&mut Transform, &mut Container), With<User>>,
     mut event:      EventReader<ConsoleInput>
 ) {
     if event.is_empty() {
@@ -98,7 +100,7 @@ pub fn cmd_execute(
                                 if let Ok(x) = x_str.parse::<f32>() {
                                     if let Ok(y) = y_str.parse::<f32>() {
                                         if let Ok(mut player) = player.get_single_mut() {
-                                            player.translation = Vec3::new(x * 16.0, y * 16.0, 0.5);
+                                            player.0.translation = Vec3::new(x * 16.0, y * 16.0, 0.5);
                                         }
                                     }
                                 }
@@ -111,8 +113,28 @@ pub fn cmd_execute(
                         if let Some(x_str) = parts.get(1) {
                             if let Ok(x) = x_str.parse::<f32>() {
                                 if let Ok(mut player) = player.get_single_mut() {
-                                    player.scale = Vec3::splat(x)
+                                    player.0.scale = Vec3::splat(x)
                                 }
+                            }
+                        }
+                    }
+                    "/get" => {
+                        println!("/get");
+
+                        if let Some(x_str) = parts.get(1).map(|s| *s) {
+                            if let Some(y_str) = parts.get(2) {
+                                match x_str {
+                                    "ammo" => {
+                                        if let Ok(mut player) = player.get_single_mut() {
+                                            if let Ok(y) = y_str.parse::<usize>() {
+                                                player.1.add_in_container(ItemType::Item(Item::Ammo), y);
+                                            }
+                                        } 
+                                    },
+                                    _ => {
+                                        println!("Неизвестная команда")
+                                    }
+                                }           
                             }
                         }
                     }

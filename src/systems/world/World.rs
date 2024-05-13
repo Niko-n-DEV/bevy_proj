@@ -16,22 +16,25 @@ use std::collections::HashMap;
 use bevy_entitiles::EntiTilesPlugin;
 
 use crate::core::{
-    entities::EntitySystem::EnemySpawner, 
-    items::{
-        ItemType::{
-            Ammo, 
-            Item, 
-            ItemType, 
-            Pickupable,
-            Material
-        }, 
-        Weapon::GunController
+    entities::EntitySystem::EnemySpawner,
+    ItemType::{
+        Ammo, 
+        Item, 
+        ItemType, 
+        Pickupable,
+        Material
     }, 
+    Weapon::GunController, 
     PlayerSystem::PlayerAttach, 
-    resource::graphic::Atlas::{
-        DirectionAtlas, 
-        TestTextureAtlas
-    }, 
+    resource::{
+        graphic::Atlas::{
+            AtlasRes,
+            DirectionAtlas, 
+            TestTextureAtlas
+        },
+        Registry::Registry,
+        SpriteLayer
+    },
     world::{
         chunk::Chunk::Chunk, 
         TileMap::{
@@ -58,9 +61,10 @@ impl Plugin for WorldSystem {
             .add_plugins(EntiTilesPlugin)
             .add_plugins((
                 // Физика
-                RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
+                // RapierPhysicsPlugin::<NoUserData>::default().in_fixed_schedule(),
+                RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(32.0),
                 RapierDebugRenderPlugin {
-                    enabled: false,
+                    enabled: true,
                     ..default()
                 }
             ))
@@ -121,8 +125,10 @@ impl WorldSystem {
     /// Установка как задачи процессы загрузки ресурсов и прогрузки отдельных комплексных компонентов.
     fn init_world(
         mut commands:       Commands,
+            atlas:          Res<AtlasRes>,
             handle:         Res<TestTextureAtlas>,
-            handle_dir:     Res<DirectionAtlas>
+            handle_dir:     Res<DirectionAtlas>,
+        mut register:       ResMut<Registry>
     ) {
         /*
             Тут будет непосредственно инициализация мира, где будет размещение игровой сетки, основных его компонентов и сущностей.
@@ -132,64 +138,66 @@ impl WorldSystem {
         // Test ==============================
 
         // Спавн спрайта, являющийся игроком
-        let (texture, atlas) = DirectionAtlas::set_sprite("human", &handle_dir);
-        let entity = commands.spawn((
-            RigidBody::Dynamic,
-            EntityBase {
-                speed: Speed(50., 75., 25.),
-                health: Health(100.),
-                position: Position(Vec3::new(64., 64., 0.)),
-                direction: DirectionState::South,
-                movable: true,
-                ..default()
-            },
-            SpriteSheetBundle {
-                texture,
-                atlas,
-                transform: Transform {
-                    translation: Vec3::new(0.0, 0.0, 0.5),
+        //let (texture, atlas) = DirectionAtlas::set_sprite("human", &handle_dir);
+        if let Some(sprite) = register.get_entity("human", &atlas) {
+            let entity = commands.spawn((
+                RigidBody::Dynamic,
+                EntityBase {
+                    speed: Speed(50., 75., 25.),
+                    health: Health(100.),
+                    position: Position(Vec3::new(64., 64., 0.)),
+                    direction: DirectionState::South,
+                    movable: true,
                     ..default()
                 },
+                sprite,
+                SpriteLayer::Entity,
+                EntityType::Humonoid(HumonoidType::Human),
+                EntityNeutrality::Neutral,
+                Name::new("Player"),
+            ))
+            .insert(Velocity::zero())
+            .insert(Collider::round_cuboid(2., 2., 0.25))
+            .insert(LockedAxes::ROTATION_LOCKED)
+            .id();
+    
+            commands.entity(entity)
+            .insert(User {
+                control_entity: Some(entity),
                 ..default()
-            },
-            EntityType::Humonoid(HumonoidType::Human),
-            EntityNeutrality::Neutral,
-            Name::new("Player"),
-        ))
-        .insert(Velocity::zero())
-        .insert(Collider::round_cuboid(2., 2., 0.001))
-        .insert(LockedAxes::ROTATION_LOCKED)
-        .id();
+            })
+            .insert(Container::default());
 
-        commands.entity(entity)
-        .insert(User {
-            control_entity: Some(entity),
-            ..default()
-        })
-        .insert(Container::default());
-
-        // Спавн оружия и соединение с игроком
-        commands
-            .spawn(SpriteSheetBundle {
-                texture: handle.image.clone().unwrap(),
-                atlas: TextureAtlas {
-                    layout: handle.layout.clone().unwrap(),
-                    index: TestTextureAtlas::get_index("gun", &handle),
-                },
-                transform: Transform {
-                    translation: Vec3::new(0., 0., 0.5),
+            // Спавн оружия и соединение с игроком
+            if let Some(sprite) = register.get_test("gun", &atlas) {
+                commands
+                .spawn(SpriteSheetBundle {
+                    texture: handle.image.clone().unwrap(),
+                    atlas: TextureAtlas {
+                        layout: handle.layout.clone().unwrap(),
+                        index: TestTextureAtlas::get_index("gun", &handle),
+                    },
+                    transform: Transform {
+                        translation: Vec3::new(0., 0., 0.5),
+                        ..default()
+                    },
                     ..default()
-                },
-                ..default()
-            })
-            .insert(EntityObject::default())
-            .insert(PlayerAttach {
-                offset: Vec2::new(0., -3.),
-            })
-            .insert(GunController {
-                shoot_cooldown: 0.5,
-                shoot_timer: 0.,
-            });
+                })
+                .insert(EntityObject::default())
+                .insert(SpriteLayer::Item)
+                .insert(PlayerAttach {
+                    offset: Vec2::new(0., -3.),
+                })
+                .insert(GunController {
+                    shoot_cooldown: 0.5,
+                    shoot_timer: 0.,
+                });
+            } else {
+                println!("ERROR - Spawn Gun!")
+            }
+        } else {
+            println!("ERROR - Spawn Player!")
+        }
 
         // Спавн подбираемого предмета
         commands

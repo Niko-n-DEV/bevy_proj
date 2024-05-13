@@ -4,24 +4,60 @@ use std::collections::HashMap;
 
 #[derive(Resource)]
 pub struct AtlasRes {
-    pub items:      Option<ItemsAtlas>,
-    pub material:   Option<MaterialAtlas>,
-    pub terrain:    Option<TerrainAtlas>,
-    pub objects:    Option<ObjectAtlas>,
-    pub entity:     Option<DirectionAtlas>,
-    pub test:       Option<TestTextureAtlas>
+    pub items:      ItemsAtlas,
+    pub material:   MaterialAtlas,
+    pub terrain:    TerrainAtlas,
+    pub objects:    ObjectAtlas,
+    pub particle:   ParticleAtlas,
+    pub entity:     DirectionAtlas,
+    pub test:       TestTextureAtlas
 }
 
 impl AtlasRes {
     pub fn init() -> Self {
         Self {
-            items:      Some(ItemsAtlas::default()),
-            material:   Some(MaterialAtlas::default()),
-            terrain:    Some(TerrainAtlas::default()),
-            objects:    Some(ObjectAtlas::default()),
-            entity:     Some(DirectionAtlas::default()),
-            test:       Some(TestTextureAtlas::default()),
+            items:      ItemsAtlas::default(),
+            material:   MaterialAtlas::default(),
+            terrain:    TerrainAtlas::default(),
+            objects:    ObjectAtlas::default(),
+            particle:   ParticleAtlas::default(),
+            entity:     DirectionAtlas::default(),
+            test:       TestTextureAtlas::default(),
         }
+    }
+
+    pub fn get_entity_spritesheet(&self, name: &str) -> Option<SpriteSheetBundle> {
+        if let Some(index) = &self.entity.ids {
+            if let Some(index) = index.get(name) {
+                let sprite = SpriteSheetBundle {
+                    texture: self.entity.image.clone().unwrap(),
+                    atlas: TextureAtlas {
+                        layout: self.entity.layout.clone().unwrap(),
+                        index: *index
+                    },
+                    ..default()
+                };
+                return Some(sprite);
+            }
+        }
+        None
+    }
+
+    pub fn get_test_spritesheet(&self, name: &str) -> Option<SpriteSheetBundle> {
+        if let Some(index) = &self.test.ids {
+            if let Some(index) = index.get(name) {
+                let sprite = SpriteSheetBundle {
+                    texture: self.test.image.clone().unwrap(),
+                    atlas: TextureAtlas {
+                        layout: self.test.layout.clone().unwrap(),
+                        index: *index
+                    },
+                    ..default()
+                };
+                return Some(sprite);
+            }
+        }
+        None
     }
 }
 
@@ -73,6 +109,13 @@ impl TerrainAtlas {
 
 #[derive(Resource, Default)]
 pub struct ObjectAtlas {
+    pub layout: Option<Handle<TextureAtlasLayout>>,
+    pub image:  Option<Handle<Image>>,
+    pub ids:    Option<HashMap<String, usize>>,
+}
+
+#[derive(Resource, Default)]
+pub struct ParticleAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
     pub image:  Option<Handle<Image>>,
     pub ids:    Option<HashMap<String, usize>>,
@@ -135,6 +178,7 @@ impl Default for DirectionAtlas {
         }
     }
 }
+
 // ! Сделать функцию, которая будет возвращать текстуру
 impl DirectionAtlas {
     /// Получить индекс текстуры в атласе по его имени

@@ -18,6 +18,7 @@ bevy-inspector-egui = "0.24.0"
 iyes_perf_ui = "0.2.3"
 # belly = { git = "https://github.com/jkb0o/belly/", branch = "main" }
 bevy_pancam = "0.11.1"
+extol_sprite_layer = "0.5.0"
 bevy_pixel_camera = "0.13.0"
 bevy_entitiles = { version = "0.8.0" }
 rand = { version = "0.8.5" }

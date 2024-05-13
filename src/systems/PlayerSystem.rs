@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_rapier2d::prelude::*;
+//use bevy_rapier2d::prelude::*;
 
 //use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 //use bevy_inspector_egui::InspectorOptions;
@@ -13,7 +13,7 @@ use crate::core::{
         EnemySpawner,
         MovementEntity
     },
-    items::Weapon::*,
+    Weapon::*,
     resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
     AppState,
     Entity::{EntityBase, Position},
@@ -22,7 +22,7 @@ use crate::core::{
     Movement::DirectionState,
     world::World::WorldSystem,
     UserSystem::User,
-    items::ItemType::{
+    ItemType::{
         Pickupable,
         ItemType
     },
@@ -49,7 +49,7 @@ impl Plugin for PlayerPlugin {
 impl PlayerPlugin {
     
     fn player_movement(
-        mut entity_query:       Query<(&mut Transform, &mut EntityBase, &mut Velocity, Entity), With<User>>,
+        mut entity_query:       Query<(&mut Transform, &mut EntityBase, Entity), With<User>>,
         mut move_event:         EventWriter<MovementEntity>,
             keyboard_input:     Res<ButtonInput<KeyCode>>
     ) {
@@ -57,7 +57,7 @@ impl PlayerPlugin {
             return;
         }
 
-        for (mut _transform, player, mut _vel, entity) in &mut entity_query {
+        for (mut _transform, player, entity) in &mut entity_query {
             if player.movable {
                 let mut direction = Vec3::ZERO;
 
@@ -81,7 +81,7 @@ impl PlayerPlugin {
                 }
 
                 if direction != Vec3::ZERO {
-                    move_event.send(MovementEntity(entity, direction.normalize(), speed_var));
+                    move_event.send(MovementEntity(entity, direction, speed_var));
                 }
             }
         }
@@ -93,7 +93,7 @@ impl PlayerPlugin {
         mut user_query:     Query<(&Transform, &EntityBase, &mut Container), With<User>>,
         pickupable_quety:   Query<(Entity, &Transform, &Pickupable), Without<User>>
     ) {
-        if pickupable_quety.is_empty() {
+        if pickupable_quety.is_empty() || user_query.is_empty() {
             return;
         }
 

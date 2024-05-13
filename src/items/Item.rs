@@ -6,7 +6,6 @@ use crate::core::{
         Health,
         Position
     },
-    Movement::DirectionState,
     resource::{
         Registry::Registry,
         graphic::Atlas::AtlasRes
@@ -14,34 +13,21 @@ use crate::core::{
 };
 
 #[derive(Component)]
-pub struct EntityObject {
+pub struct EntityItem {
     pub health: Health,
     pub position: Position,
-    pub direction: DirectionState,
-    pub movable: bool,
-}
-
-impl Default for EntityObject {
-    fn default() -> Self {
-        Self {
-            health: Health(1.),
-            position: Position(Vec3::ZERO),
-            direction: DirectionState::South,
-            movable: true,
-        }
-    }
 }
 
 /// Событие спавна предмета
 #[derive(Event)]
-pub struct ObjectSpawn(pub String);
+pub struct ItemSpawn(pub String);
 
 /// Функция отвечающая за спавн предмета при вызове события спавна.
-pub fn spawn_object(
+pub fn spawn_item(
     mut commands:   Commands,
     mut registry:   ResMut<Registry>,
         atlas:      Res<AtlasRes>,
-        event:      EventReader<ObjectSpawn>
+        event:      EventReader<ItemSpawn>
 ) {
     if event.is_empty() {
         return;

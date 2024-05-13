@@ -7,7 +7,13 @@ use bevy_rapier2d::prelude::*;
 use crate::
     core::{
         UserSystem::User,
-        resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
+        resource::{
+            SpriteLayer,
+            graphic::Atlas::{
+                DirectionAtlas, 
+                TestTextureAtlas
+            }
+        },
         Entity::{
             EntityBase,
             Health,
@@ -79,9 +85,10 @@ pub fn update_spawning(
                         EntityType::Humonoid(HumonoidType::Human),
                         EntityNeutrality::Hostile,
                     ))
+                    .insert(SpriteLayer::Entity)
                     .insert(Velocity::zero())
                     .insert(RigidBody::Dynamic)
-                    .insert(Collider::round_cuboid(2., 2., 0.001))
+                    .insert(Collider::round_cuboid(2., 2., 0.25))
                     .insert(LockedAxes::ROTATION_LOCKED);
             }
         }
@@ -137,7 +144,7 @@ impl Plugin for EntitySystem {
             .add_systems(
                 Update,
                 (
-                    handle_move,
+                    handle_move, // .before(PhysicsSet::SyncBackend),
                     handle_direction_changed_events.after(handle_move)
                 ).run_if(in_state(AppState::Game))
             )
@@ -185,7 +192,7 @@ fn delete_enemy_spawner(
 // ==============================
 
 #[derive(Event)]
-pub struct MovementEntity(pub Entity, pub Vec3, pub f32);
+pub struct MovementEntity(pub Entity, pub Vec3, pub f32); // 0 - Entity, 1 - Diraction, 2 - Speed
 
 fn handle_move(
     mut query: Query<(
@@ -193,20 +200,23 @@ fn handle_move(
         &mut Transform,
         &mut Velocity
     )>,
-    //mut collision: Query<&Transform, With<Collision>>,
-    mut event: EventReader<MovementEntity>,
-    mut dir_event: EventWriter<DirectionChangeEvent>,
-    time: Res<Time>
+    mut event:      EventReader<MovementEntity>,
+    mut dir_event:  EventWriter<DirectionChangeEvent>,
+    //time: Res<Time>
 ) {
     if event.is_empty() {
         return;
     }
 
     for event in event.read() {
-        if let Ok((mut entity_base, mut transform, mut _vel)) = query.get_mut(event.0) {
+        if let Ok((mut entity_base, mut transform, mut velocity)) = query.get_mut(event.0) {
             if event.1 != Vec3::ZERO {
                 dir_event.send(DirectionChangeEvent(event.0, determine_direction(event.1)));
-                transform.translation = transform.translation + time.delta_seconds() * event.2 * event.1;
+                //transform.translation = transform.translation + time.delta_seconds() * event.2 * event.1;
+                
+                let move_var = event.1 / event.1.length();
+                velocity.linvel = move_var.truncate() * event.2;
+
                 entity_base.position = Position(transform.translation);
             } else {
                 transform.translation = entity_base.position.0
@@ -217,18 +227,16 @@ fn handle_move(
 
 fn inertia_attenuation(
     mut query: Query<&mut Velocity, With<EntityBase>>,
-    time: Res<Time>
 ) {
     if query.is_empty() {
         return;
     }
 
-    let damping_coefficient = 0.9;
+    let damping_coefficient = 0.75;
 
     for mut vel in query.iter_mut() {
         if vel.linvel != Vec2::ZERO {
-            vel.linvel.x *= damping_coefficient * time.delta_seconds();
-            vel.linvel.y *= damping_coefficient * time.delta_seconds();
+            vel.linvel *= damping_coefficient;
         }
     }
 }
@@ -271,8 +279,8 @@ fn handle_direction_changed_events(
         &mut TextureAtlas,
         &EntityType
     )>,
-    _handle_dir: Res<DirectionAtlas>,
-    mut event: EventReader<DirectionChangeEvent>,
+    _handle_dir:    Res<DirectionAtlas>,
+    mut event:      EventReader<DirectionChangeEvent>,
 ) {
     if event.is_empty() {
         return;

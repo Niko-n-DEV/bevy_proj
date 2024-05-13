@@ -6,8 +6,7 @@ use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
     AppState,
-    // Debug::{GameError, GameErrorType},
-    items::ItemType::{
+    ItemType::{
         ItemAndCount,
         ItemType,
         Pickupable

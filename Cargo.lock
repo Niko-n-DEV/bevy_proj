@@ -1923,6 +1923,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "extol_sprite_layer"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e5a926088dbdf19211639e759b0aed33783800741f5ee03eb01dca95546d41e"
+dependencies = [
+ "bevy",
+ "ordered-float",
+ "tap",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3610,6 +3621,7 @@ dependencies = [
  "bevy_pancam",
  "bevy_pixel_camera",
  "bevy_rapier2d",
+ "extol_sprite_layer",
  "iyes_perf_ui",
  "rand",
  "serde",
@@ -3764,6 +3776,12 @@ dependencies = [
  "num-traits",
  "slotmap",
 ]
+
+[[package]]
+name = "tap"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "termcolor"

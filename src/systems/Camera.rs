@@ -87,7 +87,7 @@ impl CameraController {
             if camera_transform.1.player_fixed {
                 let player_transform = player_query.single().translation;
                 let (x, y) = (player_transform.x, player_transform.y);
-                camera_transform.0.translation = camera_transform.0.translation.lerp(vec3(x, y, 0.0), 0.1);
+                camera_transform.0.translation = camera_transform.0.translation.lerp(vec3(x, y, 0.0), 0.075);
             }
         }
     }

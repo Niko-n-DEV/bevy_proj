@@ -2,7 +2,10 @@ use bevy::prelude::*;
 
 use crate::core::{
     PlayerSystem::PlayerAttach,
-    resource::graphic::Atlas::TestTextureAtlas,
+    resource::{
+        Registry::Registry,
+        graphic::Atlas::AtlasRes
+    },
     UserSystem::{
         CursorPosition,
         User
@@ -13,7 +16,7 @@ use crate::core::{
         BULLET_SPEED
     },
     Container::Container,
-    items::ItemType::{
+    ItemType::{
         ItemType,
         Item
     }
@@ -34,12 +37,12 @@ pub fn gun_controls(
         &mut PlayerAttach,
     )>,
     mut user_container: Query<&mut Container, With<User>>,
-    cursor: Res<CursorPosition>,
-    time: Res<Time>,
-    _buttons: Res<ButtonInput<MouseButton>>,
-    _keyboard_input: Res<ButtonInput<KeyCode>>,
-    _asset_server: Res<AssetServer>,
-    handle: Res<TestTextureAtlas>,
+    cursor:             Res<CursorPosition>,
+    time:               Res<Time>,
+    _buttons:           Res<ButtonInput<MouseButton>>,
+    _keyboard_input:    Res<ButtonInput<KeyCode>>,
+    atlas:              Res<AtlasRes>,
+    mut register:       ResMut<Registry>
 ) {
     if gun_query.is_empty() && user_container.is_empty() {
         return;
@@ -91,22 +94,24 @@ pub fn gun_controls(
                     spawn_transform.rotation = Quat::from_axis_angle(Vec3::new(0., 0., 1.), angle);
                     gun_controller.shoot_timer = gun_controller.shoot_cooldown;
 
-                    commands
+                    if let Some(sprite) = register.get_test("bullet_p", &atlas) {
+                        let sprite_ex = (sprite.texture, sprite.atlas);
+                        commands
                         .spawn(SpriteSheetBundle {
-                            transform: spawn_transform,
-                            texture: handle.image.clone().unwrap(),
-                            atlas: TextureAtlas {
-                                layout: handle.layout.clone().unwrap(),
-                                index: TestTextureAtlas::get_index("bullet", &handle),
-                            },
+                            transform:  spawn_transform,
+                            texture:    sprite_ex.0,
+                            atlas:      sprite_ex.1,
                             ..default()
                         })
                         .insert(Name::new("Bullet"))
                         .insert(Bullet {
-                            lifetime: BULLET_LIFETIME,
-                            speed: BULLET_SPEED,
-                            direction: diff.normalize(),
+                            lifetime:   BULLET_LIFETIME,
+                            speed:      BULLET_SPEED,
+                            direction:  diff.normalize(),
                         });
+                    } else {
+                        println!("error")
+                    }
                 }
             } else {
                 attach.offset = Vec2::new(0., -3.);

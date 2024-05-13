@@ -3,8 +3,9 @@ use bevy::prelude::*;
 // Определение модулей
 
 mod components;
-mod objects;
 mod entities;
+mod items;
+mod objects;
 mod systems;
 mod util;
 
@@ -17,6 +18,7 @@ mod core {
     pub use crate::components::*;
     #[allow(unused)]
     pub use crate::objects::*;
+    pub use crate::items::*;
     pub use crate::entities::*;
     pub use crate::systems::*;
 

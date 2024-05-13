@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use crate::core::{
     resource::graphic::Atlas::TestTextureAtlas,
     AppState,
-    items::ItemType::{
+    ItemType::{
         ItemType,
         Pickupable
     }

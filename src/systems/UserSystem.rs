@@ -10,20 +10,24 @@ use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
-    resource::graphic::Atlas::TestTextureAtlas,
+    resource::{
+        SpriteLayer,
+        graphic::Atlas::{
+            TestTextureAtlas,
+            AtlasRes
+        }
+    },
     AppState,
     world::World::WorldSystem,
     world::chunk::Chunk::Chunk,
     Camera::UserCamera,
-
     Object::EntityObject,
-    items::ItemType::{
+    ItemType::{
         Pickupable,
         ItemType,
         Item
     }
 };
-
 
 #[derive(Component, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
@@ -356,12 +360,13 @@ fn place_wall(
                         index: TestTextureAtlas::get_index("wall", &handle),
                     },
                     transform: Transform {
-                        translation: Vec3::new(tiled_pos.x as f32 * 16. + 8., tiled_pos.y as f32 * 16. + 8., 0.8),
+                        translation: Vec3::new(tiled_pos.x as f32 * 16. + 8., tiled_pos.y as f32 * 16. + 8., 0.8), 
                         ..default()
                     },
                     ..default()
                 },
-                RigidBody::Fixed
+                RigidBody::Fixed,
+                SpriteLayer::Object
             ))
             .insert(Collider::cuboid(8., 8.))
             .insert(Name::new("Wall"))

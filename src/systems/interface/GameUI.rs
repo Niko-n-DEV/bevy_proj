@@ -14,7 +14,7 @@ use crate::core::{
     entities::EntitySystem::EnemySpawner,
     UserSystem::User,
     Container::Container,
-    items::ItemType::*,
+    ItemType::*,
     AppState
 };
 

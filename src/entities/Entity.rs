@@ -7,7 +7,13 @@ use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
-    //player::PlayerEntity::User,
+    resource::{
+        Registry::{
+            Registry,
+            EntityRegistry
+        },
+        graphic::Atlas::AtlasRes
+    },
     UserSystem::User,
     Movement::DirectionState
 };
@@ -63,6 +69,40 @@ impl Default for EntityBase {
     }
 }
 
+/// Событие спавна сущности
+#[derive(Event)]
+pub struct EntitySpawn(pub String);
+
+/// Функция отвечающая за спавн сущности при вызове события спавна.
+pub fn spawn_entity(
+    mut commands:   Commands,
+    mut registry:   ResMut<Registry>,
+        atlas:      Res<AtlasRes>,
+        event:      EventReader<EntitySpawn>
+) {
+    if event.is_empty() {
+        return;
+    }
+
+
+    // commands.spawn((
+    //     RigidBody::Dynamic,
+    //     EntityBase {
+    //         speed: Speed(50., 75., 25.),
+    //         health: Health(100.),
+    //         position: Position(Vec3::new(64., 64., 0.)),
+    //         direction: DirectionState::South,
+    //         movable: true,
+    //         ..default()
+    //     },
+    //     sprite,
+    //     EntityType::Humonoid(HumonoidType::Human),
+    //     EntityNeutrality::Neutral,
+    //     Name::new("Player"),
+    // ));
+}
+
+// Добавил чисто для теста
 #[derive(Bundle)]
 pub struct EntityFounder {
     pub health: Health,
@@ -72,6 +112,7 @@ pub struct EntityFounder {
     pub entity_type: EntityType
 }
 
+/// Определяет состояние сущности [статичен, стоит или двигается]
 #[derive(Component, Default)]
 pub enum EntityState {
     Fixed,
@@ -80,6 +121,8 @@ pub enum EntityState {
     Move,
 }
 
+// будет корректировка
+/// Тип сущности 
 #[derive(Component, Clone, PartialEq, Eq, Hash, Reflect)]
 pub enum EntityType {
     None,
@@ -87,6 +130,8 @@ pub enum EntityType {
     Animal
 }
 
+// будет переделываться на систему репутации и хищничества
+/// Поведение в отношении игрока
 #[derive(Component, Default)]
 pub enum EntityNeutrality {
     Hostile,
@@ -95,15 +140,17 @@ pub enum EntityNeutrality {
     Neutral
 }
 
-
+/// Какого типа гумонойд (помимо человека будут и другие расы)
 #[derive(Component, Clone, PartialEq, Eq, Hash, Reflect)]
 pub enum HumonoidType {
     Human,
 }
 
+// Это для определения частей тела, чтобы к ним прикреплять одежду с контейнерами, вычислять показатели модульного здоровья
 #[derive(Component)]
 pub struct Body;
 
+/// Гендер существа
 #[derive(Component, Default)]
 pub enum EntityGender {
     Male,
@@ -113,6 +160,7 @@ pub enum EntityGender {
     None,
 }
 
+// Это нужно переделать/перенести от сюда
 #[derive(Component)]
 pub struct EntityMissile;
 
