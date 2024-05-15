@@ -5,18 +5,39 @@ edition = "2021"
 
 [dependencies.bevy]
 version = "0.13.2"
+default-features = false
 features = [
-    "multi-threaded",
-    "dynamic_linking",
+    # Bevy functionality:
+    "multi-threaded",     # Run with multithreading
+    "bevy_asset",         # Assets management
+    "bevy_audio",         # Builtin audio
+    "bevy_scene",         # Scenes management
+    "bevy_winit",         # Window management (cross-platform Winit backend)
+    "bevy_render",        # Rendering framework core
+    "bevy_core_pipeline", # Common rendering abstractions
+    "bevy_gizmos",        # Support drawing debug lines and shapes
+    "bevy_sprite",        # 2D (sprites) rendering
+    "bevy_pbr",           # 3D (physically-based) rendering | Inspector
+    "bevy_text",          # Text/font rendering
+    "bevy_ui",            # UI toolkit
+    "animation",          # Animation support
+    "tonemapping_luts",   # Support different camera Tonemapping modes (enables KTX2+zstd)
+    "default_font",       # Embed a minimal default font for text/UI
+
+    # File formats:
+    "png",    # PNG image format for simple 2D images
+
+    # Development/Debug features:
+    # "dynamic_linking",   # Dynamic linking for faster compile-times
     ]
 
 [dependencies]
-tracy-client = { version = "0.17.0", default-features = false, features = ["enable"] }
+# tracy-client = { version = "0.17.0", default-features = false, features = ["enable"] } # Для трасировки производительности (не знаю как работать с ней)
 bevy_rapier2d = "0.26.0"
 bevy_egui = "0.27"
 bevy-inspector-egui = "0.24.0"
 iyes_perf_ui = "0.2.3"
-# belly = { git = "https://github.com/jkb0o/belly/", branch = "main" }
+# belly = { git = "https://github.com/jkb0o/belly/", branch = "main" } # Для дополнительного интерфейса
 bevy_pancam = "0.11.1"
 extol_sprite_layer = "0.5.0"
 bevy_pixel_camera = "0.13.0"
@@ -37,3 +58,10 @@ lto = true
 codegen-units = 1
 strip = true
 panic = "abort"
+
+# [profile.release]
+# lto = true
+# opt-level = 3
+# codegen-units = 1
+# incremental = false
+# debug = false

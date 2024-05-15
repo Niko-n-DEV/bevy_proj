@@ -17,7 +17,7 @@ use crate::core::{
             TestRegistry
         }
     },
-    Entity::{
+    EntityType::{
         EntityType,
         HumonoidType
     },
@@ -112,6 +112,14 @@ pub fn setup_ex(
     atlas.entity.layout =   Some(atlas_dir_nearest_handle);
     atlas.entity.image =    Some(nearest_texture_atlases);
     atlas.entity.ids =      Some(_hash);
+
+    atlas.items.layout =  Some(atlas_nearest_handle.clone());
+    atlas.items.image =   Some(nearest_texture.clone());
+    atlas.items.ids =     Some(_hash_t.clone());
+
+    atlas.objects.layout =  Some(atlas_nearest_handle.clone());
+    atlas.objects.image =   Some(nearest_texture.clone());
+    atlas.objects.ids =     Some(_hash_t.clone());
 
     atlas.test.layout =  Some(atlas_nearest_handle);
     atlas.test.image =   Some(nearest_texture);

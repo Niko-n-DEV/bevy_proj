@@ -1,0 +1,6 @@
+{
+	"id_name": "bullet",
+	"item_type": {
+        "Item": "Ammo"
+    }
+}

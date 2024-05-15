@@ -1,4 +1,6 @@
 #![allow(unused)]
+use std::default;
+
 use bevy::prelude::*;
 
 use crate::core::{
@@ -10,13 +12,22 @@ use crate::core::{
     }
 };
 
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 
 use bevy_inspector_egui::InspectorOptions;
 
+#[derive(Serialize, Deserialize)]
+pub enum ObjectSizeType {
+    Small,
+    Normal
+}
+
 /// Перечисление того, что является объектом мира
-#[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component)]
+#[derive(InspectorOptions, Default, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component)]
 pub enum WorldObject {
+    #[default]
+    None,
+    Object,
     Item(ItemType),
     Plant(PlantType),
 }
@@ -121,12 +132,6 @@ impl WorldObject {
     //         _ => None,
     //     }
     // }
-}
-
-impl Default for WorldObject {
-    fn default() -> Self {
-        WorldObject::Item(ItemType::None)
-    }
 }
 
 /// Перечисление того, что является растением

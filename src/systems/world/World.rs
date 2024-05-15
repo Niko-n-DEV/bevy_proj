@@ -1,7 +1,4 @@
-use bevy::prelude::{
-    *, 
-    World
-};
+use bevy::prelude::*;
 use bevy_rapier2d::{
     prelude::{
         Collider, 
@@ -17,15 +14,6 @@ use bevy_entitiles::EntiTilesPlugin;
 
 use crate::core::{
     entities::EntitySystem::EnemySpawner,
-    ItemType::{
-        Ammo, 
-        Item, 
-        ItemType, 
-        Pickupable,
-        Material
-    }, 
-    Weapon::GunController, 
-    PlayerSystem::PlayerAttach, 
     resource::{
         graphic::Atlas::{
             AtlasRes,
@@ -45,11 +33,39 @@ use crate::core::{
     }, 
     AppState, 
     Container::Container, 
-    Entity::*,
-    Object::*,
-    Movement::DirectionState, 
+    Entity::{
+        EntityBase,
+        Health,
+        Speed,
+        Position,
+        EntitySpawn
+    },
+    EntityType::{
+        EntityType,
+        HumonoidType,
+        EntityNeutrality
+    },
+    Item::{
+        ItemSpawn,
+        spawn_item
+    },
+    ItemType::{
+        Ammo, 
+        Item, 
+        ItemType, 
+        Pickupable,
+        Material
+    }, 
+    Object::{
+        EntityObject,
+        ObjectSpawn,
+        spawn_object
+    },
+    Movement::DirectionState,
     Settings::Settings, 
-    UserSystem::User
+    UserSystem::User,
+    PlayerSystem::PlayerAttach, 
+    Weapon::GunController, 
 };
 
 pub struct WorldSystem;
@@ -71,6 +87,8 @@ impl Plugin for WorldSystem {
             // Init Event
             .add_event::<LoadChunkPos>()
             .add_event::<DischargeChunkPos>()
+            .add_event::<ItemSpawn>()
+            .add_event::<ObjectSpawn>()
             // Init Resource
             .init_resource::<WorldRes>()
             .init_resource::<Chunk>()
@@ -87,6 +105,12 @@ impl Plugin for WorldSystem {
                 Self::setup, 
                 Self::init_world.after(Self::setup)
             ))
+            .add_systems(FixedUpdate, 
+                (
+                    spawn_item,
+                    spawn_object
+                ).run_if(in_state(AppState::Game))
+            )
             .add_systems(
                 Update,
                 (

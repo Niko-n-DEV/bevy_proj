@@ -20,11 +20,12 @@ use crate::
             Position,
             //Speed,
             //Velocity,
+        },
+        EntityType::{
             EntityType,
             HumonoidType,
             EntityNeutrality
         },
-        //ObjType::Collision,
         Movement::DirectionState,
         Missile::{update_bullet_hits, update_bullets},
         Container::Container,

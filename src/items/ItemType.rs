@@ -1,27 +1,25 @@
 #[allow(unused)]
 use bevy::prelude::*;
 
-use serde::Deserialize;
+use serde::{
+    Deserialize,
+    Serialize
+};
 
 use bevy_inspector_egui::InspectorOptions;
 
 /// Всё, что может бить предметом
-#[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect)]
+#[derive(InspectorOptions, Debug, Default, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
 pub enum ItemType {
+    #[default]
     None,
     Tool(Tool),
     Weapon(Weapon),
     Item(Item),
 }
 
-impl Default for ItemType {
-    fn default() -> Self {
-        ItemType::None
-    }
-}
-
 /// Всё, что может быть взято как иструмент
-#[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect)]
+#[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
 pub enum Tool {
     Axe,
     Shovel,
@@ -30,13 +28,13 @@ pub enum Tool {
 }
 
 /// Всё, что может быть взято как оружие
-#[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect)]
+#[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
 pub enum Weapon {
     Gun,
 }
 
 /// Всё, что является предметом
-#[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect)]
+#[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
 pub enum Item {
     Material(Material),
     Consumables,
@@ -44,7 +42,7 @@ pub enum Item {
 }
 
 /// Перечисление того, что является предметом
-#[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect)]
+#[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
 pub enum Material {
     Wood,
     Cobblestone,
@@ -52,7 +50,7 @@ pub enum Material {
 }
 
 /// Перечисление того, что является боеприпасом
-#[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect)]
+#[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
 pub enum Ammo {
     SmallAmmo,
     MediumAmmo,

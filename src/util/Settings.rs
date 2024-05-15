@@ -1,4 +1,5 @@
 use bevy::ecs::system::Resource;
+
 use serde::{
     Deserialize,
     Serialize

@@ -3,7 +3,7 @@ use bevy::{
     prelude::*, 
     window::PrimaryWindow
 };
-use bevy_egui::egui::epaint::text::cursor;
+
 use bevy_rapier2d::prelude::*;
 
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
@@ -12,6 +12,7 @@ use bevy_inspector_egui::InspectorOptions;
 use crate::core::{
     resource::{
         SpriteLayer,
+        Registry::Registry,
         graphic::Atlas::{
             TestTextureAtlas,
             AtlasRes
@@ -21,12 +22,14 @@ use crate::core::{
     world::World::WorldSystem,
     world::chunk::Chunk::Chunk,
     Camera::UserCamera,
-    Object::EntityObject,
-    ItemType::{
-        Pickupable,
-        ItemType,
-        Item
-    }
+    //Object::EntityObject,
+    Item::ItemSpawn,
+    Object::ObjectSpawn,
+    // ItemType::{
+    //     Pickupable,
+    //     ItemType,
+    //     Item
+    // }
 };
 
 #[derive(Component, InspectorOptions, Reflect)]
@@ -87,7 +90,7 @@ impl Plugin for UserPlugin {
                     selector_update,
                     selector_remove,
                     attach_to_select,
-                    spawn_bullets
+                    spawn_bullets,
                 ).run_if(in_state(AppState::Game))
             )
         ;
@@ -345,35 +348,39 @@ fn place_wall(
         keyboard_input: Res<ButtonInput<KeyCode>>,
         _buttons:       Res<ButtonInput<MouseButton>>,
         handle:         Res<TestTextureAtlas>,
-    mut chunk_res:      ResMut<Chunk>
+    mut chunk_res:      ResMut<Chunk>,
+    mut obj_event:      EventWriter<ObjectSpawn>
 ) {
     if keyboard_input.just_pressed(KeyCode::KeyR) {
         let cursor_pos = cursor.0;
         let tiled_pos = WorldSystem::get_currect_chunk_tile(cursor_pos.as_ivec2());
-        if !chunk_res.objects.contains_key(&tiled_pos) {
-            let wall = commands
-            .spawn((
-                SpriteSheetBundle {
-                    texture: handle.image.clone().unwrap(),
-                    atlas: TextureAtlas {
-                        layout: handle.layout.clone().unwrap(),
-                        index: TestTextureAtlas::get_index("wall", &handle),
-                    },
-                    transform: Transform {
-                        translation: Vec3::new(tiled_pos.x as f32 * 16. + 8., tiled_pos.y as f32 * 16. + 8., 0.8), 
-                        ..default()
-                    },
-                    ..default()
-                },
-                RigidBody::Fixed,
-                SpriteLayer::Object
-            ))
-            .insert(Collider::cuboid(8., 8.))
-            .insert(Name::new("Wall"))
-            .id();
 
-            chunk_res.objects.insert(tiled_pos, wall);
-        }
+        obj_event.send(ObjectSpawn("wall".to_string(), tiled_pos));
+        
+        // if !chunk_res.objects.contains_key(&tiled_pos) {
+        //     let wall = commands
+        //     .spawn((
+        //         SpriteSheetBundle {
+        //             texture: handle.image.clone().unwrap(),
+        //             atlas: TextureAtlas {
+        //                 layout: handle.layout.clone().unwrap(),
+        //                 index: TestTextureAtlas::get_index("wall", &handle),
+        //             },
+        //             transform: Transform {
+        //                 translation: Vec3::new(tiled_pos.x as f32 * 16. + 8., tiled_pos.y as f32 * 16. + 8., 0.8), 
+        //                 ..default()
+        //             },
+        //             ..default()
+        //         },
+        //         RigidBody::Fixed,
+        //         SpriteLayer::Object
+        //     ))
+        //     .insert(Collider::cuboid(8., 8.))
+        //     .insert(Name::new("Wall"))
+        //     .id();
+
+        //     chunk_res.objects.insert(tiled_pos, wall);
+        // }
     }
 }
 
@@ -398,37 +405,41 @@ fn spawn_bullets(
         cursor:         Res<CursorPosition>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
         handle:         Res<TestTextureAtlas>,
-    mut chunk_res:      ResMut<Chunk>
+        atlas:          Res<AtlasRes>,
+    mut register:       ResMut<Registry>,
+    mut chunk_res:      ResMut<Chunk>,
+    mut item_event:     EventWriter<ItemSpawn>
 ) {
     if keyboard_input.just_pressed(KeyCode::KeyB) {
         let cursor_pos = cursor.0;
         let tiled_pos = WorldSystem::get_currect_chunk_tile(cursor_pos.as_ivec2());
 
-        let entity = commands
-            .spawn((
-                EntityObject {
-                    ..default()
-                },
-                SpriteSheetBundle {
-                    texture: handle.image.clone().unwrap(),
-                    atlas: TextureAtlas {
-                        layout: handle.layout.clone().unwrap(),
-                        index: TestTextureAtlas::get_index("bullet", &handle)
-                    },
-                    transform: Transform {
-                        translation: Vec3::new(tiled_pos.x as f32 * 16. + 8., tiled_pos.y as f32 * 16. + 8., 0.3),
-                        ..default()
-                    },
-                    ..default()
-                }
-            ))
-            .insert(Pickupable {
-                item: ItemType::Item(Item::Ammo),
-                count: 32
-            })
-            .insert(Name::new("Item"))
-            .id();
+        item_event.send(ItemSpawn("bullet".to_string(), tiled_pos, 16));
 
-        chunk_res.objects_ex.insert(tiled_pos, entity);
+        // if let Some(sprite) = register.get_item("bullet", &atlas) {
+        //     let entity = commands
+        //     .spawn((
+        //         EntityObject {
+        //             ..default()
+        //         },
+        //         SpriteSheetBundle {
+        //             texture: sprite.texture,
+        //             atlas: sprite.atlas,
+        //             transform: Transform {
+        //                 translation: Vec3::new(tiled_pos.x as f32 * 16. + 8., tiled_pos.y as f32 * 16. + 8., 0.3),
+        //                 ..default()
+        //             },
+        //             ..default()
+        //         }
+        //     ))
+        //     .insert(Pickupable {
+        //         item: ItemType::Item(Item::Ammo),
+        //         count: 32
+        //     })
+        //     .insert(Name::new("Item"))
+        //     .id();
+        
+        //     chunk_res.objects_ex.insert(tiled_pos, entity);
+        // }
     }
 }

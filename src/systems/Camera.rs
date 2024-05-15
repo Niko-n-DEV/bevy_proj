@@ -5,6 +5,9 @@ use bevy::{
     prelude::*,
 };
 
+use bevy_inspector_egui::prelude::ReflectInspectorOptions;
+use bevy_inspector_egui::InspectorOptions;
+
 use bevy_pancam::{
     PanCam,
     PanCamPlugin
@@ -24,9 +27,11 @@ use crate::core::{
 
 // Основной компонент камеры
 // Определить параметр зацепа к объекту (option)
-#[derive(Component)]
+#[derive(Component, InspectorOptions, Reflect)]
+#[reflect(Component, InspectorOptions)]
 pub struct UserCamera {
-    pub player_fixed: bool
+    pub player_fixed: bool,
+    pub coef: f32
 }
 
 // ===== Base =====
@@ -35,6 +40,8 @@ pub struct CameraController;
 impl Plugin for CameraController {
     fn build(&self, app: &mut App) {
         app
+            // Register Types
+            .register_type::<UserCamera>()
             // Init Plugins
             .add_plugins(PanCamPlugin::default())
             .add_plugins(PixelCameraPlugin)
@@ -55,7 +62,8 @@ impl CameraController {
                 Camera2dBundle::default(),
                 PixelViewport,
                 UserCamera {
-                    player_fixed: false
+                    player_fixed: false,
+                    coef: 0.075
                 }
             ))
             .insert(PanCam {
@@ -87,7 +95,7 @@ impl CameraController {
             if camera_transform.1.player_fixed {
                 let player_transform = player_query.single().translation;
                 let (x, y) = (player_transform.x, player_transform.y);
-                camera_transform.0.translation = camera_transform.0.translation.lerp(vec3(x, y, 0.0), 0.075);
+                camera_transform.0.translation = camera_transform.0.translation.lerp(vec3(x, y, 0.0), camera_transform.1.coef);
             }
         }
     }

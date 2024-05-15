@@ -41,9 +41,6 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use iyes_perf_ui::prelude::*;
 
 fn main() {
-    let _span = tracy_client::span!("some span");
-    _span.emit_value(42);
-
     App::new()
         // Init State - Инициализация состояний приложения
         .init_state::<AppState>()

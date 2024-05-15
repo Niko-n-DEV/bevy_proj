@@ -1,5 +1,6 @@
 #![allow(unused)]
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 
 use crate::core::{
     Entity::{
@@ -8,9 +9,11 @@ use crate::core::{
     },
     Movement::DirectionState,
     resource::{
+        SpriteLayer,
         Registry::Registry,
         graphic::Atlas::AtlasRes
-    }
+    },
+    world::chunk::Chunk::Chunk
 };
 
 #[derive(Component)]
@@ -34,17 +37,50 @@ impl Default for EntityObject {
 
 /// Событие спавна предмета
 #[derive(Event)]
-pub struct ObjectSpawn(pub String);
+pub struct ObjectSpawn(pub String, pub IVec2);
 
 /// Функция отвечающая за спавн предмета при вызове события спавна.
 pub fn spawn_object(
     mut commands:   Commands,
     mut registry:   ResMut<Registry>,
+    mut chunk_res:  ResMut<Chunk>,
         atlas:      Res<AtlasRes>,
-        event:      EventReader<ObjectSpawn>
+    mut event:      EventReader<ObjectSpawn>
 ) {
     if event.is_empty() {
         return;
+    }
+
+    for event in event.read() {
+        if !chunk_res.objects.contains_key(&event.1) {
+            if let Some(sprite) = registry.get_object(&event.0, &atlas) {
+                if let Some(info) = registry.get_object_info(&event.0) {
+                    if !chunk_res.objects.contains_key(&event.1) {
+                        let entity = commands
+                            .spawn((
+                                EntityObject::default(),
+                                SpriteSheetBundle {
+                                    texture: sprite.texture,
+                                    atlas: sprite.atlas,
+                                    transform: Transform {
+                                        translation: Vec3::new(event.1.x as f32 * 16. + 8., event.1.y as f32 * 16. + 8., 0.8), // Откорректировать
+                                        ..default()
+                                    },
+                                    ..default()
+                                },
+                                SpriteLayer::Object,
+                                RigidBody::Fixed,
+                                Collider::cuboid(info.collision.x, info.collision.y),
+                                Name::new(info.id_name.clone())
+                            )).id();
+                    }
+                } else {
+                    println!("error - 2")
+                }
+            } else {
+                println!("error - 1")
+            }
+        }
     }
 
 

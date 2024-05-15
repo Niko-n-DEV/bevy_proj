@@ -1,10 +1,9 @@
 #![allow(unused)]
-use std::default;
-
 use bevy::prelude::*;
 
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
+
 
 use crate::core::{
     resource::{
@@ -14,8 +13,9 @@ use crate::core::{
         },
         graphic::Atlas::AtlasRes
     },
-    UserSystem::User,
-    Movement::DirectionState
+    //UserSystem::User,
+    Movement::DirectionState,
+    EntityType::*
 };
 
 /// Компонент отвечающий за [Здоровье]
@@ -71,7 +71,7 @@ impl Default for EntityBase {
 
 /// Событие спавна сущности
 #[derive(Event)]
-pub struct EntitySpawn(pub String);
+pub struct EntitySpawn(pub String, Vec2);
 
 /// Функция отвечающая за спавн сущности при вызове события спавна.
 pub fn spawn_entity(
@@ -102,6 +102,7 @@ pub fn spawn_entity(
     // ));
 }
 
+#[allow(unused)]
 // Добавил чисто для теста
 #[derive(Bundle)]
 pub struct EntityFounder {
@@ -121,44 +122,9 @@ pub enum EntityState {
     Move,
 }
 
-// будет корректировка
-/// Тип сущности 
-#[derive(Component, Clone, PartialEq, Eq, Hash, Reflect)]
-pub enum EntityType {
-    None,
-    Humonoid(HumonoidType),
-    Animal
-}
-
-// будет переделываться на систему репутации и хищничества
-/// Поведение в отношении игрока
-#[derive(Component, Default)]
-pub enum EntityNeutrality {
-    Hostile,
-    Friendly,
-    #[default]
-    Neutral
-}
-
-/// Какого типа гумонойд (помимо человека будут и другие расы)
-#[derive(Component, Clone, PartialEq, Eq, Hash, Reflect)]
-pub enum HumonoidType {
-    Human,
-}
-
 // Это для определения частей тела, чтобы к ним прикреплять одежду с контейнерами, вычислять показатели модульного здоровья
 #[derive(Component)]
 pub struct Body;
-
-/// Гендер существа
-#[derive(Component, Default)]
-pub enum EntityGender {
-    Male,
-    Female,
-    Hermophrodite,
-    #[default]
-    None,
-}
 
 // Это нужно переделать/перенести от сюда
 #[derive(Component)]

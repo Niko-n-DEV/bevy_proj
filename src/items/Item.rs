@@ -2,14 +2,17 @@
 use bevy::prelude::*;
 
 use crate::core::{
+    resource::{
+        graphic::Atlas::AtlasRes, 
+        Registry::Registry
+    }, 
+    world::chunk::Chunk::Chunk, 
     Entity::{
         Health,
         Position
-    },
-    resource::{
-        Registry::Registry,
-        graphic::Atlas::AtlasRes
-    }
+    }, 
+    Object::EntityObject,
+    ItemType::Pickupable
 };
 
 #[derive(Component)]
@@ -20,33 +23,44 @@ pub struct EntityItem {
 
 /// Событие спавна предмета
 #[derive(Event)]
-pub struct ItemSpawn(pub String);
+pub struct ItemSpawn(pub String, pub IVec2, pub usize);
 
 /// Функция отвечающая за спавн предмета при вызове события спавна.
 pub fn spawn_item(
     mut commands:   Commands,
     mut registry:   ResMut<Registry>,
+    mut chunk_res:  ResMut<Chunk>,
         atlas:      Res<AtlasRes>,
-        event:      EventReader<ItemSpawn>
+    mut event:      EventReader<ItemSpawn>
 ) {
     if event.is_empty() {
         return;
     }
 
+    for event in event.read() {
+        if let Some(sprite) = registry.get_item(&event.0, &atlas) {
+            if let Some(info) = registry.get_item_info(&event.0) {
+                let entity = commands
+                .spawn((
+                    EntityObject::default(),
+                    SpriteSheetBundle {
+                        texture: sprite.texture,
+                        atlas: sprite.atlas,
+                        transform: Transform {
+                            translation: Vec3::new(event.1.x as f32 * 16. + 8., event.1.y as f32 * 16. + 8., 0.3),
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    Pickupable {
+                        item: info.item_type,
+                        count: event.2
+                    },
+                    Name::new(info.id_name.clone())
+                )).id();
 
-    // commands.spawn((
-    //     RigidBody::Dynamic,
-    //     EntityBase {
-    //         speed: Speed(50., 75., 25.),
-    //         health: Health(100.),
-    //         position: Position(Vec3::new(64., 64., 0.)),
-    //         direction: DirectionState::South,
-    //         movable: true,
-    //         ..default()
-    //     },
-    //     sprite,
-    //     EntityType::Humonoid(HumonoidType::Human),
-    //     EntityNeutrality::Neutral,
-    //     Name::new("Player"),
-    // ));
+                chunk_res.objects_ex.insert(event.1, entity);
+            }
+        }
+    }
 }

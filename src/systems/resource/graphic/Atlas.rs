@@ -43,6 +43,40 @@ impl AtlasRes {
         None
     }
 
+    pub fn get_object_spritesheet(&self, name: &str) -> Option<SpriteSheetBundle> {
+        if let Some(index) = &self.objects.ids {
+            if let Some(index) = index.get(name) {
+                let sprite = SpriteSheetBundle {
+                    texture: self.objects.image.clone().unwrap(),
+                    atlas: TextureAtlas {
+                        layout: self.objects.layout.clone().unwrap(),
+                        index: *index
+                    },
+                    ..default()
+                };
+                return Some(sprite);
+            }
+        }
+        None
+    }
+
+    pub fn get_item_spritesheet(&self, name: &str) -> Option<SpriteSheetBundle> {
+        if let Some(index) = &self.items.ids {
+            if let Some(index) = index.get(name) {
+                let sprite = SpriteSheetBundle {
+                    texture: self.items.image.clone().unwrap(),
+                    atlas: TextureAtlas {
+                        layout: self.items.layout.clone().unwrap(),
+                        index: *index
+                    },
+                    ..default()
+                };
+                return Some(sprite);
+            }
+        }
+        None
+    }
+
     pub fn get_test_spritesheet(&self, name: &str) -> Option<SpriteSheetBundle> {
         if let Some(index) = &self.test.ids {
             if let Some(index) = index.get(name) {
@@ -61,6 +95,7 @@ impl AtlasRes {
     }
 }
 
+/// Атлас для хранения текстур предметов
 #[derive(Resource, Default)]
 pub struct ItemsAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
@@ -68,6 +103,7 @@ pub struct ItemsAtlas {
     pub ids:    Option<HashMap<String, usize>>,
 }
 
+/// Атлас текстурных палетт (Наслоение на текстуру, как маска)
 #[derive(Resource, Default)]
 pub struct MaterialAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
@@ -107,6 +143,7 @@ impl TerrainAtlas {
     }
 }
 
+/// Атлас для хранения текстур объектов
 #[derive(Resource, Default)]
 pub struct ObjectAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
@@ -114,6 +151,7 @@ pub struct ObjectAtlas {
     pub ids:    Option<HashMap<String, usize>>,
 }
 
+/// Атлас для хранения текстур эффектов
 #[derive(Resource, Default)]
 pub struct ParticleAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
@@ -122,6 +160,7 @@ pub struct ParticleAtlas {
 }
 
 // [Test]
+/// Атлас для хранения тестовых и буферных текстур
 #[derive(Resource, Default)]
 pub struct TestTextureAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
@@ -162,6 +201,7 @@ pub enum OrientationState {
 }
 
 // для сторонозависимых атласов
+/// Атлас для хранения текстур для сущностей (8-ми направленных движенияй (3на3 атласы))
 #[derive(Resource, Component)]
 pub struct DirectionAtlas {
     pub layout: Option<Handle<TextureAtlasLayout>>,
