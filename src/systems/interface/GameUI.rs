@@ -12,9 +12,13 @@ use crate::core::{
     world::World::WorldSystem,
     Entity::EntityBase,
     entities::EntitySystem::EnemySpawner,
-    UserSystem::User,
+    UserSystem::{
+        User,
+        CursorPlacer
+    },
     Container::Container,
     ItemType::*,
+    resource::Registry::Registry,
     AppState
 };
 
@@ -25,7 +29,8 @@ use crate::core::{
 pub struct GameUI {
     pub bargui_is_open: bool,
     pub console_toggle: bool,
-    pub debug_toggle: bool
+    pub debug_toggle:   bool,
+    pub debug_menu:     bool
 }
 
 // ========== Button
@@ -61,7 +66,8 @@ impl GameUI {
                 GameUI {
                     bargui_is_open: false,
                     console_toggle: false,
-                    debug_toggle:   false
+                    debug_toggle:   false,
+                    debug_menu:     false
                 },
                 Interaction::None,
                 Name::new("Game UI"),
@@ -163,6 +169,8 @@ impl DebugInfoPanel {
         mut parent_query:   Query<&mut GameUI, With<GameUI>>,
         mut contexts:       EguiContexts,
         mut spawners:       Query<&mut EnemySpawner, With<EnemySpawner>>,
+            registry:       Res<Registry>,
+        mut placer:         ResMut<CursorPlacer>,
             player:         Query<&EntityBase, With<User>>,
             keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
@@ -172,6 +180,7 @@ impl DebugInfoPanel {
 
         if let Ok(mut game_ui) = parent_query.get_single_mut() {
             if keyboard_input.just_pressed(KeyCode::F3) {
+                game_ui.debug_menu = false;
                 game_ui.debug_toggle = !game_ui.debug_toggle
             }
 
@@ -193,7 +202,37 @@ impl DebugInfoPanel {
                                 }
                             }
                         });
+
+                        if ui.button("menu").clicked() {
+                            game_ui.debug_menu = !game_ui.debug_menu;
+                        }
                     });
+            }
+
+            if game_ui.debug_menu {
+                egui::Window::new("Debug Menu")
+                    .show(contexts.ctx_mut(), |ui| {
+                        ui.label("Items");
+                        ui.horizontal(|ui| {
+                            for key in registry.item_registry.keys() {
+                                if ui.button(key).clicked() {
+                                    placer.placer = Some(("item".to_string(), key.clone()));
+                                }
+                            }
+                        });
+
+                        ui.label("Objects");
+                        ui.horizontal(|ui| {
+                            for key in registry.object_registry.keys() {
+                                if ui.button(key).clicked() {
+                                    placer.placer = Some(("object".to_string(), key.clone()));
+                                }
+                            }
+                        });
+
+                        ui.label("Entities");
+                    });
+                
             }
         }
     }
@@ -483,7 +522,8 @@ impl BarGui {
     pub fn update_inventory_ui(
         mut commands:           Commands,
         mut inventoty_gui:      Query<(Entity, &mut InventoryGui), With<InventoryGui>>,
-        mut inventoty:          Query<&mut Container, With<User>>
+        mut inventoty:          Query<&mut Container, With<User>>,
+        //    registry:           Res<Registry>
     ) {
         if inventoty_gui.is_empty() || inventoty.is_empty() {
             return;
@@ -517,6 +557,8 @@ impl BarGui {
                         // Обновляем UI слота с новыми данными из инвентаря
                         if let Some(entity) = inv_gui_slot.entity {
                             commands.entity(entity).with_children(|parent| {
+                                //if let Some(sprite) = registry.get_item_texture(name, atlas)
+                                //parent.spawn(bundle)
                                 parent.spawn(TextBundle {
                                     text: Text {
                                         sections: vec![TextSection::new(

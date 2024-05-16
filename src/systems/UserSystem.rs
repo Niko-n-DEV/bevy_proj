@@ -79,23 +79,30 @@ impl Plugin for UserPlugin {
             .register_type::<User>()
             // Использование данных о позиции курсора из CursorPosition
             .init_resource::<CursorPosition>()
+            .init_resource::<CursorPlacer>()
             .insert_resource(Selector { selector_entity: None, select_entity: None })
             // Обновление информации о позиции курсора
             .add_systems(PreUpdate, cursor_track.run_if(in_state(AppState::Game)))
             .add_systems(Update, 
                 (
-                    place_wall,
-                    delete_wall,
+                    placer,
+                    delete_object,
                     select_object,
                     selector_update,
                     selector_remove,
                     attach_to_select,
-                    spawn_bullets,
+                    attach_to_cursor,
+                    create_text_placer,
+                    attach_to_cursor
                 ).run_if(in_state(AppState::Game))
             )
         ;
     }
 }
+
+// ==============================
+// Cursor Position
+// ==============================
 
 /// Позиция курсора на глобальной координатной сетке
 #[derive(Resource, Default)]
@@ -119,14 +126,107 @@ pub fn cursor_track(
     }
 }
 
+// ==============================
+// Placer
+// ==============================
+
 /// Компонент отвечающий за хранение информации о распалогаемом объекте на месте курсора
-#[derive(Resource)]
-pub struct CursorPlacer;
+#[derive(Resource, Default)]
+pub struct CursorPlacer {
+    pub placer: Option<(String, String)>,
+    pub entity: Option<Entity>
+}
+
+fn placer(
+        cursor:         Res<CursorPosition>,
+        mouse_input:    Res<ButtonInput<MouseButton>>,
+        keyboard_input: Res<ButtonInput<KeyCode>>,
+        registry:       Res<Registry>,
+    mut placer:         ResMut<CursorPlacer>,
+    mut obj_event:      EventWriter<ObjectSpawn>,
+    mut item_event:     EventWriter<ItemSpawn>
+    // entity
+) {
+    if mouse_input.just_pressed(MouseButton::Left) {
+        if let Some(match_type) = placer.placer.clone() {
+
+            match match_type.0.as_str() {
+                "item" => {
+                    item_event.send(ItemSpawn(match_type.1, WorldSystem::get_currect_chunk_subtile(cursor.0.as_ivec2()), 1));
+                },
+                "object" => {
+                    obj_event.send(ObjectSpawn(match_type.1, WorldSystem::get_currect_chunk_tile(cursor.0.as_ivec2())));
+                },
+                _ => warn!("Неверный указанный тип!")
+            }
+        }
+    }
+
+    if keyboard_input.just_pressed(KeyCode::Escape) {
+        placer.placer = None;
+    }
+}
+
+fn create_text_placer(
+    mut commands:   Commands,
+    mut placer:     ResMut<CursorPlacer>
+) {
+    if placer.is_changed() {
+        if let Some(entity) = placer.entity {
+            commands.entity(entity).despawn_recursive();
+            placer.entity = None
+        }
+
+        if !placer.placer.is_none() {
+            if let Some(text) = placer.placer.clone() {
+                placer.entity = Some(commands.spawn((
+                    Text2dBundle {
+                        text: Text {
+                            sections: vec![TextSection::new(
+                                format!("{}", text.1),
+                                TextStyle {
+                                    font_size: 8.0,
+                                    ..default()
+                                },
+                            )],
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    InfoTextPlace
+                )).id());
+            }
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct InfoTextPlace;
+
+fn attach_to_cursor(
+        cursor: Res<CursorPosition>,
+        placer: ResMut<CursorPlacer>,
+    mut text:   Query<&mut Transform, With<InfoTextPlace>>
+) {
+    if text.is_empty() {
+        return;
+    }
+
+    if !placer.placer.is_none() {
+        if let Ok(mut text) = text.get_single_mut() {
+            text.translation = Vec3::new(cursor.0.x + 16.0, cursor.0.y + 16.0, 0.0);
+        }
+    }
+}
 
 #[derive(Component)]
 pub struct Selectable {
     pub is_selected: bool
 }
+
+// ==============================
+// Selector
+// ==============================
 
 /// Ресурс, отвечающий за хранение данных о выделении
 #[derive(Resource)]
@@ -142,58 +242,6 @@ pub struct Select;
 /// Компонент-якорь, отвечающий за определение выделенного объекта
 #[derive(Component)]
 pub struct Selected;
-
-#[derive(Resource)]
-pub struct SelectBox {
-    pub is_active: bool,
-    pub start_position: Vec2,
-    pub current_position: Vec2
-}
-
-pub fn update_select_box(
-    mut query: Query<(
-        &Camera2d,
-        &Camera,
-        &GlobalTransform
-    )>,
-    mut select_box:     ResMut<SelectBox>,
-        mouse_input:    Res<ButtonInput<MouseButton>>,
-        windows:        Query<&Window, With<PrimaryWindow>>
-) {
-    let (_, camera, global_transform) = query.single_mut();
-
-    // let window = if let RenderTarget::Window(id) = camera.target {
-    //     windows.get(id).unwrap()
-    // } else {
-    //     windows.get_primary().unwrap()
-    // };
-
-    let window = windows.single();
-
-    if let Some(win_pos) = window.cursor_position() {
-
-        let window_size     = Vec2::new(window.width() as f32, window.height() as f32);
-        let ndc             = (win_pos / window_size) * 2.0 - Vec2::ONE;
-        let ndc_to_world    = global_transform.compute_matrix() * camera.projection_matrix().inverse();
-        let world_pos       = ndc_to_world.project_point3(ndc.extend(-1.0));
-        let world_pos: Vec2       = world_pos.truncate();
-
-        if mouse_input.just_pressed(MouseButton::Left) {
-            select_box.is_active = true;
-            select_box.start_position = world_pos;
-            select_box.current_position = world_pos;
-        }
-
-        if mouse_input.pressed(MouseButton::Left) {
-            select_box.is_active = true;
-            select_box.current_position = world_pos;
-        }
-
-        if mouse_input.just_released(MouseButton::Left) {
-            select_box.is_active = false;
-        }
-    }
-}
 
 fn select_object(
     mut commands:           Commands,
@@ -339,52 +387,64 @@ fn attach_to_select(
     }
 }
 
+// ==============================
+// SelectBox
+// ==============================
 
-// Test
-/// Установка стены
-fn place_wall(
-    mut commands:       Commands,
-        cursor:         Res<CursorPosition>,
-        keyboard_input: Res<ButtonInput<KeyCode>>,
-        _buttons:       Res<ButtonInput<MouseButton>>,
-        handle:         Res<TestTextureAtlas>,
-    mut chunk_res:      ResMut<Chunk>,
-    mut obj_event:      EventWriter<ObjectSpawn>
+#[derive(Resource)]
+pub struct SelectBox {
+    pub is_active: bool,
+    pub start_position: Vec2,
+    pub current_position: Vec2
+}
+
+pub fn update_select_box(
+    mut query: Query<(
+        &Camera2d,
+        &Camera,
+        &GlobalTransform
+    )>,
+    mut select_box:     ResMut<SelectBox>,
+        mouse_input:    Res<ButtonInput<MouseButton>>,
+        windows:        Query<&Window, With<PrimaryWindow>>
 ) {
-    if keyboard_input.just_pressed(KeyCode::KeyR) {
-        let cursor_pos = cursor.0;
-        let tiled_pos = WorldSystem::get_currect_chunk_tile(cursor_pos.as_ivec2());
+    let (_, camera, global_transform) = query.single_mut();
 
-        obj_event.send(ObjectSpawn("wall".to_string(), tiled_pos));
-        
-        // if !chunk_res.objects.contains_key(&tiled_pos) {
-        //     let wall = commands
-        //     .spawn((
-        //         SpriteSheetBundle {
-        //             texture: handle.image.clone().unwrap(),
-        //             atlas: TextureAtlas {
-        //                 layout: handle.layout.clone().unwrap(),
-        //                 index: TestTextureAtlas::get_index("wall", &handle),
-        //             },
-        //             transform: Transform {
-        //                 translation: Vec3::new(tiled_pos.x as f32 * 16. + 8., tiled_pos.y as f32 * 16. + 8., 0.8), 
-        //                 ..default()
-        //             },
-        //             ..default()
-        //         },
-        //         RigidBody::Fixed,
-        //         SpriteLayer::Object
-        //     ))
-        //     .insert(Collider::cuboid(8., 8.))
-        //     .insert(Name::new("Wall"))
-        //     .id();
+    // let window = if let RenderTarget::Window(id) = camera.target {
+    //     windows.get(id).unwrap()
+    // } else {
+    //     windows.get_primary().unwrap()
+    // };
 
-        //     chunk_res.objects.insert(tiled_pos, wall);
-        // }
+    let window = windows.single();
+
+    if let Some(win_pos) = window.cursor_position() {
+
+        let window_size     = Vec2::new(window.width() as f32, window.height() as f32);
+        let ndc             = (win_pos / window_size) * 2.0 - Vec2::ONE;
+        let ndc_to_world    = global_transform.compute_matrix() * camera.projection_matrix().inverse();
+        let world_pos       = ndc_to_world.project_point3(ndc.extend(-1.0));
+        let world_pos: Vec2       = world_pos.truncate();
+
+        if mouse_input.just_pressed(MouseButton::Left) {
+            select_box.is_active = true;
+            select_box.start_position = world_pos;
+            select_box.current_position = world_pos;
+        }
+
+        if mouse_input.pressed(MouseButton::Left) {
+            select_box.is_active = true;
+            select_box.current_position = world_pos;
+        }
+
+        if mouse_input.just_released(MouseButton::Left) {
+            select_box.is_active = false;
+        }
     }
 }
 
-fn delete_wall(
+// Test
+fn delete_object(
     mut commands:       Commands,
         cursor:         Res<CursorPosition>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -392,54 +452,9 @@ fn delete_wall(
     mut chunk_res:      ResMut<Chunk>
 ) {
     if keyboard_input.just_pressed(KeyCode::KeyT) {
-        let cursor_pos = cursor.0;
-        let tiled_pos = WorldSystem::get_currect_chunk_tile(cursor_pos.as_ivec2());
+        let tiled_pos = WorldSystem::get_currect_chunk_tile(cursor.0.as_ivec2());
         if let Some(entity) = chunk_res.remove_object(&tiled_pos) {
             commands.entity(entity).despawn_recursive();
         }
-    }
-}
-
-fn spawn_bullets(
-    mut commands:       Commands,
-        cursor:         Res<CursorPosition>,
-        keyboard_input: Res<ButtonInput<KeyCode>>,
-        handle:         Res<TestTextureAtlas>,
-        atlas:          Res<AtlasRes>,
-    mut register:       ResMut<Registry>,
-    mut chunk_res:      ResMut<Chunk>,
-    mut item_event:     EventWriter<ItemSpawn>
-) {
-    if keyboard_input.just_pressed(KeyCode::KeyB) {
-        let cursor_pos = cursor.0;
-        let tiled_pos = WorldSystem::get_currect_chunk_tile(cursor_pos.as_ivec2());
-
-        item_event.send(ItemSpawn("bullet".to_string(), tiled_pos, 16));
-
-        // if let Some(sprite) = register.get_item("bullet", &atlas) {
-        //     let entity = commands
-        //     .spawn((
-        //         EntityObject {
-        //             ..default()
-        //         },
-        //         SpriteSheetBundle {
-        //             texture: sprite.texture,
-        //             atlas: sprite.atlas,
-        //             transform: Transform {
-        //                 translation: Vec3::new(tiled_pos.x as f32 * 16. + 8., tiled_pos.y as f32 * 16. + 8., 0.3),
-        //                 ..default()
-        //             },
-        //             ..default()
-        //         }
-        //     ))
-        //     .insert(Pickupable {
-        //         item: ItemType::Item(Item::Ammo),
-        //         count: 32
-        //     })
-        //     .insert(Name::new("Item"))
-        //     .id();
-        
-        //     chunk_res.objects_ex.insert(tiled_pos, entity);
-        // }
     }
 }

@@ -53,32 +53,28 @@ pub fn spawn_object(
 
     for event in event.read() {
         if !chunk_res.objects.contains_key(&event.1) {
-            if let Some(sprite) = registry.get_object(&event.0, &atlas) {
-                if let Some(info) = registry.get_object_info(&event.0) {
-                    if !chunk_res.objects.contains_key(&event.1) {
-                        let entity = commands
-                            .spawn((
-                                EntityObject::default(),
-                                SpriteSheetBundle {
-                                    texture: sprite.texture,
-                                    atlas: sprite.atlas,
-                                    transform: Transform {
-                                        translation: Vec3::new(event.1.x as f32 * 16. + 8., event.1.y as f32 * 16. + 8., 0.8), // Откорректировать
-                                        ..default()
-                                    },
+            if let Some(info) = registry.get_object_info(&event.0) {
+                if let Some(sprite) = registry.get_object_texture(&info.id_texture, &atlas) {
+                    let entity = commands
+                        .spawn((
+                            EntityObject::default(),
+                            SpriteSheetBundle {
+                                texture: sprite.texture,
+                                atlas: sprite.atlas,
+                                transform: Transform {
+                                    translation: Vec3::new(event.1.x as f32 * 16. + 8., event.1.y as f32 * 16. + 8., 0.8), // Откорректировать
                                     ..default()
                                 },
-                                SpriteLayer::Object,
-                                RigidBody::Fixed,
-                                Collider::cuboid(info.collision.x, info.collision.y),
-                                Name::new(info.id_name.clone())
-                            )).id();
-                    }
-                } else {
-                    println!("error - 2")
+                                ..default()
+                            },
+                            SpriteLayer::Object,
+                            RigidBody::Fixed,
+                            Collider::cuboid(info.collision.x, info.collision.y),
+                            Name::new(info.id_name.clone())
+                        )).id();
+                    
+                    chunk_res.objects.insert(event.1, entity);
                 }
-            } else {
-                println!("error - 1")
             }
         }
     }

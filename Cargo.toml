@@ -28,7 +28,7 @@ features = [
     "png",    # PNG image format for simple 2D images
 
     # Development/Debug features:
-    # "dynamic_linking",   # Dynamic linking for faster compile-times
+    "dynamic_linking",   # Dynamic linking for faster compile-times
     ]
 
 [dependencies]

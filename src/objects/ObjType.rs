@@ -19,7 +19,7 @@ use bevy_inspector_egui::InspectorOptions;
 #[derive(Serialize, Deserialize)]
 pub enum ObjectSizeType {
     Small,
-    Normal
+    Normal,
 }
 
 /// Перечисление того, что является объектом мира

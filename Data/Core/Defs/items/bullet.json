@@ -1,5 +1,6 @@
 {
 	"id_name": "bullet",
+	"id_texture": "ammo",
 	"item_type": {
         "Item": "Ammo"
     }

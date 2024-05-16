@@ -15,7 +15,16 @@ impl Chunk {
         self.objects.remove(pos)
     }
 
-    
+    pub fn remove_sub_object_ex(&mut self, entity: Entity) {
+        let keys: Vec<_> = self.objects_ex.iter()
+        .filter(|(_, &ent)| ent == entity)
+        .map(|(key, _)| key.clone())
+        .collect();
+
+        for key in keys {
+            self.objects_ex.remove(&key);
+        }
+    }
 }
 
 impl Default for Chunk {

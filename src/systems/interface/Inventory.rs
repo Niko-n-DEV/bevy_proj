@@ -27,9 +27,9 @@ impl InventoryGui {
 #[derive(Component, Clone, Copy, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
 pub struct InventorySlot {
-    pub id: Option<usize>,
-    pub entity: Option<Entity>,
-    pub contain: Option<InventoryItemSlot>
+    pub id:         Option<usize>,
+    pub entity:     Option<Entity>,
+    pub contain:    Option<InventoryItemSlot>
 }
 
 impl InventorySlot {
@@ -45,9 +45,9 @@ impl InventorySlot {
 impl Default for InventorySlot {
     fn default() -> Self {
         Self {
-            id: None,
-            entity: None,
-            contain: None
+            id:         None,
+            entity:     None,
+            contain:    None
         }
     }
 }

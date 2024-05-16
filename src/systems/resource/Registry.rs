@@ -33,21 +33,22 @@ pub struct Registry {
     pub object_registry: HashMap<String, ObjectRegistry>,    // Хэш-таблица с регистрируемыми объектами
     pub item_registry:   HashMap<String, ItemRegistry>,      // Хэш-таблица с регистрируемыми предметами
 
-    pub test:            HashMap<String, TestRegistry>,    // Хэш-таблица с регистрируемыми тест
+    pub test:            HashMap<String, TestRegistry>,    // Хэш-таблица с тест
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct EntityRegistry {
     pub id_name:        String,
     pub id_source:      Option<String>,
-    pub entity_type:    EntityType,
-    pub id_texture:     usize
+    pub id_texture:     String,
+    pub entity_type:    EntityType
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct ObjectRegistry {
     pub id_name:        String,
     pub id_source:      Option<String>,
+    pub id_texture:     String,
     //pub size_type:      ObjectSizeType,
     pub size:           IVec2C,
     pub collision:      Vec2C,
@@ -57,6 +58,7 @@ pub struct ObjectRegistry {
 pub struct ItemRegistry {
     pub id_name:    String,
     pub id_source:  Option<String>,
+    pub id_texture: String,
     pub item_type:  ItemType
 }
 
@@ -94,15 +96,11 @@ impl Registry {
         }
     }
 
-    pub fn get_entity(&mut self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
-        if let Some(var) = self.entity_registry.get(name) {
-            atlas.get_entity_spritesheet(&var.id_name)
-        } else {
-            None
-        }
+    pub fn get_entity(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
+        atlas.get_entity_spritesheet(name)
     }
 
-    pub fn get_entity_info(&mut self, name: &str) -> Option<&EntityRegistry> {
+    pub fn get_entity_info(&self, name: &str) -> Option<&EntityRegistry> {
         self.entity_registry.get(name)
     }
 
@@ -116,15 +114,11 @@ impl Registry {
         }
     }
 
-    pub fn get_object(&mut self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
-        if let Some(var) = self.object_registry.get(name) {
-            atlas.get_object_spritesheet(&var.id_name)
-        } else {
-            None
-        }
+    pub fn get_object_texture(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
+        atlas.get_object_spritesheet(name)
     }
 
-    pub fn get_object_info(&mut self, name: &str) -> Option<&ObjectRegistry> {
+    pub fn get_object_info(&self, name: &str) -> Option<&ObjectRegistry> {
         self.object_registry.get(name)
     }
 
@@ -138,15 +132,11 @@ impl Registry {
         }
     }
 
-    pub fn get_item(&mut self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
-        if let Some(var) = self.item_registry.get(name) {
-            atlas.get_item_spritesheet(&var.id_name)
-        } else {
-            None
-        }
+    pub fn get_item_texture(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
+        atlas.get_item_spritesheet(name)
     }
 
-    pub fn get_item_info(&mut self, name: &str) -> Option<&ItemRegistry> {
+    pub fn get_item_info(&self, name: &str) -> Option<&ItemRegistry> {
         self.item_registry.get(name)
     }
 
@@ -159,7 +149,7 @@ impl Registry {
         }
     }
 
-    pub fn get_test(&mut self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
+    pub fn get_test(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
         if let Some(var) = self.test.get(name) {
             atlas.get_test_spritesheet(&var.0)
         } else {

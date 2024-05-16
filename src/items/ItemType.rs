@@ -8,6 +8,14 @@ use serde::{
 
 use bevy_inspector_egui::InspectorOptions;
 
+#[derive(InspectorOptions, Debug, Default, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
+pub enum ItemSizeType {
+    #[default]
+    Small,
+    Big
+}
+
+
 /// Всё, что может бить предметом
 #[derive(InspectorOptions, Debug, Default, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
 pub enum ItemType {

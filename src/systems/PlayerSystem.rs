@@ -26,6 +26,7 @@ use crate::core::{
         Pickupable,
         ItemType
     },
+    world::chunk::Chunk::Chunk,
     Container::Container
 };
 
@@ -88,10 +89,11 @@ impl PlayerPlugin {
     }
 
     fn player_pickup(
-        mut commands:       Commands,
-        keyboard_input:     Res<ButtonInput<KeyCode>>,
-        mut user_query:     Query<(&Transform, &EntityBase, &mut Container), With<User>>,
-        pickupable_quety:   Query<(Entity, &Transform, &Pickupable), Without<User>>
+        mut commands:           Commands,
+        mut chunk_res:          ResMut<Chunk>,
+            keyboard_input:     Res<ButtonInput<KeyCode>>,
+        mut user_query:         Query<(&Transform, &EntityBase, &mut Container), With<User>>,
+            pickupable_quety:   Query<(Entity, &Transform, &Pickupable), Without<User>>
     ) {
         if pickupable_quety.is_empty() || user_query.is_empty() {
             return;
@@ -103,6 +105,8 @@ impl PlayerPlugin {
             for (entity, transform, pick) in pickupable_quety.iter() {
                 if user.interaction_radius > Vec3::distance(transform.translation, user_transform.translation) {
                     if container.add_in_container(pick.item, pick.count) {
+                        chunk_res.remove_sub_object_ex(entity);
+                        
                         commands.entity(entity).despawn_recursive();
                     }
                 }

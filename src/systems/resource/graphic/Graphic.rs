@@ -1,8 +1,11 @@
-#![allow(unused)]
+//#![allow(unused)]
 use std::{collections::HashMap, path::Path};
 
-use bevy::{asset::LoadedFolder, prelude::*, render::texture::ImageSampler};
-use bevy_egui::egui::TextBuffer;
+use bevy::{
+    asset::LoadedFolder, 
+    prelude::*, 
+    render::texture::ImageSampler
+};
 
 use crate::core::{
     resource::{
@@ -11,32 +14,13 @@ use crate::core::{
             DirectionAtlas, 
             TestTextureAtlas
         },
-        Registry::{
-            Registry,
-            EntityRegistry,
-            TestRegistry
-        }
-    },
-    EntityType::{
-        EntityType,
-        HumonoidType
+        //Registry::Registry,
+        LoadingBuffer,
+        ResourceFolder,
+        ResourceModule
     },
     AppState,
 };
-
-/// Ресурс хранящий в себе загружаемую папку ресурсов
-#[derive(Resource, Default)]
-pub struct ResourceFolder(Handle<LoadedFolder>, Handle<LoadedFolder>);
-
-/// функция для загрузки ресурсов из определённой папки, по умолчанию эта папка - assets, и всё его содержимое
-pub fn load_resource_folder(mut commands: Commands, asset_server: Res<AssetServer>) {
-    info!("Insert resources");
-    commands.insert_resource(ResourceFolder(
-        asset_server.load_folder(""),
-        asset_server.load_folder("core/textures/entity/player"),
-    ));
-    info!("State: ResourceCheck");
-}
 
 /// Проверка чего-то с каждым обновлением
 pub fn check_textures(
@@ -54,14 +38,17 @@ pub fn check_textures(
 pub fn setup_ex(
     mut commands:           Commands,
         resource_handle:    Res<ResourceFolder>,
+        resource_module:    Res<ResourceModule>,
     mut handle_cust_atlas:  ResMut<TestTextureAtlas>,
     mut handle_dir_atlas:   ResMut<DirectionAtlas>,
-    mut register:           ResMut<Registry>,
-    mut atlas:              ResMut<AtlasRes>,
-    mut texture_atlases:    ResMut<Assets<TextureAtlasLayout>>,
         loaded_folders:     Res<Assets<LoadedFolder>>,
+    // mut register:           ResMut<Registry>,
+    mut atlas:              ResMut<AtlasRes>,
+    //    asset_server:       Res<AssetServer>,
+    mut texture_atlases:    ResMut<Assets<TextureAtlasLayout>>,
     mut textures:           ResMut<Assets<Image>>,
     mut next_state:         ResMut<NextState<AppState>>,
+    load_buff:              ResMut<LoadingBuffer>
 ) {
     // ==============================
     // Сборка текстур в единый атлас
@@ -76,6 +63,7 @@ pub fn setup_ex(
     );
     let atlas_nearest_handle = texture_atlases.add(texture_atlas_nearest);
 
+    // Спавн спрайта атласа ждя debug
     commands.spawn(SpriteBundle {
         texture: nearest_texture.clone(),
         transform: Transform {
@@ -95,7 +83,7 @@ pub fn setup_ex(
     let loaded_folder = loaded_folders.get(&resource_handle.1).unwrap();
     let (texture_atlas_dir_atlases, nearest_texture_atlases, _hash) = load_and_index_atlas(
         &loaded_folder,
-        None,
+        Some(UVec2::splat(1)),
         Some(ImageSampler::nearest()),
         &mut textures,
     );
@@ -107,23 +95,49 @@ pub fn setup_ex(
     handle_dir_atlas.ids =      Some(_hash.clone());
 
     // ==============================
+    // Items
+    // ==============================
+    let loaded_folder = loaded_folders.get(&resource_module.0).unwrap();
+
+    let (texture_atlas_nearest, items_texture, items_hash) = create_texture_atlas_ex(
+        &load_buff.verified_item_texture,
+        &loaded_folder,
+        Some(UVec2::splat(1)),
+        Some(ImageSampler::nearest()),
+        &mut textures,
+    );
+    let items_layout = texture_atlases.add(texture_atlas_nearest);
+
+    atlas.items.layout =    Some(items_layout);
+    atlas.items.image =     Some(items_texture);
+    atlas.items.ids =       Some(items_hash);
+    // ==============================
+    // Objects
+    // ==============================
+    let loaded_folder = loaded_folders.get(&resource_module.0).unwrap();
+
+    let (texture_atlas_nearest, objects_texture, objects_hash) = create_texture_atlas_ex(
+        &load_buff.verified_object_texture,
+        &loaded_folder,
+        Some(UVec2::splat(1)),
+        Some(ImageSampler::nearest()),
+        &mut textures,
+    );
+    let object_layout = texture_atlases.add(texture_atlas_nearest);
+
+    atlas.objects.layout =  Some(object_layout);
+    atlas.objects.image =   Some(objects_texture);
+    atlas.objects.ids =     Some(objects_hash);
+    // ==============================
     // Test
     // ==============================
     atlas.entity.layout =   Some(atlas_dir_nearest_handle);
     atlas.entity.image =    Some(nearest_texture_atlases);
     atlas.entity.ids =      Some(_hash);
 
-    atlas.items.layout =  Some(atlas_nearest_handle.clone());
-    atlas.items.image =   Some(nearest_texture.clone());
-    atlas.items.ids =     Some(_hash_t.clone());
-
-    atlas.objects.layout =  Some(atlas_nearest_handle.clone());
-    atlas.objects.image =   Some(nearest_texture.clone());
-    atlas.objects.ids =     Some(_hash_t.clone());
-
-    atlas.test.layout =  Some(atlas_nearest_handle);
-    atlas.test.image =   Some(nearest_texture);
-    atlas.test.ids =     Some(_hash_t);
+    atlas.test.layout =     Some(atlas_nearest_handle);
+    atlas.test.image =      Some(nearest_texture);
+    atlas.test.ids =        Some(_hash_t);
     // ==============================
     // 
     // ==============================
@@ -131,6 +145,86 @@ pub fn setup_ex(
     next_state.set(AppState::MainMenu);
     info!("State: MainMenu")
 }
+
+// ==============================
+// 
+// ==============================
+fn create_texture_atlas_ex(
+    load_buff:  &Vec<String>,
+    folder:     &LoadedFolder,
+    padding:    Option<UVec2>,
+    sampling:   Option<ImageSampler>,
+    textures:   &mut ResMut<Assets<Image>>,
+) -> (TextureAtlasLayout, Handle<Image>, HashMap<String, usize>) {
+    let mut textures_ids: HashMap<String, usize> = HashMap::new();
+    // Скорее всего создаётся полотно, в которое будет помещаться текстуры
+    let mut texture_atlas_builder =
+        TextureAtlasBuilder::default().padding(padding.unwrap_or_default());
+
+    let mut num: usize = 0;
+
+    // Прогон по имеющимся текстурам в loadedfolder
+    for handle in folder.handles.iter() {
+        if let Some(path) = handle.path() {
+            if let Some(file_name) = path.to_string().as_str().split('/').last() {
+                if let Some(first) = file_name.rsplit(|c| c == '\\' || c == '/').next() {
+                    // println!("{first}");
+                    for sec in load_buff.clone() {
+                        if let Some(second) = sec.rsplit(|c| c == '\\' || c == '/').next() {
+                            // println!("{second}");
+                            if first == second {
+                                // Получение id у прогоняемой текстуры
+                                let id = handle.id().typed_unchecked::<Image>();
+                                // Проверка, преобразоваемый файл ли в текстуру
+                                let Some(texture) = textures.get(id) else {
+                                    warn!(
+                                        "{:?} did not resolve to an `Image` asset.",
+                                        handle.path().unwrap()
+                                    );
+
+                                    continue;
+                                };
+
+                                // Получение имени загружаемого файла, чтобы использовать это как ключь-имя в hash-таблице
+                                if let Some(path) = handle.path() {
+                                    if let Some(file_name) = path.to_string().as_str().split('/').last() {
+                                        let file_fmt = Path::new(file_name).file_stem().unwrap().to_string_lossy();
+
+                                        println!("Loaded module resource | {}", file_fmt);
+                                        textures_ids.insert(file_fmt.to_string(), num);
+                                    } else {
+                                        warn!("[Error] - An error occurred while reading the file name!")
+                                    }
+                                } else {
+                                    warn!("[Error] - An error occurred while reading the file path!")
+                                }
+
+                                num += 1;
+                                // Добавление на полотно добавляемую текстуру
+                                texture_atlas_builder.add_texture(Some(id), texture);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Финальная сборка полотна в layout и цельную текстуру
+    let (texture_atlas_layout, texture) = texture_atlas_builder.finish().unwrap();
+    // Добавление текстуры в handle
+    let texture = textures.add(texture);
+
+    // Обновление настройки выборки в атласе текстур
+    let image = textures.get_mut(&texture).unwrap();
+    // Применение обработки к текстурам
+    image.sampler = sampling.unwrap_or_default();
+
+    (texture_atlas_layout, texture, textures_ids)
+}
+// ==============================
+// 
+// ==============================
 
 /// Создание атласа текстур с заданными настройками заполнения и выборки из отдельных спрайтов в данной папке
 fn create_texture_atlas(
@@ -145,6 +239,7 @@ fn create_texture_atlas(
         TextureAtlasBuilder::default().padding(padding.unwrap_or_default());
 
     let mut num: usize = 0;
+
     // Прогон по имеющимся текстурам в loadedfolder
     for handle in folder.handles.iter() {
         // Получение id у прогоняемой текстуры
@@ -162,7 +257,9 @@ fn create_texture_atlas(
         // Получение имени загружаемого файла, чтобы использовать это как ключь-имя в hash-таблице
         if let Some(path) = handle.path() {
             if let Some(file_name) = path.to_string().as_str().split('/').last() {
+                // println!("{file_name}");
                 let file_fmt = Path::new(file_name).file_stem().unwrap().to_string_lossy();
+
                 println!("Loaded resource | {}", file_fmt);
                 textures_ids.insert(file_fmt.to_string(), num);
             } else {
@@ -193,6 +290,7 @@ fn create_texture_atlas(
 // ==================================================
 const SPRITE_SHEET_W: usize = 16; // размер одного фрагмента по ширине
 const SPRITE_SHEET_H: usize = 16; // размер одного фрагмента по высоте
+
 /// Индексирование атласа, путём его разбиения на сетку.
 fn load_and_index_atlas(
     folder:     &LoadedFolder,
@@ -242,7 +340,7 @@ fn load_and_index_atlas(
         // current_index += 1;
     }
 
-    let (texture_atlas_layout, texture) = texture_atlas_builder.finish().unwrap();
+    let (_texture_atlas_layout, texture) = texture_atlas_builder.finish().unwrap();
     let texture = textures.add(texture);
 
     // Обновление настройки выборки в атласе текстур

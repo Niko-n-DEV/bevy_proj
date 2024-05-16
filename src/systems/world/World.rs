@@ -77,10 +77,9 @@ impl Plugin for WorldSystem {
             .add_plugins(EntiTilesPlugin)
             .add_plugins((
                 // Физика
-                // RapierPhysicsPlugin::<NoUserData>::default().in_fixed_schedule(),
                 RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(32.0),
                 RapierDebugRenderPlugin {
-                    enabled: true,
+                    enabled: !true,
                     ..default()
                 }
             ))
@@ -162,7 +161,6 @@ impl WorldSystem {
         // Test ==============================
 
         // Спавн спрайта, являющийся игроком
-        //let (texture, atlas) = DirectionAtlas::set_sprite("human", &handle_dir);
         if let Some(sprite) = register.get_entity("human", &atlas) {
             let entity = commands.spawn((
                 RigidBody::Dynamic,
@@ -222,31 +220,6 @@ impl WorldSystem {
         } else {
             println!("ERROR - Spawn Player!")
         }
-
-        // Спавн подбираемого предмета
-        commands
-            .spawn((
-                EntityObject {
-                    ..default()
-                },
-                SpriteSheetBundle {
-                    texture: handle.image.clone().unwrap(),
-                    atlas: TextureAtlas {
-                        layout: handle.layout.clone().unwrap(),
-                        index: TestTextureAtlas::get_index("bullet", &handle)
-                    },
-                    transform: Transform {
-                        translation: Vec3::new(64., 64., 0.3),
-                        ..default()
-                    },
-                    ..default()
-                }
-            ))
-            .insert(Pickupable {
-                item: ItemType::Item(Item::Ammo),
-                count: 32
-            })
-            .insert(Name::new("Item"));
 
         // Точка спавна для спавна "болванчиков", которые двигаются к игроку
         commands
@@ -463,6 +436,24 @@ impl WorldSystem {
                 input_var.y / cell_size
             } else {
                 (input_var.y - cell_size + 1) / cell_size
+            }
+        );
+        result
+    }
+
+    /// Функция для определения точных координат суб-тайлов в чанке
+    pub fn get_currect_chunk_subtile(input_var: IVec2) -> IVec2 {
+        let sub_size = 8;
+        let result: IVec2 = IVec2::new(
+            if input_var.x >= 0 {
+                input_var.x / sub_size
+            } else {
+                (input_var.x - sub_size + 1) / sub_size
+            },
+            if input_var.y >= 0 {
+                input_var.y / sub_size
+            } else {
+                (input_var.y - sub_size + 1) / sub_size
             }
         );
         result

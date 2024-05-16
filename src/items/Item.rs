@@ -28,9 +28,10 @@ pub struct ItemSpawn(pub String, pub IVec2, pub usize);
 /// Функция отвечающая за спавн предмета при вызове события спавна.
 pub fn spawn_item(
     mut commands:   Commands,
-    mut registry:   ResMut<Registry>,
+        registry:   Res<Registry>,
     mut chunk_res:  ResMut<Chunk>,
         atlas:      Res<AtlasRes>,
+    mut items:      Query<(Entity, &mut Pickupable), With<Pickupable>>,
     mut event:      EventReader<ItemSpawn>
 ) {
     if event.is_empty() {
@@ -38,28 +39,37 @@ pub fn spawn_item(
     }
 
     for event in event.read() {
-        if let Some(sprite) = registry.get_item(&event.0, &atlas) {
+        if !chunk_res.objects_ex.contains_key(&event.1) {
             if let Some(info) = registry.get_item_info(&event.0) {
-                let entity = commands
-                .spawn((
-                    EntityObject::default(),
-                    SpriteSheetBundle {
-                        texture: sprite.texture,
-                        atlas: sprite.atlas,
-                        transform: Transform {
-                            translation: Vec3::new(event.1.x as f32 * 16. + 8., event.1.y as f32 * 16. + 8., 0.3),
+                if let Some(sprite) = registry.get_item_texture(&info.id_texture, &atlas) {
+                    let entity = commands
+                    .spawn((
+                        EntityObject::default(),
+                        SpriteSheetBundle {
+                            texture: sprite.texture,
+                            atlas: sprite.atlas,
+                            transform: Transform {
+                                translation: Vec3::new(event.1.x as f32 * 8. + 4., event.1.y as f32 * 8. + 4., 0.3),
+                                scale: Vec3::new(0.5, 0.5, 0.0),
+                                ..default()
+                            },
                             ..default()
                         },
-                        ..default()
-                    },
-                    Pickupable {
-                        item: info.item_type,
-                        count: event.2
-                    },
-                    Name::new(info.id_name.clone())
-                )).id();
-
-                chunk_res.objects_ex.insert(event.1, entity);
+                        Pickupable {
+                            item: info.item_type,
+                            count: event.2
+                        },
+                        Name::new(info.id_name.clone())
+                    )).id();
+    
+                    chunk_res.objects_ex.insert(event.1, entity);
+                }
+            }
+        } else {
+            if let Some(sub_obj_entity) = chunk_res.objects_ex.get(&event.1) {
+                if let Ok(mut entity) = items.get_mut(*sub_obj_entity) {
+                    entity.1.count += event.2;
+                }
             }
         }
     }

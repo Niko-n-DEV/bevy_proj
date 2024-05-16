@@ -1,10 +1,14 @@
 pub mod graphic;
 pub mod Registry;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::fs;
 
-use bevy::prelude::*;
+use bevy::{
+    asset::LoadedFolder, 
+    prelude::*
+};
+
 use extol_sprite_layer::*;
 
 use crate::core::{
@@ -45,46 +49,72 @@ impl Plugin for ResourcePlugin {
         app
             // Init Plugins
             .add_plugins(SpriteLayerPlugin::<SpriteLayer>::default())
-            // Insert Resources
-            .insert_resource(LoadingBuffer::default())
             // Проверка целостности данных ядра
             // Инициализация загрузки ресурсов ядра ==============================
-                // Взятие ресурсов из assets
-            .add_systems(OnEnter(AppState::ResourceCheck), graphic::Graphic::load_resource_folder)
-                // Определение атласов
-            .insert_resource(graphic::Atlas::AtlasRes::init())
+            // Взятие ресурсов из assets
+            .add_systems(OnEnter(AppState::ResourceCheck), Self::start_loading)
+            // Определение атласов
             .insert_resource(graphic::Atlas::TestTextureAtlas::default())
             .insert_resource(graphic::Atlas::DirectionAtlas::default())
-            .insert_resource(SpriteLayerOptions { y_sort: true })
             // Init registry
             .insert_resource(Registry::Registry::new())
-                // Проверка ресурсов на зависимости (Непонятно как оно точно работает)
+            // Проверка ресурсов на зависимости (Непонятно как оно точно работает)
             .add_systems(Update,graphic::Graphic::check_textures.run_if(in_state(AppState::ResourceCheck)))
             .add_systems(OnEnter(AppState::ResourceLoading), (
+                Self::loading,
                 graphic::Graphic::setup_ex,
                 Self::register_types,
-                Self::loading
-            ))
+            ).chain())
             // - Загрузка DLC
             // Инициализация загрузки пользовательских ресурсов (Текстуры, аддоны)
             
             // Init Resource
-            .add_systems(OnEnter(AppState::MainMenu), Self::setup)
+            .add_systems(OnEnter(AppState::MainMenu), Self::load_settings)
         ;
     }
 }
 
+
+/// Ресурс хранящий в себе загружаемую папку ресурсов
 #[derive(Resource, Default)]
-struct LoadingBuffer {
-    source_id: String,
-    textures_path_buffet: Vec<String>
+pub struct ResourceFolder(Handle<LoadedFolder>, Handle<LoadedFolder>);
+
+#[derive(Resource, Default)]
+pub struct ResourceModule(Handle<LoadedFolder>);
+
+#[derive(Resource, Default)]
+pub struct LoadingBuffer {
+    source_id:                  String,
+    textures_path_buf:          Vec<String>,
+    reg_item_tex_path:          Vec<String>,
+    reg_entity_tex_path:        Vec<String>,
+    reg_object_tex_path:        Vec<String>,
+    verified_item_texture:      Vec<String>,
+    verified_entity_texture:    Vec<String>,
+    verified_object_texture:    Vec<String>,
 }
 
 impl ResourcePlugin {
-    fn setup(mut commands: Commands) {
-        commands.insert_resource(Settings::load())
-        
 
+    /// функция для загрузки ресурсов из определённой папки, по умолчанию эта папка - assets, и всё его содержимое
+    pub fn start_loading(mut commands: Commands, asset_server: Res<AssetServer>) {
+        info!("Insert resources");
+        commands.insert_resource(ResourceFolder(
+            asset_server.load_folder(""),
+            asset_server.load_folder("core/textures/entity/player"),
+        ));
+        
+        commands.insert_resource(ResourceModule(asset_server.load_folder("Data://Core/Textures")));
+
+        commands.insert_resource(LoadingBuffer::default());
+
+        commands.insert_resource(graphic::Atlas::AtlasRes::init());
+
+        info!("State: ResourceCheck");
+    }
+
+    fn load_settings(mut commands: Commands) {
+        commands.insert_resource(Settings::load())
     }
 
     fn register_types(
@@ -93,8 +123,8 @@ impl ResourcePlugin {
         register.register_entity(Registry::EntityRegistry {
             id_name: "human".to_string(),
             id_source: Some("core".to_string()),
+            id_texture: "human".to_string(),
             entity_type: EntityType::Humonoid(HumonoidType::Human),
-            id_texture: 0
         });
 
         register.register_test("gun".to_string(), Registry::TestRegistry("gun".to_string()));       // Предмет
@@ -103,9 +133,9 @@ impl ResourcePlugin {
     }
 
     fn loading(
-        mut commands:  Commands,
-        mut register:  ResMut<Registry::Registry>,
-        mut load_buff: ResMut<LoadingBuffer>
+        // mut commands:       Commands,
+        mut register:       ResMut<Registry::Registry>,
+        mut load_buff:      ResMut<LoadingBuffer>
     ) {
         /*
             прогон по папкам и рекурсивно внутри папок.
@@ -131,7 +161,7 @@ impl ResourcePlugin {
             }
         }
 
-        commands.remove_resource::<LoadingBuffer>();
+        // commands.remove_resource::<LoadingBuffer>();
     }
 
     fn process_loading(
@@ -163,6 +193,17 @@ impl ResourcePlugin {
                     let dir_name = dir_name.to_string_lossy();
 
                     match dir_name.as_ref() {
+                        "Textures" => {
+                            let assets_path = path.join("items");
+                            if assets_path.exists() {
+                                Self::process_directory_assets(&mut register, &mut load_buff, &assets_path)?;
+                            }
+
+                            let assets_path = path.join("objects");
+                            if assets_path.exists() {
+                                Self::process_directory_assets(&mut register, &mut load_buff, &assets_path)?;
+                            }
+                        },
                         "Defs" => {
                             let res_path = path.join("entities");
                             if res_path.exists() {
@@ -179,19 +220,41 @@ impl ResourcePlugin {
                                 Self::process_directory_res(&mut register, &mut load_buff, &res_path)?;
                             }
                         }
-                        "Textures" => {
-                            let assets_path = path.join("items");
-                            if assets_path.exists() {
-                                Self::process_directory_assets(&mut register, &mut load_buff, &assets_path)?;
-                            }
-                        }
                         _ => continue,
                     }
                 }
             }
         }
 
+        load_buff.verified_item_texture   = Self::process_assets(&load_buff.reg_item_tex_path, &load_buff.textures_path_buf);
+        load_buff.verified_entity_texture = Self::process_assets(&load_buff.reg_entity_tex_path, &load_buff.textures_path_buf);
+        load_buff.verified_object_texture = Self::process_assets(&load_buff.reg_object_tex_path, &load_buff.textures_path_buf);
+
+
+        
         Ok(())
+    }
+
+    fn process_assets(
+        find:  &Vec<String>,
+        check: &Vec<String>
+    ) -> Vec<String> {
+        let mut result: Vec<String> = Vec::new();
+        for check_string in find {
+            let file_find = PathBuf::from(check_string);
+            for tex_path in check {
+                let path_buf = PathBuf::from(tex_path);
+                if let Some(file_stem) = path_buf.file_stem() {
+                    if file_stem == file_find.file_stem().unwrap() {
+                        let to_load = path_buf.to_string_lossy().into_owned();
+                        if !result.contains(&to_load) {
+                            result.push(path_buf.to_string_lossy().into_owned());
+                        }
+                    }
+                }
+            }
+        }
+        result
     }
 
     fn process_directory_assets(
@@ -204,31 +267,14 @@ impl ResourcePlugin {
     
             let path = entry.path();
     
-            if path.is_file() {
+            if path.is_file() && path.extension().map_or(false, |ext| ext == "png") {
                 let path_str = path.to_string_lossy().into_owned();
-                load_buff.textures_path_buffet.push(path_str)
-            } else if path.is_dir() {
-                //let dir_name = path.file_name().ok_or("Невалидное имя директории")?;
-                //let dir_name = dir_name.to_string_lossy();
                 
+                if !load_buff.textures_path_buf.contains(&path_str) {
+                    load_buff.textures_path_buf.push(path_str);
+                }
+            } else if path.is_dir() {
                 Self::process_directory_assets(&mut register, &mut load_buff, &path)?;
-
-                // match dir_name.as_ref() {
-                //     "textures" => {
-                //         let textures_items_path = path.join("items");
-                //         if textures_items_path.exists() {
-                //             Self::process_directory_assets(&mut register, &mut load_buff, &textures_items_path)?;
-                //         }
-
-                //         let textures_entities_path = path.join("entities");
-                //         if textures_entities_path.exists() {
-                //             Self::process_directory_assets(&mut register, &mut load_buff, &textures_entities_path)?;
-                //         }
-                //     },
-                //     _ => {
-                //         Self::process_directory_assets(&mut register, &mut load_buff, &path)?;
-                //     }
-                // }
             }
         }
     
@@ -250,11 +296,14 @@ impl ResourcePlugin {
                 if dir.file_name().map_or(false, |name| name == "entities") {
                     if let Ok(contents) = fs::read_to_string(&path) {
                         if let Ok(module) = serde_json::from_str::<Registry::EntityRegistry>(&contents) {
+
+                            load_buff.reg_entity_tex_path.push(module.id_texture.clone());
+
                             register.register_entity(Registry::EntityRegistry {
                                 id_name: module.id_name,
                                 id_source: Some(load_buff.source_id.clone()),
+                                id_texture: module.id_texture,
                                 entity_type: module.entity_type,
-                                id_texture: module.id_texture
                             });
                         }
                     }
@@ -263,9 +312,13 @@ impl ResourcePlugin {
                 if dir.file_name().map_or(false, |name| name == "items") {
                     if let Ok(contents) = fs::read_to_string(&path) {
                         if let Ok(module) = serde_json::from_str::<Registry::ItemRegistry>(&contents) {
+
+                            load_buff.reg_item_tex_path.push(module.id_texture.clone());
+
                             register.register_item(Registry::ItemRegistry {
                                 id_name: module.id_name,
                                 id_source: Some(load_buff.source_id.clone()),
+                                id_texture: module.id_texture,
                                 item_type: module.item_type
                             });
                         }
@@ -277,9 +330,13 @@ impl ResourcePlugin {
                 if dir.file_name().map_or(false, |name| name == "objects") {
                     if let Ok(contents) = fs::read_to_string(&path) {
                         if let Ok(module) = serde_json::from_str::<Registry::ObjectRegistry>(&contents) {
+
+                            load_buff.reg_object_tex_path.push(module.id_texture.clone());
+
                             register.register_object(Registry::ObjectRegistry {
                                 id_name: module.id_name,
                                 id_source: Some(load_buff.source_id.clone()),
+                                id_texture: module.id_texture,
                                 //size_type: module.size_type,
                                 size: module.size,
                                 collision: module.collision
@@ -289,15 +346,7 @@ impl ResourcePlugin {
                     
                 }
             } else if path.is_dir() {
-                let dir_name = path.file_name().ok_or("Невалидное имя директории")?;
-                let dir_name = dir_name.to_string_lossy();
-    
-                match dir_name.as_ref() {
-                    "entities" | "items" | "objects" => {
-                        Self::process_directory_res(&mut register, &mut load_buff, &path)?;
-                    },
-                    _ => continue,
-                }
+                Self::process_directory_res(&mut register, &mut load_buff, &path)?;
             }
         }
     

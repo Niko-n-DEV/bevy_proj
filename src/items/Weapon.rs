@@ -42,7 +42,7 @@ pub fn gun_controls(
     _buttons:           Res<ButtonInput<MouseButton>>,
     _keyboard_input:    Res<ButtonInput<KeyCode>>,
     atlas:              Res<AtlasRes>,
-    mut register:       ResMut<Registry>
+    register:           Res<Registry>
 ) {
     if gun_query.is_empty() && user_container.is_empty() {
         return;

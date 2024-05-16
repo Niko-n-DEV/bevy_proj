@@ -1,4 +1,10 @@
-use bevy::prelude::*;
+use bevy::{
+    asset::io::{
+        file::FileAssetReader, 
+        AssetSource
+    }, 
+    prelude::*
+};
 
 // Определение модулей
 
@@ -52,6 +58,9 @@ fn main() {
         // Есть возможность изменения размера окна
         // [Test] Включена Вертикальная синхронизация (у меня 144 герц) [AutoVsync]
         // Установлен nearest фильтр, чтобы спрайты были несглаженные.
+        .register_asset_source("Data", AssetSource::build()
+            .with_reader(|| Box::new(FileAssetReader::new("Data")))
+        )
         .add_plugins(DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
