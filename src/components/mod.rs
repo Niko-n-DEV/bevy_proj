@@ -2,6 +2,5 @@
 #![allow(unused)]
 use bevy::prelude::*;
 
-pub mod Container;
 pub mod Missile;
 pub mod Movement;

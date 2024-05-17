@@ -3,5 +3,6 @@
 	"id_texture": "ammo",
 	"item_type": {
         "Item": "Ammo"
-    }
+    },
+	"item_size": "Small"
 }

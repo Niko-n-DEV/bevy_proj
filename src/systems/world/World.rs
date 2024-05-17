@@ -32,7 +32,7 @@ use crate::core::{
         }, WorldTaskManager
     }, 
     AppState, 
-    Container::Container, 
+    ContainerSystem::Container, 
     Entity::{
         EntityBase,
         Health,
@@ -122,6 +122,7 @@ impl Plugin for WorldSystem {
             .add_systems(OnExit(AppState::Game), (
                 WorldTaskManager::despawn_entities,
                 WorldTaskManager::despawn_object,
+                WorldTaskManager::despawn_items,
                 WorldTaskManager::despawn_terrain
             ))
         ;
@@ -167,7 +168,7 @@ impl WorldSystem {
                 EntityBase {
                     speed: Speed(50., 75., 25.),
                     health: Health(100.),
-                    position: Position(Vec3::new(64., 64., 0.)),
+                    position: Position(Vec2::new(64., 64.)),
                     direction: DirectionState::South,
                     movable: true,
                     ..default()

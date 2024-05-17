@@ -28,7 +28,7 @@ impl Default for EntityObject {
     fn default() -> Self {
         Self {
             health: Health(1.),
-            position: Position(Vec3::ZERO),
+            position: Position(Vec2::ZERO),
             direction: DirectionState::South,
             movable: true,
         }
@@ -78,21 +78,4 @@ pub fn spawn_object(
             }
         }
     }
-
-
-    // commands.spawn((
-    //     RigidBody::Dynamic,
-    //     EntityBase {
-    //         speed: Speed(50., 75., 25.),
-    //         health: Health(100.),
-    //         position: Position(Vec3::new(64., 64., 0.)),
-    //         direction: DirectionState::South,
-    //         movable: true,
-    //         ..default()
-    //     },
-    //     sprite,
-    //     EntityType::Humonoid(HumonoidType::Human),
-    //     EntityNeutrality::Neutral,
-    //     Name::new("Player"),
-    // ));
 }

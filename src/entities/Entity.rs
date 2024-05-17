@@ -19,7 +19,7 @@ use crate::core::{
 };
 
 /// Компонент отвечающий за [Здоровье]
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Default)]
 pub struct Health(pub f32);
 
 /// Компонент отвечающий за [Скорость]
@@ -29,8 +29,8 @@ pub struct Health(pub f32);
 pub struct Speed(pub f32, pub f32, pub f32);
 
 /// Компонент отвечающий за [Позицию]
-#[derive(Component, Reflect)]
-pub struct Position(pub Vec3);
+#[derive(Component, Reflect, Default)]
+pub struct Position(pub Vec2);
 
 /// Компонент отвечающий за [Направление движения]
 // #[derive(Component, Reflect)]
@@ -60,7 +60,7 @@ impl Default for EntityBase {
         Self {
             speed: Speed(50., 75., 25.),
             health: Health(1.),
-            position: Position(Vec3::ZERO),
+            position: Position(Vec2::ZERO),
             direction: DirectionState::South,
             movable: true,
             interaction_radius: 10.0,

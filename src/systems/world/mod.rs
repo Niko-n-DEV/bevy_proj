@@ -11,6 +11,7 @@ use bevy::prelude::*;
 use crate::core::{
     Entity::EntityBase,
     Object::EntityObject,
+    Item::EntityItem,
     world::TileMap::TileM,
     AppState
 };
@@ -57,14 +58,28 @@ impl WorldTaskManager {
     /// функция выгрузки объектов
     fn despawn_object(
         mut commands: Commands,
-        mut entities: Query<Entity, With<EntityObject>>,
+        mut objects: Query<Entity, With<EntityObject>>,
     ) {
-        if entities.is_empty()  {
+        if objects.is_empty()  {
             return;
         }
     
-        for entities in entities.iter_mut() {
-            commands.entity(entities).despawn();
+        for obj in objects.iter_mut() {
+            commands.entity(obj).despawn();
+        }
+    }
+
+    /// функция выгрузки предметов
+    fn despawn_items(
+        mut commands: Commands,
+        mut items: Query<Entity, With<EntityItem>>,
+    ) {
+        if items.is_empty()  {
+            return;
+        }
+    
+        for item in items.iter_mut() {
+            commands.entity(item).despawn();
         }
     }
 
@@ -77,8 +92,8 @@ impl WorldTaskManager {
             return;
         }
     
-        for entities in entities.iter_mut() {
-            commands.entity(entities).despawn();
+        for entity in entities.iter_mut() {
+            commands.entity(entity).despawn();
         }
     }
 

@@ -27,7 +27,7 @@ use crate::core::{
         ItemType
     },
     world::chunk::Chunk::Chunk,
-    Container::Container
+    ContainerSystem::Container
 };
 
 pub struct PlayerPlugin;

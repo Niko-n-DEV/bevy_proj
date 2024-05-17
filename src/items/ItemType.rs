@@ -15,6 +15,22 @@ pub enum ItemSizeType {
     Big
 }
 
+impl ItemSizeType {
+    /// Размер предмета (Размер, (Сетка, Сдвиг по сетку к центру))
+    pub fn type_size_convert(&self) -> (f32, (f32, f32)) {
+        match self {
+            ItemSizeType::Small => (0.5, (8.0, 4.0)),
+            ItemSizeType::Big   => (1.0, (16.0, 8.0))
+        }
+    }
+}
+
+#[derive(InspectorOptions, Debug, Default, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
+pub enum ItemStackType {
+    #[default]
+    Scalable,
+    Fixed
+}
 
 /// Всё, что может бить предметом
 #[derive(InspectorOptions, Debug, Default, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]

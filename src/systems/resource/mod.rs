@@ -319,7 +319,8 @@ impl ResourcePlugin {
                                 id_name: module.id_name,
                                 id_source: Some(load_buff.source_id.clone()),
                                 id_texture: module.id_texture,
-                                item_type: module.item_type
+                                item_type: module.item_type,
+                                item_size: module.item_size
                             });
                         }
                     }

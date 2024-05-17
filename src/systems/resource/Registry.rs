@@ -9,7 +9,10 @@ use serde::{
 };
 
 use crate::core::{
-    ItemType::ItemType,
+    ItemType::{
+        ItemType,
+        ItemSizeType
+    },
     EntityType::EntityType,
     ObjType::ObjectSizeType,
     resource::graphic::Atlas::AtlasRes,
@@ -59,7 +62,8 @@ pub struct ItemRegistry {
     pub id_name:    String,
     pub id_source:  Option<String>,
     pub id_texture: String,
-    pub item_type:  ItemType
+    pub item_type:  ItemType,
+    pub item_size:  ItemSizeType
 }
 
 pub struct TestRegistry(pub String);

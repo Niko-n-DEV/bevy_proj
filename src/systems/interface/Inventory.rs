@@ -5,7 +5,7 @@ use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
-    Container::InventoryItemSlot
+    ContainerSystem::InventoryItemSlot
 };
 
 #[derive(Component, InspectorOptions, Reflect)]

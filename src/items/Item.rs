@@ -15,10 +15,22 @@ use crate::core::{
     ItemType::Pickupable
 };
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct EntityItem {
-    pub health: Health,
-    pub position: Position,
+    pub id_name:    String,
+    pub health:     Health,
+    pub position:   Position,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct ItemPickUpEvent {
+    pub picker: Entity,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct ItemDropEvent {
+    pub droper: Entity,
+    pub item: Entity,
 }
 
 /// Событие спавна предмета
@@ -44,7 +56,10 @@ pub fn spawn_item(
                 if let Some(sprite) = registry.get_item_texture(&info.id_texture, &atlas) {
                     let entity = commands
                     .spawn((
-                        EntityObject::default(),
+                        EntityItem {
+                            id_name: info.id_name.clone(),
+                            ..default()
+                        },
                         SpriteSheetBundle {
                             texture: sprite.texture,
                             atlas: sprite.atlas,

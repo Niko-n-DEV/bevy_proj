@@ -28,7 +28,7 @@ use crate::
         },
         Movement::DirectionState,
         Missile::{update_bullet_hits, update_bullets},
-        Container::Container,
+        ContainerSystem::Container,
         AppState
     };
 
@@ -218,9 +218,9 @@ fn handle_move(
                 let move_var = event.1 / event.1.length();
                 velocity.linvel = move_var.truncate() * event.2;
 
-                entity_base.position = Position(transform.translation);
+                entity_base.position = Position(transform.translation.truncate());
             } else {
-                transform.translation = entity_base.position.0
+                transform.translation = entity_base.position.0.extend(0.5)
             }
         }
     }

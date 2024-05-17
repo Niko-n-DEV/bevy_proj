@@ -84,7 +84,7 @@ pub fn fill_chunk(
                     storage.set(
                         &mut commands,
                         IVec2 { x, y },
-                        TileBuilder::new().with_layer(1, TileLayer::no_flip(4)),
+                        TileBuilder::new().with_layer(1, TileLayer::no_flip(0)),
                     );
                 }
                 

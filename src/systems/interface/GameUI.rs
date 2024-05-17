@@ -16,7 +16,7 @@ use crate::core::{
         User,
         CursorPlacer
     },
-    Container::Container,
+    ContainerSystem::Container,
     ItemType::*,
     resource::Registry::Registry,
     AppState
@@ -192,7 +192,7 @@ impl DebugInfoPanel {
                         ui.label("Position");
                         ui.vertical(|ui| {
                             ui.label(format!("Pos: {}", player_pos.position.0));
-                            ui.label(format!("Pos_T: {}", WorldSystem::get_currect_chunk_tile(player_pos.position.0.truncate().as_ivec2())))
+                            ui.label(format!("Pos_T: {}", WorldSystem::get_currect_chunk_tile(player_pos.position.0.as_ivec2())))
                         });
 
                         ui.horizontal(|ui| {

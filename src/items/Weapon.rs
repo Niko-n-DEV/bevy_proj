@@ -15,7 +15,7 @@ use crate::core::{
         BULLET_LIFETIME, 
         BULLET_SPEED
     },
-    Container::Container,
+    ContainerSystem::Container,
     ItemType::{
         ItemType,
         Item
@@ -97,18 +97,18 @@ pub fn gun_controls(
                     if let Some(sprite) = register.get_test("bullet_p", &atlas) {
                         let sprite_ex = (sprite.texture, sprite.atlas);
                         commands
-                        .spawn(SpriteSheetBundle {
-                            transform:  spawn_transform,
-                            texture:    sprite_ex.0,
-                            atlas:      sprite_ex.1,
-                            ..default()
-                        })
-                        .insert(Name::new("Bullet"))
-                        .insert(Bullet {
-                            lifetime:   BULLET_LIFETIME,
-                            speed:      BULLET_SPEED,
-                            direction:  diff.normalize(),
-                        });
+                            .spawn(SpriteSheetBundle {
+                                transform:  spawn_transform,
+                                texture:    sprite_ex.0,
+                                atlas:      sprite_ex.1,
+                                ..default()
+                            })
+                            .insert(Name::new("Bullet"))
+                            .insert(Bullet {
+                                lifetime:   BULLET_LIFETIME,
+                                speed:      BULLET_SPEED,
+                                direction:  diff.normalize(),
+                            });
                     } else {
                         println!("error")
                     }
