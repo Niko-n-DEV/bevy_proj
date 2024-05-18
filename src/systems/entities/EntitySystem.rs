@@ -28,7 +28,7 @@ use crate::
         },
         Movement::DirectionState,
         Missile::{update_bullet_hits, update_bullets},
-        ContainerSystem::Container,
+        // ContainerSystem::Container,
         AppState
     };
 
@@ -137,10 +137,11 @@ impl Plugin for EntitySystem {
         app
             // Init Register
             .register_type::<EntityBase>()
-            .register_type::<Container>()
             // Init Events
             .add_event::<DirectionChangeEvent>()
             .add_event::<MovementEntity>()
+            // Init Plugins
+            
             // Init Systems
             .add_systems(
                 Update,

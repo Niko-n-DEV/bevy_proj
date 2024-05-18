@@ -8,6 +8,8 @@ use serde::{
 
 use bevy_inspector_egui::InspectorOptions;
 
+use crate::core::ContainerSystem::ItemTypeEx;
+
 #[derive(InspectorOptions, Debug, Default, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
 pub enum ItemSizeType {
     #[default]
@@ -41,6 +43,8 @@ pub enum ItemType {
     Weapon(Weapon),
     Item(Item),
 }
+
+impl ItemTypeEx for ItemType {}
 
 /// Всё, что может быть взято как иструмент
 #[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]

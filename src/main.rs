@@ -32,12 +32,10 @@ mod core {
 }
 
 use crate::core::{
-    entities::EntitySystem::EntitySystem,
     resource::ResourcePlugin,
     world::World::WorldSystem,
     Camera::CameraController,
     interface::UIPlugin,
-    PlayerSystem::PlayerPlugin,
     UserSystem::UserPlugin
 };
 
@@ -94,11 +92,7 @@ fn main() {
             UIPlugin,           // Инициализация плагина пользовательского графического интерфейса
             UserPlugin          // Инициализация интерфейса взаимодействия пользователя
         ))
-        .add_plugins((
-            EntitySystem,   // Инициализация плагина, отвечающего за работу всех entity
-            PlayerPlugin,   // Инициализация плагина, отвечающего за работу управления entity-player
-            WorldSystem     // Инициализация плагина, отвечающего за работу компонентов "мира"
-        ))
+        .add_plugins(WorldSystem)
         // Инициализация StartUP функции setup
         .add_systems(Startup, setup)
         .run();

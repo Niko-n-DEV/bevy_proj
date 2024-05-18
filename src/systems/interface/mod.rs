@@ -41,9 +41,9 @@ impl Plugin for UIPlugin {
             .add_systems(OnEnter(AppState::Game), GameUI::GameUI::spawn_game_ui)
             .add_systems(Update, (
                     GameUI::BarGui::build_gui,
-                    GameUI::BarGui::spawn_inventory_ui.after(GameUI::BarGui::build_gui),
-                    GameUI::BarGui::build_inv_slots.after(GameUI::BarGui::spawn_inventory_ui),
-                    GameUI::BarGui::update_inventory_ui.after(GameUI::BarGui::build_gui),
+                    // GameUI::BarGui::spawn_inventory_ui.after(GameUI::BarGui::build_gui),
+                    // GameUI::BarGui::build_inv_slots.after(GameUI::BarGui::spawn_inventory_ui),
+                    // GameUI::BarGui::update_inventory_ui.after(GameUI::BarGui::build_gui),
                     GameUI::BarGui::update_player_info,
                     GameUI::BarGui::interact_with_to_inv_visible_button,
                     GameUI::GameUI::interact_with_to_menu_button

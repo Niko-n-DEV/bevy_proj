@@ -1,10 +1,11 @@
-// #![allow(unused)]
+#![allow(unused)]
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 use std::{
     fmt::Debug,
     hash::Hash,
     ops::{Index, IndexMut},
+    marker::PhantomData
 };
 
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
@@ -12,23 +13,63 @@ use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
     AppState,
-    Item::{
-        ItemPickUpEvent,
-        ItemDropEvent
-    },
-    ItemType::{
-        ItemAndCount,
-        ItemType,
-        Pickupable
-    },
+    ItemType::
+        ItemType
+    ,
+    interface::{
+        Inventory::{
+            InventoryDisplayToggleEvent,
+            toggle_inventory_open_event_send,
+            toggle_inventory_open,
+            inventory_update
+        }
+    }
 };
 
-pub struct ContainerPlugin;
+pub struct ContainerPlugin<I: ItemTypeEx> {
+    pub phantom: PhantomData<I>
+}
 
-impl Plugin for ContainerPlugin {
+impl<I: ItemTypeEx> Plugin for ContainerPlugin<I> {
     fn build(&self, app: &mut App) {
-        
+        app
+            // Reg Type
+            .register_type::<Inventory>()
+            // Reg Events
+            .add_event::<InventoryDisplayToggleEvent>()
+            .add_event::<ItemPickUpEvent>()
+            .add_event::<ItemDropEvent>()
+            // Systems
+            .add_systems(Update, 
+                (
+                //    BarGui::spawn_inventory_ui::<I>,
+                    toggle_inventory_open_event_send::<I>,
+                    toggle_inventory_open::<I>,
+                ).run_if(in_state(AppState::Game))
+            )
+            .add_systems( Update,
+                (
+                    inventory_update::<I>
+                ).run_if(in_state(AppState::Game))
+            )
+        ;
     }
+}
+
+// ==============================
+// Event
+// ==============================
+
+
+#[derive(Event, Debug, Copy, Clone)]
+pub struct ItemPickUpEvent {
+    pub picker: Entity,
+}
+
+#[derive(Event, Debug, Copy, Clone)]
+pub struct ItemDropEvent {
+    pub droper: Entity,
+    pub item: Entity,
 }
 
 // ==============================
@@ -133,20 +174,6 @@ impl Container {
                 });
         }
         None
-    }
-
-    /// Выложить из контейнера слот предмета
-    pub fn upload_from_container(
-        &mut self,
-        item_type: ItemType,
-        count: usize
-    ) {
-
-    }
-
-    /// Выложить из контейнера слот предмета с определённым кол-вом
-    pub fn upload_def_from_container() {
-
     }
 }
 
@@ -260,9 +287,10 @@ impl<I: ItemTypeEx> IndexMut<(I, u8)> for Equipment<I> {
 // Inventory
 // ==============================
 
-#[derive(Debug, Clone, Component)]
+#[derive(Debug, Clone, Component, InspectorOptions, Reflect)]
+#[reflect(Component, InspectorOptions)]
 pub struct Inventory {
-    items: Vec<Option<Entity>>,
+    items: Vec<Option<(Entity, String, usize)>>,
 }
 
 impl Default for Inventory {
@@ -272,7 +300,7 @@ impl Default for Inventory {
 }
 
 impl Inventory {
-    pub const DEFAULT_CAPACITY: usize = 16;
+    pub const DEFAULT_CAPACITY: usize = 12;
 
     // Установка размера инвентаря по умолчанию
     pub fn with_capacity(cap: usize) -> Self {
@@ -282,33 +310,89 @@ impl Inventory {
     }
 
     /// Добавление в первый попавшиеся свободный слот
-    pub fn add(&mut self, item: Entity) -> bool {
-        if let Some((_, e)) = self.items.iter_mut().enumerate().find(|(_, b)| b.is_none()) {
-            *e = Some(item);
-            true
+    // pub fn add(&mut self, item: (Entity, usize)) -> bool {
+    //     if let Some((_, e)) = self.items.iter_mut().enumerate().find(|(_, b)| b.is_none()) {
+    //         *e = Some((item.0, item.1));
+    //         true
+    //     } else {
+    //         false
+    //     }
+    // }
+    pub fn add(&mut self, item: (Entity, String, usize)) -> bool {
+        // Проверяем, есть ли слот с таким же именем
+        if let Some((_, e)) = self.items.iter_mut().enumerate().find(|(_, b)| {
+            if let Some((entity, name, count)) = b {
+                name == &item.1
+            } else {
+                false
+            }
+        }) {
+            if let Some((entity, name, count)) = e {
+                *count += item.2;
+                true
+            } else {
+                false
+            }
         } else {
-            false
+            // Если слот с таким именем не найден, ищем свободный слот
+            if let Some((_, e)) = self.items.iter_mut().enumerate().find(|(_, b)| b.is_none()) {
+                *e = Some((item.0, item.1.clone(), item.2));
+                true
+            } else {
+                false
+            }
         }
     }
 
     /// Взятие предмета из инвентаря
-    pub fn take(&mut self, item: Entity) -> bool {
-        if let Some((_, e)) = self
-            .items
-            .iter_mut()
-            .enumerate()
-            .find(|(_, b)| b.is_some() && b.unwrap() == item)
-        {
-            *e = None;
-            true
+    // pub fn take(&mut self, item: (Entity, String, usize)) -> bool {
+    //     if let Some((_, e)) = self
+    //         .items
+    //         .iter_mut()
+    //         .enumerate()
+    //         .find(|(_, b)| b.is_some() && b.unwrap() == item)
+    //     {
+    //         *e = None;
+    //         true
+    //     } else {
+    //         false
+    //     }
+    // }
+    pub fn take(&mut self, item: (Entity, String, usize)) -> bool {
+        if let Some(e) = self.items.iter_mut().find(|b| {
+            if let Some((entity, name, count)) = b {
+                entity == &item.0 && name == &item.1 && *count >= item.2
+            } else {
+                false
+            }
+        }) {
+            if let Some((_, _, count)) = e {
+                if *count > item.2 {
+                    *count -= item.2;
+                } else {
+                    *e = None;
+                }
+                true
+            } else {
+                false
+            }
         } else {
             false
         }
     }
     
     /// Проверка всех слотов и возвращение Предмета
-    pub fn iter_some(&self) -> impl Iterator<Item = Entity> + '_ {
-        self.items.iter().filter_map(|i| *i)
+    // pub fn iter_some(&self) -> impl Iterator<Item = (Entity, &str, usize)> + '_ {
+    //     self.items.iter().filter_map(|i| *i)
+    // }
+    pub fn iter_some(&self) -> impl Iterator<Item = (Entity, &str, usize)> + '_ {
+        self.items.iter().filter_map(|i| {
+            if let Some((entity, name, count)) = i {
+                Some((*entity, name.as_str(), *count))
+            } else {
+                None
+            }
+        })
     }
 
     /// Проверка, полон ли инвентарь
@@ -328,7 +412,7 @@ impl Inventory {
 }
 
 impl Index<usize> for Inventory {
-    type Output = Option<Entity>;
+    type Output = Option<(Entity, String, usize)>;
 
     /// Возвращает элемент по указанному индексу
     fn index(&self, index: usize) -> &Self::Output {

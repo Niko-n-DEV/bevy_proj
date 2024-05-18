@@ -27,7 +27,13 @@ use crate::core::{
         ItemType
     },
     world::chunk::Chunk::Chunk,
-    ContainerSystem::Container
+    ContainerSystem::{
+        ItemPickUpEvent,
+        ItemDropEvent,
+        Container,
+        Inventory,
+        ItemTypeEx
+    }
 };
 
 pub struct PlayerPlugin;
@@ -89,30 +95,80 @@ impl PlayerPlugin {
     }
 
     fn player_pickup(
-        mut commands:           Commands,
+        // mut commands:           Commands,
         mut chunk_res:          ResMut<Chunk>,
+        mut user:               Query<(&mut Inventory, &EntityBase, &Transform), With<User>>,
             keyboard_input:     Res<ButtonInput<KeyCode>>,
-        mut user_query:         Query<(&Transform, &EntityBase, &mut Container), With<User>>,
-            pickupable_quety:   Query<(Entity, &Transform, &Pickupable), Without<User>>
+        //mut user_query:         Query<(&Transform, &EntityBase, &mut Container), With<User>>,
+            pickupable_quety:   Query<(Entity, &Transform, &Pickupable, &Name), Without<User>>
     ) {
-        if pickupable_quety.is_empty() || user_query.is_empty() {
+        if pickupable_quety.is_empty() || user.is_empty() {
             return;
         }
 
-        let (user_transform, user, mut container) = user_query.single_mut();
+        //let (user_transform, user, mut container) = user_query.single_mut();
+        let mut user = user.single_mut();
 
         if keyboard_input.just_pressed(KeyCode::Space) {
-            for (entity, transform, pick) in pickupable_quety.iter() {
-                if user.interaction_radius > Vec3::distance(transform.translation, user_transform.translation) {
-                    if container.add_in_container(pick.item, pick.count) {
+            for (entity, transform, pick, name) in pickupable_quety.iter() {
+                if user.1.interaction_radius > Vec3::distance(transform.translation, user.2.translation) {
+                    if user.0.add((entity, name.to_string(), pick.count)) {
                         chunk_res.remove_sub_object_ex(entity);
                         
-                        commands.entity(entity).despawn_recursive();
+                        // commands.entity(entity).despawn_recursive();
                     }
                 }
             }
         }
     }
+
+    // pub fn pick_up_items<I: ItemTypeEx>(
+    //     mut cmd:            Commands,
+    //     mut pickup_event:   EventReader<ItemPickUpEvent>,
+    //     mut user:           Query<(&mut Inventory, &EntityBase, &Transform), With<User>>,
+    //         items: Query<
+    //             (Entity, &Transform, &I, &Pickupable, &Children),
+    //             (
+    //                 With<Transform>,
+    //                 With<GlobalTransform>,
+    //                 With<Visibility>,
+    //             ),
+    //         >,
+    // ) {
+    //     for event in pickup_event.read() {
+    //         if let Ok((mut inv, user, transform)) = user.get_mut(event.picker) {
+
+    //             // for (item_entity, _, item_type, pick, children) in
+    //             //     items.iter().filter(|(_, pt, _, _)| **pt == *actor_pt)
+    //             // {
+    //             //     if equipment.add(item_entity, item_type) || inventory.add(item_entity) {
+    //             //         for c in children.iter() {
+    //             //             cmd.entity(*c).despawn_recursive();
+    //             //         }
+    //             //         cmd.entity(item_entity)
+    //             //             .remove::<Transform>()
+    //             //             .remove::<GlobalTransform>()
+    //             //             .remove::<Visibility>();
+    //             //     }
+    //             // }
+
+    //         }
+    //     }
+    // }
+    
+    // pub fn drop_item<I: ItemTypeEx>(
+    //     mut cmd: Commands,
+    //     mut drop_reader: EventReader<ItemDropEvent>,
+    //     mut actors: Query<(&Vector2D, &mut Inventory, &mut Equipment<I>)>,
+    // ) {
+    //     for e in drop_reader.iter() {
+    //         if let Ok((pt, mut inventory, mut equipment)) = actors.get_mut(e.droper) {
+    //             if inventory.take(e.item) || equipment.take(e.item) {
+    //                 cmd.entity(e.item).insert(*pt);
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 #[allow(unused)]

@@ -22,17 +22,6 @@ pub struct EntityItem {
     pub position:   Position,
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct ItemPickUpEvent {
-    pub picker: Entity,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct ItemDropEvent {
-    pub droper: Entity,
-    pub item: Entity,
-}
-
 /// Событие спавна предмета
 #[derive(Event)]
 pub struct ItemSpawn(pub String, pub IVec2, pub usize);

@@ -24,7 +24,7 @@ use crate::core::{
 #[derive(Debug, Copy, Clone, Component, PartialEq, Eq, Hash)]
 pub enum SpriteLayer {
     Object,
-    Item,
+    // Item,
     Entity,
 }
 
@@ -35,7 +35,7 @@ impl LayerIndex for SpriteLayer {
             // Note that the z-coordinates must be at least 1 apart...
             //Background => 0.,
             Object => 1.,
-            Item => 1.,
+            // Item => 1.,
             Entity => 1.,
             //Ui => 995.
         }

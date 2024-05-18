@@ -8,12 +8,15 @@ use bevy_rapier2d::{
     rapier::dynamics::RigidBodyDamping
 };
 
-use std::collections::HashMap;
+use std::{collections::HashMap, marker::PhantomData};
 
 use bevy_entitiles::EntiTilesPlugin;
 
 use crate::core::{
-    entities::EntitySystem::EnemySpawner,
+    entities::EntitySystem::{
+        EntitySystem,
+        EnemySpawner,
+    },
     resource::{
         graphic::Atlas::{
             AtlasRes,
@@ -32,7 +35,12 @@ use crate::core::{
         }, WorldTaskManager
     }, 
     AppState, 
-    ContainerSystem::Container, 
+    ContainerSystem::{
+        ContainerPlugin,
+        ItemTypeEx,
+        Container,
+        Inventory,
+    }, 
     Entity::{
         EntityBase,
         Health,
@@ -64,7 +72,10 @@ use crate::core::{
     Movement::DirectionState,
     Settings::Settings, 
     UserSystem::User,
-    PlayerSystem::PlayerAttach, 
+    PlayerSystem::{
+        PlayerPlugin,
+        PlayerAttach,
+    }, 
     Weapon::GunController, 
 };
 
@@ -82,6 +93,13 @@ impl Plugin for WorldSystem {
                     enabled: !true,
                     ..default()
                 }
+            ))
+            .add_plugins((
+                EntitySystem,   // Инициализация плагина, отвечающего за работу всех entity
+                PlayerPlugin,   // Инициализация плагина, отвечающего за работу управления entity-player
+                ContainerPlugin::<ItemType> {
+                    phantom: PhantomData {}
+                },
             ))
             // Init Event
             .add_event::<LoadChunkPos>()
@@ -189,35 +207,36 @@ impl WorldSystem {
                 control_entity: Some(entity),
                 ..default()
             })
-            .insert(Container::default());
+            .insert(Inventory::with_capacity(12));
+            // .insert(Container::default());
 
             // Спавн оружия и соединение с игроком
-            if let Some(sprite) = register.get_test("gun", &atlas) {
-                commands
-                .spawn(SpriteSheetBundle {
-                    texture: handle.image.clone().unwrap(),
-                    atlas: TextureAtlas {
-                        layout: handle.layout.clone().unwrap(),
-                        index: TestTextureAtlas::get_index("gun", &handle),
-                    },
-                    transform: Transform {
-                        translation: Vec3::new(0., 0., 0.5),
-                        ..default()
-                    },
-                    ..default()
-                })
-                .insert(EntityObject::default())
-                .insert(SpriteLayer::Item)
-                .insert(PlayerAttach {
-                    offset: Vec2::new(0., -3.),
-                })
-                .insert(GunController {
-                    shoot_cooldown: 0.5,
-                    shoot_timer: 0.,
-                });
-            } else {
-                println!("ERROR - Spawn Gun!")
-            }
+            // if let Some(sprite) = register.get_test("gun", &atlas) {
+            //     commands
+            //     .spawn(SpriteSheetBundle {
+            //         texture: handle.image.clone().unwrap(),
+            //         atlas: TextureAtlas {
+            //             layout: handle.layout.clone().unwrap(),
+            //             index: TestTextureAtlas::get_index("gun", &handle),
+            //         },
+            //         transform: Transform {
+            //             translation: Vec3::new(0., 0., 0.5),
+            //             ..default()
+            //         },
+            //         ..default()
+            //     })
+            //     .insert(EntityObject::default())
+            //     .insert(SpriteLayer::Item)
+            //     .insert(PlayerAttach {
+            //         offset: Vec2::new(0., -3.),
+            //     })
+            //     .insert(GunController {
+            //         shoot_cooldown: 0.5,
+            //         shoot_timer: 0.,
+            //     });
+            // } else {
+            //     println!("ERROR - Spawn Gun!")
+            // }
         } else {
             println!("ERROR - Spawn Player!")
         }

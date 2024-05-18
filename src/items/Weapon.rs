@@ -44,7 +44,7 @@ pub fn gun_controls(
     atlas:              Res<AtlasRes>,
     register:           Res<Registry>
 ) {
-    if gun_query.is_empty() && user_container.is_empty() {
+    if gun_query.is_empty() || user_container.is_empty() {
         return;
     }
 

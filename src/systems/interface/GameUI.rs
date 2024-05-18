@@ -7,7 +7,10 @@ use bevy_egui::{
 use crate::core::{
     interface::{
         Styles::*,
-        Inventory::*
+        Inventory::{
+            InventoryGui,
+            InventorySlot,
+        }
     },
     world::World::WorldSystem,
     Entity::EntityBase,
@@ -16,7 +19,10 @@ use crate::core::{
         User,
         CursorPlacer
     },
-    ContainerSystem::Container,
+    ContainerSystem::{
+        Container,
+        ItemTypeEx,
+    },
     ItemType::*,
     resource::Registry::Registry,
     AppState
@@ -425,8 +431,10 @@ impl BarGui {
         }
     }
 
-    pub fn spawn_inventory_ui(
+    #[allow(unused)]
+    pub fn spawn_inventory_ui<I: ItemTypeEx>(
         mut commands:   Commands,
+        // mut inv_toggle: EventReader<InventoryDisplayToggleEvent>,
         mut bar_gui:    Query<(Entity, &mut BarGui), With<BarGui>>,
         mut event:      EventWriter<InvSlotsBuild>,
             game_ui:    Query<&GameUI, With<GameUI>>,
@@ -440,34 +448,35 @@ impl BarGui {
                 if let Ok(mut bar_gui) = bar_gui.get_single_mut() {
                     if !bar_gui.1.inventory_open {
                         commands.entity(bar_gui.0).with_children(|parent| {
-                            parent.spawn((NodeBundle {
-                                style: Style {
-                                    display:    Display::Grid,
-                                    left:       Val::Px(-176.0),
-                                    bottom:     Val::Px(2.0),
-                                    width:      Val::Px(136.0),
-                                    height:     Val::Px(104.0),
-                                    border: UiRect { 
-                                        left:   Val::Px(4.), 
-                                        right:  Val::Px(4.), 
-                                        top:    Val::Px(4.), 
-                                        bottom: Val::Px(4.) 
+                            parent.spawn((
+                                Name::new("Inventory"),
+                                NodeBundle {
+                                    style: Style {
+                                        display:    Display::Grid,
+                                        left:       Val::Px(-176.0),
+                                        bottom:     Val::Px(2.0),
+                                        width:      Val::Px(136.0),
+                                        height:     Val::Px(104.0),
+                                        border: UiRect { 
+                                            left:   Val::Px(4.), 
+                                            right:  Val::Px(4.), 
+                                            top:    Val::Px(4.), 
+                                            bottom: Val::Px(4.) 
+                                        },
+                                        grid_template_columns: vec![GridTrack::px(32.), GridTrack::px(32.), GridTrack::px(32.), GridTrack::px(32.)],
+                                        grid_template_rows: vec![
+                                            GridTrack::px(32.),
+                                            GridTrack::px(32.)
+                                        ],
+                                        ..default()
                                     },
-                                    grid_template_columns: vec![GridTrack::px(32.), GridTrack::px(32.), GridTrack::px(32.), GridTrack::px(32.)],
-                                    grid_template_rows: vec![
-                                        GridTrack::px(32.),
-                                        GridTrack::px(32.)
-                                    ],
+                                    background_color:   Color::rgb(0.13, 0.13, 0.13).into(),
+                                    border_color:       Color::rgb(0.19, 0.19, 0.19).into(),
                                     ..default()
                                 },
-                                background_color:   Color::rgb(0.13, 0.13, 0.13).into(),
-                                border_color:       Color::rgb(0.19, 0.19, 0.19).into(),
-                                ..default()
-                            },
-                            InventoryGui {
-                                slots: [InventorySlot::default(); 12]
-                            },
-                            Name::new("Inventory")
+                                InventoryGui {
+                                    slots: [InventorySlot::default(); 12]
+                                }
                             )).with_children(|slots| {
                                 let mut slot_entities = Vec::new();
                                 for i in 0..12 {
@@ -502,6 +511,7 @@ impl BarGui {
         }
     }
 
+    #[allow(unused)]
     pub fn build_inv_slots(
         mut inventory:  Query<(Entity, &mut InventoryGui), With<InventoryGui>>,
         mut event:      EventReader<InvSlotsBuild>
@@ -519,6 +529,7 @@ impl BarGui {
         }
     }
 
+    #[allow(unused)]
     pub fn update_inventory_ui(
         mut commands:           Commands,
         mut inventoty_gui:      Query<(Entity, &mut InventoryGui), With<InventoryGui>>,
@@ -631,10 +642,11 @@ impl BarGui {
             game_ui:    Query<&GameUI, With<GameUI>>,
         mut line_h:     Query<&mut Style, (With<HealthBarLine>, Without<HealthBarNum>)>,
         mut text_h:     Query<&mut Text, (With<HealthBarNum>, Without<HealthBarLine>)>,
-        mut text_a:     Query<&mut Text, (With<AmmoBarGui>, (Without<HealthBarLine>, Without<HealthBarNum>))>,
-            player:     Query<(&EntityBase, &Container), With<User>>
+        // mut text_a:     Query<&mut Text, (With<AmmoBarGui>, (Without<HealthBarLine>, Without<HealthBarNum>))>,
+        //    player:     Query<(&EntityBase, &Container), With<User>>
+            player:     Query<&EntityBase, With<User>>
     ) {
-        if (text_h.is_empty() && line_h.is_empty()) && text_a.is_empty() {
+        if text_h.is_empty() && line_h.is_empty() { // && text_a.is_empty() {
             return;
         }
 
@@ -642,7 +654,7 @@ impl BarGui {
             if game_ui.bargui_is_open {
                 if let Ok(player) = player.get_single() {
                     if let Ok(mut text) = text_h.get_single_mut() {
-                        let health = player.0.health.0;
+                        let health = player.health.0;
                         text.sections = vec![TextSection::new(
                             format!("{health}%"),
                             TextStyle {
@@ -656,18 +668,18 @@ impl BarGui {
                         }
                     }
             
-                    if let Ok(mut text) = text_a.get_single_mut() {
-                        if let Some(ammo) = player.1.find_in_container(ItemType::Item(Item::Ammo)) {
-                            let count = ammo.item_stack.count;
-                            text.sections = vec![TextSection::new(
-                                format!("AMMO: {count}"),
-                                TextStyle {
-                                    font_size: 11.0,
-                                    ..default()
-                                },
-                            )]
-                        }
-                    }
+                    // if let Ok(mut text) = text_a.get_single_mut() {
+                    //     if let Some(ammo) = player.1.find_in_container(ItemType::Item(Item::Ammo)) {
+                    //         let count = ammo.item_stack.count;
+                    //         text.sections = vec![TextSection::new(
+                    //             format!("AMMO: {count}"),
+                    //             TextStyle {
+                    //                 font_size: 11.0,
+                    //                 ..default()
+                    //             },
+                    //         )]
+                    //     }
+                    // }
                 }
             }
         }
