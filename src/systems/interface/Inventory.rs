@@ -18,7 +18,13 @@ use crate::core::{
         GameUI
     },
     UserSystem::User,
-    resource::Registry::Registry,
+    resource::{
+        graphic::Atlas::{
+            AtlasRes,
+            UiImageAtlas
+        },
+        Registry::Registry
+    },
 };
 
 /// Компонент отвечающий ща GUI инвентаря игрока
@@ -160,7 +166,7 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
                                 },
                                 Inventory::with_capacity(12)
                             )).with_children(|slots| {
-                                let mut slot_entities = Vec::new();
+                                //let mut slot_entities = Vec::new();
                                 
                                 for index in 0..inventory.len() {
                                     let slot = slots.spawn((
@@ -184,7 +190,7 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
                                         }
                                     )).id();
                                     
-                                    slot_entities.push(slot);
+                                    //slot_entities.push(slot);
                                 }
                                 // event.send(InvSlotsBuild(slot_entities));
                             });
@@ -203,18 +209,20 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
     mut inv_slots:          Query<&mut InventoryDisplaySlot>,
     mut bar_gui:            Query<(Entity, &mut BarGui), With<BarGui>>,
         register:           Res<Registry>,
+        atlas:              Res<AtlasRes>,
         game_ui:            Query<&GameUI, With<GameUI>>,
     //    inv_options:        Res<InventoryDisplayOptions>,
         inv_displ_nodes:    Query<(&InventoryDisplayNode, &Children)>,
-        invs:               Query<&Inventory>,
-        items:              Query<&UiRenderInfo, With<I>>,
+        player_inv:        Query<&Inventory, With<User>>,
+    //    items:              Query<&UiRenderInfo, With<I>>,
 ) {
     if game_ui.is_empty() && bar_gui.is_empty() {
         return;
     }
     
+    // Прогон по узлу со слотами и их дочерними элементами
     for (display_node, display_node_children) in inv_displ_nodes.iter() {
-        let inventory = if let Ok(inventory) = invs.get(display_node.id) {
+        let inventory = if let Ok(inventory) = player_inv.get(display_node.id) {
             inventory
         } else {
             bevy::log::error!("InventoryDisplayNode without associated Inventory");
@@ -232,41 +240,48 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
             };
 
             let mut slot_cmd = cmd.entity(slot_entity);
+
             if let Some(item_entity) = &inventory[slot.index] {
-                let render = if let Some(slot_item) = slot.item {
-                    if item_entity.0 != slot_item {
-                        slot.item = Some(item_entity.0);
+                let render = if let Some(slot_item) = slot.item.clone() {
+                    if item_entity.name != slot_item {
+                        println!("1: {:?}", slot.item);
+                        slot.item = Some(item_entity.name.clone());
                         slot_cmd.despawn_descendants();
                         true
                     } else {
                         false
                     }
                 } else {
-                    slot.item = Some(item_entity.0);
+                    slot.item = Some(item_entity.name.clone());
+                    println!("1.1: {:?}", slot.item);
                     true
                 };
 
                 if render {
-                    // if let Ok(info) = items.get(item_entity) {
-                    //     slot_cmd.with_children(|cb| {
-                    //         cb.spawn((
-                    //             Interaction::default(),
-                    //             //UiHoverTip::new(item_entity),
-                    //             Equipable {
-                    //                 actor: display_node.id,
-                    //                 item: item_entity,
-                    //             },
-                    //             ImageBundle {
-                    //                 image: info.image.clone(),
-                    //                 ..Default::default()
-                    //             },
-                    //         ));
-                    //     });
-                    // } else {
-                    //     bevy::log::error!(
-                    //         "item in inventory but not in the world. Or missing UiRenderInfo."
-                    //     );
-                    // }
+                    println!("2: {:?}", item_entity.id_name);
+                    if let Some(info) = register.get_item_info(&item_entity.id_name) {
+                        if let Some(img) = atlas.items.extruct_texture(&info.id_texture) {
+                            slot_cmd.with_children(|cb| {
+                                cb.spawn((
+                                    Interaction::default(),
+                                    //UiHoverTip::new(item_entity),
+                                    // Equipable {
+                                    //     actor: display_node.id,
+                                    //     item: item_entity,
+                                    // },
+                                    ImageBundle {
+                                        image: img.1,
+                                        ..default()
+                                    },
+                                    img.0
+                                ));
+                            });
+                        } else {
+                            bevy::log::error!(
+                                "item in inventory but not in the world. Or missing UiRenderInfo."
+                            );
+                        }
+                    }
                 }
             } else {
                 slot.item = None;
@@ -293,12 +308,14 @@ pub struct InventoryDisplayNode {
     pub id: Entity,
 }
 
+// Для инвентаря
 #[derive(Default, Debug, Clone, PartialEq, Eq, Component)]
 pub struct InventoryDisplaySlot {
     pub index: usize,
-    pub item: Option<Entity>,
+    pub item: Option<String>,
 }
 
+// Для инвентаря эквипа
 #[derive(Default, Debug, Clone, Component)]
 pub struct EquipmentDisplaySlot<I: ItemTypeEx> {
     pub index: (I, u8),
@@ -312,22 +329,26 @@ pub struct InventoryDisplayToggleEvent {
     pub actor: Entity,
 }
 
-// Item
+// ==============================
+// Item Type Interaction
+// ==============================
 
-// TODO: move to bevy_inventory lib
 #[derive(Debug, Clone, Component)]
 pub struct Equipable {
     actor: Entity,
     item: Entity,
 }
-// TODO: move to bevy_inventory lib
+
 #[derive(Debug, Clone, Component)]
 pub struct Unequipable {
     actor: Entity,
     item: Entity,
 }
 
+// ==============================
 // UiRender Image
+// Сомнительно, ну, окей
+// ==============================
 
 /// Указывает, как отображать материал, если он размещен на дисплее инвентаря или оборудования
 #[derive(Default, Debug, Clone, Component)]
@@ -339,9 +360,10 @@ pub trait ItemTypeUiImage<I: ItemTypeEx>: Resource {
     fn get_image(&self, item_type: I) -> UiImage;
 }
 
+// Для хранения изображения слота, когда курсор наведён на слот и шрифт
 #[derive(Debug, Clone, Resource)]
 pub struct InventoryUiAssets {
-    pub slot:               Handle<Image>,
-    pub hover_cursor_image: Handle<Image>,
+    pub slot:               Handle<Image>,  // Относительно
+    pub hover_cursor_image: Handle<Image>,  // Возможно
     pub font:               Handle<Font>,
 }

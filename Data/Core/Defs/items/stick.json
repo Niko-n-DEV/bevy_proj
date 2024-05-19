@@ -1,0 +1,10 @@
+{
+	"id_name": "stick",
+	"id_texture": "stick",
+	"item_type": {
+        "Item": {
+			"Material": "Stick"
+		}
+    },
+	"item_size": "Small"
+}

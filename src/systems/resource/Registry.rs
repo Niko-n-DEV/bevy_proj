@@ -11,7 +11,8 @@ use serde::{
 use crate::core::{
     ItemType::{
         ItemType,
-        ItemSizeType
+        ItemSizeType,
+        ItemStackType,
     },
     EntityType::EntityType,
     ObjType::ObjectSizeType,
@@ -44,7 +45,8 @@ pub struct EntityRegistry {
     pub id_name:        String,
     pub id_source:      Option<String>,
     pub id_texture:     String,
-    pub entity_type:    EntityType
+    pub entity_type:    EntityType,
+    pub health:         Option<f32>
 }
 
 #[derive(Serialize, Deserialize)]
@@ -52,9 +54,16 @@ pub struct ObjectRegistry {
     pub id_name:        String,
     pub id_source:      Option<String>,
     pub id_texture:     String,
-    //pub size_type:      ObjectSizeType,
     pub size:           IVec2C,
     pub collision:      Vec2C,
+    pub durability:     Option<usize>
+}
+
+impl ObjectRegistry {
+    /// Получение прочности предмета
+    pub fn get_base_durability(&self) -> Option<usize> {
+        self.durability
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -63,7 +72,22 @@ pub struct ItemRegistry {
     pub id_source:  Option<String>,
     pub id_texture: String,
     pub item_type:  ItemType,
-    pub item_size:  ItemSizeType
+    pub item_size:  ItemSizeType,
+    pub stackable:  Option<ItemStackType>,
+    pub stack_size: Option<usize>,
+    pub durability: Option<usize>
+}
+
+impl ItemRegistry {
+    /// Получение прочности предмета
+    pub fn get_base_durability(&self) -> Option<usize> {
+        self.durability
+    }
+
+    // Получение размера стака
+    pub fn get_stack_size(&self) -> Option<usize> {
+        self.stack_size
+    }
 }
 
 pub struct TestRegistry(pub String);

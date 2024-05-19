@@ -22,6 +22,7 @@ use crate::core::{
     Movement::DirectionState,
     world::World::WorldSystem,
     UserSystem::User,
+    Item::EntityItem,
     ItemType::{
         Pickupable,
         ItemType
@@ -95,27 +96,25 @@ impl PlayerPlugin {
     }
 
     fn player_pickup(
-        // mut commands:           Commands,
+        mut commands:           Commands,
         mut chunk_res:          ResMut<Chunk>,
         mut user:               Query<(&mut Inventory, &EntityBase, &Transform), With<User>>,
             keyboard_input:     Res<ButtonInput<KeyCode>>,
-        //mut user_query:         Query<(&Transform, &EntityBase, &mut Container), With<User>>,
-            pickupable_quety:   Query<(Entity, &Transform, &Pickupable, &Name), Without<User>>
+            pickupable_quety:   Query<(Entity, &Transform, &Pickupable, &EntityItem), Without<User>>
     ) {
         if pickupable_quety.is_empty() || user.is_empty() {
             return;
         }
 
-        //let (user_transform, user, mut container) = user_query.single_mut();
         let mut user = user.single_mut();
 
-        if keyboard_input.just_pressed(KeyCode::Space) {
+        if keyboard_input.just_pressed(KeyCode::KeyE) {
             for (entity, transform, pick, name) in pickupable_quety.iter() {
                 if user.1.interaction_radius > Vec3::distance(transform.translation, user.2.translation) {
-                    if user.0.add((entity, name.to_string(), pick.count)) {
+                    if user.0.add((name.name.clone(), pick.item, pick.count)) {
                         chunk_res.remove_sub_object_ex(entity);
                         
-                        // commands.entity(entity).despawn_recursive();
+                        commands.entity(entity).despawn_recursive();
                     }
                 }
             }

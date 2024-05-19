@@ -34,6 +34,16 @@ pub enum ItemStackType {
     Fixed
 }
 
+impl ItemStackType {
+    /// 
+    pub fn is_stackable(&self) -> bool {
+        match self {
+            ItemStackType::Scalable => true,
+            ItemStackType::Fixed   => false
+        }
+    }
+}
+
 /// Всё, что может бить предметом
 #[derive(InspectorOptions, Debug, Default, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
 pub enum ItemType {
@@ -73,8 +83,17 @@ pub enum Item {
 #[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
 pub enum Material {
     Wood,
+    Stick,
     Cobblestone,
     Flint,
+    Metall(Metall)
+}
+
+#[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
+pub enum Metall {
+    Iron,
+    Copper,
+    Gold,
 }
 
 /// Перечисление того, что является боеприпасом

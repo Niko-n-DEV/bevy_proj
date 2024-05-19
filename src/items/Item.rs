@@ -18,6 +18,7 @@ use crate::core::{
 #[derive(Component, Default)]
 pub struct EntityItem {
     pub id_name:    String,
+    pub name:       String,
     pub health:     Health,
     pub position:   Position,
 }
@@ -47,6 +48,7 @@ pub fn spawn_item(
                     .spawn((
                         EntityItem {
                             id_name: info.id_name.clone(),
+                            name: info.id_name.clone(),
                             ..default()
                         },
                         SpriteSheetBundle {

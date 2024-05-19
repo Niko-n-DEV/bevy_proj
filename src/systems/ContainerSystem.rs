@@ -12,18 +12,14 @@ use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
-    AppState,
-    ItemType::
-        ItemType
-    ,
-    interface::{
-        Inventory::{
-            InventoryDisplayToggleEvent,
-            toggle_inventory_open_event_send,
-            toggle_inventory_open,
-            inventory_update
-        }
-    }
+    interface::Inventory::{
+        inventory_update, 
+        toggle_inventory_open, 
+        toggle_inventory_open_event_send, 
+        InventoryDisplayToggleEvent
+    }, 
+    AppState, 
+    ItemType::ItemType
 };
 
 pub struct ContainerPlugin<I: ItemTypeEx> {
@@ -290,7 +286,16 @@ impl<I: ItemTypeEx> IndexMut<(I, u8)> for Equipment<I> {
 #[derive(Debug, Clone, Component, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
 pub struct Inventory {
-    items: Vec<Option<(Entity, String, usize)>>,
+    items: Vec<Option<Slot>>,
+}
+
+#[derive(Debug, Clone, Component, InspectorOptions, Reflect)]
+#[reflect(Component, InspectorOptions)]
+pub struct Slot {
+    pub id_name:    String,
+    pub name:       String,
+    pub item_type:  ItemType,
+    pub count:      usize,
 }
 
 impl Default for Inventory {
@@ -309,95 +314,71 @@ impl Inventory {
         }
     }
 
-    /// Добавление в первый попавшиеся свободный слот
-    // pub fn add(&mut self, item: (Entity, usize)) -> bool {
-    //     if let Some((_, e)) = self.items.iter_mut().enumerate().find(|(_, b)| b.is_none()) {
-    //         *e = Some((item.0, item.1));
-    //         true
-    //     } else {
-    //         false
-    //     }
-    // }
-    pub fn add(&mut self, item: (Entity, String, usize)) -> bool {
+    /// Добавление в первый попавшийся свободный слот
+    pub fn add(&mut self, item: (String, ItemType, usize)) -> bool {
         // Проверяем, есть ли слот с таким же именем
-        if let Some((_, e)) = self.items.iter_mut().enumerate().find(|(_, b)| {
-            if let Some((entity, name, count)) = b {
-                name == &item.1
+        if let Some(slot) = self.items.iter_mut().find(|slot| {
+            if let Some(slot) = slot {
+                slot.id_name == item.0 && slot.item_type == item.1
             } else {
                 false
             }
         }) {
-            if let Some((entity, name, count)) = e {
-                *count += item.2;
-                true
-            } else {
-                false
-            }
-        } else {
-            // Если слот с таким именем не найден, ищем свободный слот
-            if let Some((_, e)) = self.items.iter_mut().enumerate().find(|(_, b)| b.is_none()) {
-                *e = Some((item.0, item.1.clone(), item.2));
-                true
-            } else {
-                false
+            if let Some(slot) = slot {
+                slot.count += item.2;
+                return true;
             }
         }
+
+        // Если слот с таким именем не найден, ищем свободный слот
+        if let Some(slot) = self.items.iter_mut().find(|slot| slot.is_none()) {
+            *slot = Some(Slot {
+                id_name: item.0.clone(),
+                name: item.0.clone(),
+                item_type: item.1,
+                count: item.2,
+            });
+            return true;
+        }
+
+        false
     }
 
     /// Взятие предмета из инвентаря
-    // pub fn take(&mut self, item: (Entity, String, usize)) -> bool {
-    //     if let Some((_, e)) = self
-    //         .items
-    //         .iter_mut()
-    //         .enumerate()
-    //         .find(|(_, b)| b.is_some() && b.unwrap() == item)
-    //     {
-    //         *e = None;
-    //         true
-    //     } else {
-    //         false
-    //     }
-    // }
-    pub fn take(&mut self, item: (Entity, String, usize)) -> bool {
-        if let Some(e) = self.items.iter_mut().find(|b| {
-            if let Some((entity, name, count)) = b {
-                entity == &item.0 && name == &item.1 && *count >= item.2
+    pub fn take(&mut self, item: (String, usize)) -> bool {
+        if let Some(slot) = self.items.iter_mut().find(|slot| {
+            if let Some(slot) = slot {
+                slot.id_name == item.0 && slot.count >= item.1
             } else {
                 false
             }
         }) {
-            if let Some((_, _, count)) = e {
-                if *count > item.2 {
-                    *count -= item.2;
+            if let Some(slot) = slot {
+                if slot.count > item.1 {
+                    slot.count -= item.1;
                 } else {
-                    *e = None;
+                    *slot = Slot {
+                        id_name: "".to_string(),
+                        name: "".to_string(),
+                        item_type: ItemType::None,
+                        count: 0,
+                    };
                 }
-                true
-            } else {
-                false
+                return true;
             }
-        } else {
-            false
         }
+        
+        false
     }
-    
-    /// Проверка всех слотов и возвращение Предмета
-    // pub fn iter_some(&self) -> impl Iterator<Item = (Entity, &str, usize)> + '_ {
-    //     self.items.iter().filter_map(|i| *i)
-    // }
-    pub fn iter_some(&self) -> impl Iterator<Item = (Entity, &str, usize)> + '_ {
-        self.items.iter().filter_map(|i| {
-            if let Some((entity, name, count)) = i {
-                Some((*entity, name.as_str(), *count))
-            } else {
-                None
-            }
-        })
+
+    /// Проверка всех слотов и возвращение предметов
+    pub fn iter_some(&self) -> impl Iterator<Item = &Slot> + '_ {
+        self.items.iter().filter_map(|slot| slot.as_ref())
     }
 
     /// Проверка, полон ли инвентарь
     pub fn is_full(&self) -> bool {
-        self.items.iter().all(|i| i.is_some())
+        self.items.iter().all(|slot| slot.is_some())
     }
 
     /// Размер занимаемого пространства
@@ -407,12 +388,12 @@ impl Inventory {
 
     /// Проверка, пуст ли инвентарь
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.items.iter().all(|slot| slot.is_none())
     }
 }
 
 impl Index<usize> for Inventory {
-    type Output = Option<(Entity, String, usize)>;
+    type Output = Option<Slot>;
 
     /// Возвращает элемент по указанному индексу
     fn index(&self, index: usize) -> &Self::Output {

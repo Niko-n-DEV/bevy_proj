@@ -121,10 +121,11 @@ impl ResourcePlugin {
         mut register:   ResMut<Registry::Registry>,
     ) {
         register.register_entity(Registry::EntityRegistry {
-            id_name: "human".to_string(),
-            id_source: Some("core".to_string()),
-            id_texture: "human".to_string(),
-            entity_type: EntityType::Humonoid(HumonoidType::Human),
+            id_name:        "human".to_string(),
+            id_source:      Some("core".to_string()),
+            id_texture:     "human".to_string(),
+            entity_type:    EntityType::Humonoid(HumonoidType::Human),
+            health:         Some(100.0)
         });
 
         register.register_test("gun".to_string(), Registry::TestRegistry("gun".to_string()));       // Предмет
@@ -300,10 +301,11 @@ impl ResourcePlugin {
                             load_buff.reg_entity_tex_path.push(module.id_texture.clone());
 
                             register.register_entity(Registry::EntityRegistry {
-                                id_name: module.id_name,
-                                id_source: Some(load_buff.source_id.clone()),
-                                id_texture: module.id_texture,
-                                entity_type: module.entity_type,
+                                id_name:        module.id_name,
+                                id_source:      Some(load_buff.source_id.clone()),
+                                id_texture:     module.id_texture,
+                                entity_type:    module.entity_type,
+                                health:         module.health
                             });
                         }
                     }
@@ -316,11 +318,14 @@ impl ResourcePlugin {
                             load_buff.reg_item_tex_path.push(module.id_texture.clone());
 
                             register.register_item(Registry::ItemRegistry {
-                                id_name: module.id_name,
-                                id_source: Some(load_buff.source_id.clone()),
+                                id_name:    module.id_name,
+                                id_source:  Some(load_buff.source_id.clone()),
                                 id_texture: module.id_texture,
-                                item_type: module.item_type,
-                                item_size: module.item_size
+                                item_type:  module.item_type,
+                                item_size:  module.item_size,
+                                stackable:  module.stackable,
+                                stack_size: module.stack_size,
+                                durability: module.durability
                             });
                         }
                     }
@@ -335,12 +340,12 @@ impl ResourcePlugin {
                             load_buff.reg_object_tex_path.push(module.id_texture.clone());
 
                             register.register_object(Registry::ObjectRegistry {
-                                id_name: module.id_name,
-                                id_source: Some(load_buff.source_id.clone()),
-                                id_texture: module.id_texture,
-                                //size_type: module.size_type,
-                                size: module.size,
-                                collision: module.collision
+                                id_name:        module.id_name,
+                                id_source:      Some(load_buff.source_id.clone()),
+                                id_texture:     module.id_texture,
+                                size:           module.size,
+                                collision:      module.collision,
+                                durability:     module.durability
                             });
                         }
                     }
