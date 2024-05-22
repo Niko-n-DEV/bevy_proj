@@ -45,7 +45,7 @@ impl<I: ItemTypeEx> Plugin for ContainerPlugin<I> {
             )
             .add_systems( Update,
                 (
-                    inventory_update::<I>
+                    inventory_update::<I>.after(toggle_inventory_open::<I>)
                 ).run_if(in_state(AppState::Game))
             )
         ;

@@ -16,12 +16,21 @@ use crate::core::{
     Weapon::*,
     resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
     AppState,
-    Entity::{EntityBase, Position},
+    Entity::{
+        EntityBase,
+        EntityHead, 
+        Position,
+        // Head
+    },
     UserSystem::CursorPosition,
     Missile::*,
     Movement::DirectionState,
     world::World::WorldSystem,
-    UserSystem::User,
+    UserSystem::{
+        UserControl,
+        UserSubControl,
+        User,
+    },
     Item::EntityItem,
     ItemType::{
         Pickupable,
@@ -37,11 +46,15 @@ use crate::core::{
     }
 };
 
+#[derive(Default, Reflect, GizmoConfigGroup)]
+struct MyRoundGizmos {}
+
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
+            .init_gizmo_group::<MyRoundGizmos>()
             // Передвижение игрока
             .add_systems(Update, Self::player_movement.run_if(in_state(AppState::Game)))
             // Подбирание игроком предметов поддающиеся к подниманию
@@ -50,14 +63,15 @@ impl Plugin for PlayerPlugin {
             .add_systems(Update, gun_controls.run_if(in_state(AppState::Game)))
             // [Test] Соединение оружия и игрока
             .add_systems(PostUpdate, attach_objects.run_if(in_state(AppState::Game)))
-            ;
+            .add_systems(Update, Self::head_movement.run_if(in_state(AppState::Game)))
+        ;
     }
 }
 
 impl PlayerPlugin {
     
     fn player_movement(
-        mut entity_query:       Query<(&mut Transform, &mut EntityBase, Entity), With<User>>,
+        mut entity_query:       Query<(&mut Transform, &mut EntityBase, Entity), With<UserControl>>,
         mut move_event:         EventWriter<MovementEntity>,
             keyboard_input:     Res<ButtonInput<KeyCode>>
     ) {
@@ -95,12 +109,33 @@ impl PlayerPlugin {
         }
     }
 
+    fn head_movement(
+        // mut gizmos:     Gizmos,
+        // mut my_gizmos:  Gizmos<MyRoundGizmos>,
+        
+        mut head:   Query<&mut EntityHead, With<UserSubControl>>,
+            cursor: Res<CursorPosition>,
+        // Курсор
+        // Местоположение игрока player: Query<&EntityBase, With<EntityBase>>
+    ) {
+        if head.is_empty() {
+            return;
+        }
+
+        if let Ok(mut head) = head.get_single_mut() {
+            // gizmos.line_2d(player_pos.translation.truncate(), cursor.0, Color::YELLOW)
+            if head.look_at != cursor.0 {
+                head.look_at = cursor.0
+            }
+        }
+    }
+
     fn player_pickup(
         mut commands:           Commands,
         mut chunk_res:          ResMut<Chunk>,
-        mut user:               Query<(&mut Inventory, &EntityBase, &Transform), With<User>>,
+        mut user:               Query<(&mut Inventory, &EntityBase, &Transform), With<UserControl>>,
             keyboard_input:     Res<ButtonInput<KeyCode>>,
-            pickupable_quety:   Query<(Entity, &Transform, &Pickupable, &EntityItem), Without<User>>
+            pickupable_quety:   Query<(Entity, &Transform, &Pickupable, &EntityItem), Without<UserControl>>
     ) {
         if pickupable_quety.is_empty() || user.is_empty() {
             return;
@@ -183,8 +218,8 @@ pub struct PlayerAttach {
 // Используется для применение этих данных объектам, для их привязки к игроку.
 
 pub fn attach_objects(
-    player_query:       Query<(&User, &mut Transform), Without<PlayerAttach>>,
-    mut objects_query:  Query<(&PlayerAttach, &mut Transform), Without<User>>,
+    player_query:       Query<(&UserControl, &mut Transform), Without<PlayerAttach>>,
+    mut objects_query:  Query<(&PlayerAttach, &mut Transform), Without<UserControl>>,
 ) {
     if let Ok((_, player_transform)) = player_query.get_single() {
         for (attach, mut transform) in objects_query.iter_mut() {

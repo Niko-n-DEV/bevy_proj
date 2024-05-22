@@ -46,7 +46,8 @@ use crate::core::{
         Health,
         Speed,
         Position,
-        EntitySpawn
+        EntitySpawn,
+        spawn_entity
     },
     EntityType::{
         EntityType,
@@ -71,7 +72,10 @@ use crate::core::{
     },
     Movement::DirectionState,
     Settings::Settings, 
-    UserSystem::User,
+    UserSystem::{
+        UserControl,
+        User,
+    },
     PlayerSystem::{
         PlayerPlugin,
         PlayerAttach,
@@ -106,6 +110,7 @@ impl Plugin for WorldSystem {
             .add_event::<DischargeChunkPos>()
             .add_event::<ItemSpawn>()
             .add_event::<ObjectSpawn>()
+            .add_event::<EntitySpawn>()
             // Init Resource
             .init_resource::<WorldRes>()
             .init_resource::<Chunk>()
@@ -125,7 +130,8 @@ impl Plugin for WorldSystem {
             .add_systems(FixedUpdate, 
                 (
                     spawn_item,
-                    spawn_object
+                    spawn_object,
+                    spawn_entity
                 ).run_if(in_state(AppState::Game))
             )
             .add_systems(
@@ -180,66 +186,75 @@ impl WorldSystem {
         // Test ==============================
 
         // Спавн спрайта, являющийся игроком
-        if let Some(sprite) = register.get_entity("human", &atlas) {
-            let entity = commands.spawn((
-                RigidBody::Dynamic,
-                EntityBase {
-                    speed: Speed(50., 75., 25.),
-                    health: Health(100.),
-                    position: Position(Vec2::new(64., 64.)),
-                    direction: DirectionState::South,
-                    movable: true,
-                    ..default()
-                },
-                sprite,
-                SpriteLayer::Entity,
-                EntityType::Humonoid(HumonoidType::Human),
-                EntityNeutrality::Neutral,
-                Name::new("Player"),
-            ))
-            .insert(Velocity::zero())
-            .insert(Collider::round_cuboid(2., 2., 0.25))
-            .insert(LockedAxes::ROTATION_LOCKED)
-            .id();
-    
-            commands.entity(entity)
-            .insert(User {
-                control_entity: Some(entity),
-                ..default()
-            })
-            .insert(Inventory::with_capacity(12));
-            // .insert(Container::default());
+        // let texture = DirectionAtlas::set_sprite("human", &handle_dir);
+        // let entity = commands.spawn((
+        //     RigidBody::Dynamic,
+        //     EntityBase {
+        //         id_name:    "human".to_string(),
+        //         speed:      Speed(50., 75., 25.),
+        //         health:     Health(100.),
+        //         position:   Position(Vec2::new(64., 64.)),
+        //         direction:  DirectionState::South,
+        //         movable:    true,
+        //         ..default()
+        //     },
+        //     //sprite,
+        //     SpriteSheetBundle {
+        //         texture: texture.0,
+        //         atlas: texture.1,
+        //         ..default()
+        //     },
+        //     SpriteLayer::Entity,
+        //     EntityType::Humonoid(HumonoidType::Human),
+        //     EntityNeutrality::Neutral,
+        //     Name::new("Player"),
+        // ))
+        // .insert(Velocity::zero())
+        // .insert(Collider::round_cuboid(2., 2., 0.25))
+        // .insert(LockedAxes::ROTATION_LOCKED)
+        // .id();
 
-            // Спавн оружия и соединение с игроком
-            // if let Some(sprite) = register.get_test("gun", &atlas) {
-            //     commands
-            //     .spawn(SpriteSheetBundle {
-            //         texture: handle.image.clone().unwrap(),
-            //         atlas: TextureAtlas {
-            //             layout: handle.layout.clone().unwrap(),
-            //             index: TestTextureAtlas::get_index("gun", &handle),
-            //         },
-            //         transform: Transform {
-            //             translation: Vec3::new(0., 0., 0.5),
-            //             ..default()
-            //         },
-            //         ..default()
-            //     })
-            //     .insert(EntityObject::default())
-            //     .insert(SpriteLayer::Item)
-            //     .insert(PlayerAttach {
-            //         offset: Vec2::new(0., -3.),
-            //     })
-            //     .insert(GunController {
-            //         shoot_cooldown: 0.5,
-            //         shoot_timer: 0.,
-            //     });
-            // } else {
-            //     println!("ERROR - Spawn Gun!")
-            // }
-        } else {
-            println!("ERROR - Spawn Player!")
-        }
+        // commands.entity(entity)
+        // .insert(User {
+        //     control_entity: Some(entity),
+        //     ..default()
+        // })
+        // .insert(Inventory::with_capacity(12));
+        // .insert(Container::default());
+
+        // Спавн оружия и соединение с игроком
+        // if let Some(sprite) = register.get_test("gun", &atlas) {
+        //     commands
+        //     .spawn(SpriteSheetBundle {
+        //         texture: handle.image.clone().unwrap(),
+        //         atlas: TextureAtlas {
+        //             layout: handle.layout.clone().unwrap(),
+        //             index: TestTextureAtlas::get_index("gun", &handle),
+        //         },
+        //         transform: Transform {
+        //             translation: Vec3::new(0., 0., 0.5),
+        //             ..default()
+        //         },
+        //         ..default()
+        //     })
+        //     .insert(EntityObject::default())
+        //     .insert(SpriteLayer::Item)
+        //     .insert(PlayerAttach {
+        //         offset: Vec2::new(0., -3.),
+        //     })
+        //     .insert(GunController {
+        //         shoot_cooldown: 0.5,
+        //         shoot_timer: 0.,
+        //     });
+        // } else {
+        //     println!("ERROR - Spawn Gun!")
+        // }
+
+        // if let Some(sprite) = handle_dir.g("human", &atlas) {
+            
+        // } else {
+        //     println!("ERROR - Spawn Player!")
+        // }
 
         // Точка спавна для спавна "болванчиков", которые двигаются к игроку
         commands
@@ -271,7 +286,7 @@ impl WorldSystem {
             asset_server:   Res<AssetServer>,
         mut worldres:       ResMut<WorldRes>,
             handle:         Res<TestTextureAtlas>,
-            player_query:   Query<(&mut Transform, &mut User)>,
+            player_query:   Query<(&mut Transform, &mut UserControl)>,
         mut chunk_load:     EventWriter<LoadChunkPos>,
         mut chunk_upload:   EventWriter<DischargeChunkPos>
     ) {

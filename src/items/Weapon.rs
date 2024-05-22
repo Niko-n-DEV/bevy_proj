@@ -9,6 +9,7 @@ use crate::core::{
     },
     UserSystem::{
         CursorPosition,
+        UserControl,
         User
     },
     Missile::{
@@ -37,7 +38,7 @@ pub fn gun_controls(
         &mut Sprite,
         &mut PlayerAttach,
     )>,
-    mut user_container: Query<&mut Container, With<User>>,
+    mut user_container: Query<&mut Container, With<UserControl>>,
     cursor:             Res<CursorPosition>,
     time:               Res<Time>,
     _buttons:           Res<ButtonInput<MouseButton>>,

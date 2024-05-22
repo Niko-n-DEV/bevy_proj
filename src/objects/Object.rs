@@ -24,6 +24,8 @@ pub struct EntityObject {
     pub movable: bool,
 }
 
+
+
 impl Default for EntityObject {
     fn default() -> Self {
         Self {

@@ -10,6 +10,7 @@ use crate::core::{
         Inventory::{
             InventoryGui,
             InventorySlot,
+            InventoryDisplayToggleEvent
         }
     },
     world::World::WorldSystem,
@@ -17,10 +18,12 @@ use crate::core::{
     entities::EntitySystem::EnemySpawner,
     UserSystem::{
         User,
+        UserControl,
         CursorPlacer
     },
     ContainerSystem::{
         Container,
+        Inventory,
         ItemTypeEx,
     },
     ItemType::*,
@@ -37,6 +40,12 @@ pub struct GameUI {
     pub console_toggle: bool,
     pub debug_toggle:   bool,
     pub debug_menu:     bool
+}
+
+#[allow(unused)]
+enum DebugMode {
+    Active,
+    NonActive
 }
 
 // ========== Button
@@ -177,10 +186,10 @@ impl DebugInfoPanel {
         mut spawners:       Query<&mut EnemySpawner, With<EnemySpawner>>,
             registry:       Res<Registry>,
         mut placer:         ResMut<CursorPlacer>,
-            player:         Query<&EntityBase, With<User>>,
+            player:         Query<&EntityBase, With<UserControl>>,
             keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
-        if parent_query.is_empty() || player.is_empty() || spawners.is_empty() {
+        if parent_query.is_empty() || spawners.is_empty() {
             return;
         }
 
@@ -191,15 +200,18 @@ impl DebugInfoPanel {
             }
 
             if game_ui.debug_toggle {
-                let player_pos = player.single();
+                //let player_pos = player.single();
+                
 
                 egui::Window::new("Debug")
                     .show(contexts.ctx_mut(), |ui| {
                         ui.label("Position");
-                        ui.vertical(|ui| {
-                            ui.label(format!("Pos: {}", player_pos.position.0));
-                            ui.label(format!("Pos_T: {}", WorldSystem::get_currect_chunk_tile(player_pos.position.0.as_ivec2())))
-                        });
+                        if let Ok(player_pos) = player.get_single() {
+                            ui.vertical(|ui| {
+                                ui.label(format!("Pos: {}", player_pos.position.0));
+                                ui.label(format!("Pos_T: {}", WorldSystem::get_currect_chunk_tile(player_pos.position.0.as_ivec2())))
+                            });
+                        }
 
                         ui.horizontal(|ui| {
                             if ui.button("Spawners").clicked() {
@@ -237,6 +249,13 @@ impl DebugInfoPanel {
                         });
 
                         ui.label("Entities");
+                        ui.horizontal(|ui| {
+                            for key in registry.entity_registry.keys() {
+                                if ui.button(key).clicked() {
+                                    placer.placer = Some(("entity".to_string(), key.clone()));
+                                }
+                            }
+                        });
                     });
                 
             }
@@ -276,15 +295,14 @@ impl BarGui {
         mut commands:   Commands,
         mut game_ui:    Query<(Entity, &mut GameUI), (With<GameUI>, Without<BarGui>)>,
             bar_gui:    Query<Entity, (With<BarGui>, Without<GameUI>)>,
-            user:       Query<&User>
+            user:       Res<User>
     ) {
-        if (game_ui.is_empty() && bar_gui.is_empty()) || user.is_empty() {
+        if game_ui.is_empty() && bar_gui.is_empty() {
             return;
         }
 
         if let Ok(mut parent) = game_ui.get_single_mut() {
-            let user = user.single();
-            if !parent.1.bargui_is_open && user.control_entity != None {
+            if !parent.1.bargui_is_open && !user.control_entity.is_none() {
                 commands.entity(parent.0).with_children(|parent| {
                     // === BarGui ===
                     parent.spawn((
@@ -607,9 +625,16 @@ impl BarGui {
             (&Interaction, &mut BackgroundColor),
             (Changed<Interaction>, With<ToggleInvVisibleButton>),
         >,
-        mut inventory: Query<&mut Visibility, With<InventoryGui>>,
+        player: Query<
+            Entity,
+            (
+                With<UserControl>,
+                With<Inventory>,
+            ),
+        >,
+        mut inventory_toggle_writer: EventWriter<InventoryDisplayToggleEvent>,
     ) {
-        if button_query.is_empty() || inventory.is_empty() {
+        if button_query.is_empty() {
             return;
         }
 
@@ -617,12 +642,8 @@ impl BarGui {
             match *interaction {
                 Interaction::Pressed => {
                     *background_color = PRESSED_BUTTON_COLOR.into();
-                    if let Ok(mut inventory) = inventory.get_single_mut() {
-                        *inventory = match *inventory {
-                            Visibility::Inherited => Visibility::Hidden,
-                            Visibility::Hidden => Visibility::Visible,
-                            Visibility::Visible => Visibility::Hidden,
-                        }
+                    if let Ok(player) = player.get_single() {
+                        inventory_toggle_writer.send(InventoryDisplayToggleEvent { actor: player });
                     }
                 }
                 Interaction::Hovered => {
@@ -644,7 +665,7 @@ impl BarGui {
         mut text_h:     Query<&mut Text, (With<HealthBarNum>, Without<HealthBarLine>)>,
         // mut text_a:     Query<&mut Text, (With<AmmoBarGui>, (Without<HealthBarLine>, Without<HealthBarNum>))>,
         //    player:     Query<(&EntityBase, &Container), With<User>>
-            player:     Query<&EntityBase, With<User>>
+            player:     Query<&EntityBase, With<UserControl>>
     ) {
         if text_h.is_empty() && line_h.is_empty() { // && text_a.is_empty() {
             return;

@@ -23,8 +23,14 @@ use crate::core::{
     world::chunk::Chunk::Chunk,
     Camera::UserCamera,
     //Object::EntityObject,
+    Entity::{
+        EntityBase,
+        EntityHead,
+        EntitySpawn,
+    },
     Item::ItemSpawn,
     Object::ObjectSpawn,
+    ContainerSystem::Inventory,
     // ItemType::{
     //     Pickupable,
     //     ItemType,
@@ -32,19 +38,32 @@ use crate::core::{
     // }
 };
 
-#[derive(Component, InspectorOptions, Reflect)]
+#[derive(Component, InspectorOptions, Reflect, Resource)]
 #[reflect(Component, InspectorOptions)]
 pub struct User {
-    pub uid: usize,
-    pub user_name: String,
+    pub uid:            usize,
+    pub user_name:      String,
     pub control_entity: Option<Entity>
 }
+
+#[derive(Component)]
+pub struct UserControl {
+    pub uid:            usize,
+    pub user_name:      String,
+}
+
+#[derive(Component)]
+pub struct UserSubControl {
+    pub uid:            usize,
+    pub user_name:      String,
+}
+
 
 impl Default for User {
     fn default() -> Self {
         Self {
             uid: 0,
-            user_name: "Niko_n".to_string(),
+            user_name: "Admin".to_string(),
             control_entity: None
         }
     }
@@ -54,18 +73,59 @@ impl User {
     pub fn user_is_controled_entity(
         user: &User
     ) -> bool {
-        if user.control_entity != None {
-            true
-        } else {
-            false
+        !user.control_entity.is_none()
+    }
+
+    pub fn control_entity_update(
+        mut user:       ResMut<User>,
+            control:    Query<Entity, Added<UserControl>>,
+        // user: &mut User,
+        // entity: Entity
+    ) {
+        if control.is_empty() {
+            return;
+        }
+        
+        if let Ok(entity) = control.get_single() {
+            user.control_entity = Some(entity);
+            println!("place control entity")
         }
     }
 
-    pub fn set_entity_to_control(
-        user: &mut User,
-        entity: Entity
+    pub fn to_control(
+        mut commands:       Commands,
+            user:           Res<User>,
+            cursor:         Res<CursorPosition>,
+            entity_b:       Query<(Entity, &Transform), With<EntityBase>>,
+            entity_h:       Query<(Entity, &EntityHead, &Transform), With<EntityHead>>,
+            keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
-        user.control_entity = Some(entity);
+        if keyboard_input.just_pressed(KeyCode::F5) {
+            if user.control_entity.is_none() {
+                for (entity_b, transform) in &entity_b {
+                    if 16.0 > Vec3::distance(transform.translation, cursor.0.extend(0.5)) {
+                        commands.entity(entity_b)
+                            .insert(UserControl {
+                                uid: user.uid,
+                                user_name: user.user_name.clone()
+                            })
+                            .insert(Inventory::with_capacity(12));
+
+                        for (entity_h, head, transform) in &entity_h {
+                            if head.parent == entity_b {
+                                commands.entity(entity_h)
+                                    .insert(UserSubControl {
+                                        uid: user.uid,
+                                        user_name: user.user_name.clone()
+                                    });
+                            }
+                        }
+
+                        return;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -77,6 +137,7 @@ impl Plugin for UserPlugin {
         app
             // Регистрация типа "User" для индексации параметров в Инспекторе
             .register_type::<User>()
+            .insert_resource(User { ..default() })
             // Использование данных о позиции курсора из CursorPosition
             .init_resource::<CursorPosition>()
             .init_resource::<CursorPlacer>()
@@ -94,6 +155,12 @@ impl Plugin for UserPlugin {
                     attach_to_cursor,
                     create_text_placer,
                     attach_to_cursor
+                ).run_if(in_state(AppState::Game))
+            )
+            .add_systems(Update,
+                (
+                    User::control_entity_update,
+                    User::to_control
                 ).run_if(in_state(AppState::Game))
             )
         ;
@@ -144,8 +211,8 @@ fn placer(
         registry:       Res<Registry>,
     mut placer:         ResMut<CursorPlacer>,
     mut obj_event:      EventWriter<ObjectSpawn>,
-    mut item_event:     EventWriter<ItemSpawn>
-    // entity
+    mut item_event:     EventWriter<ItemSpawn>,
+    mut entity_event:   EventWriter<EntitySpawn>
 ) {
     if mouse_input.just_pressed(MouseButton::Left) {
         if let Some(match_type) = placer.placer.clone() {
@@ -156,6 +223,9 @@ fn placer(
                 },
                 "object" => {
                     obj_event.send(ObjectSpawn(match_type.1, WorldSystem::get_currect_chunk_tile(cursor.0.as_ivec2())));
+                },
+                "entity" => {
+                    entity_event.send(EntitySpawn(match_type.1, cursor.0));
                 },
                 _ => warn!("Неверный указанный тип!")
             }

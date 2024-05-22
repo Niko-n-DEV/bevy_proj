@@ -1,3 +1,4 @@
+#![allow(unused)]
 pub mod graphic;
 pub mod Registry;
 
@@ -24,8 +25,9 @@ use crate::core::{
 #[derive(Debug, Copy, Clone, Component, PartialEq, Eq, Hash)]
 pub enum SpriteLayer {
     Object,
-    // Item,
+    Item,
     Entity,
+    EntityPart
 }
 
 impl LayerIndex for SpriteLayer {
@@ -34,9 +36,10 @@ impl LayerIndex for SpriteLayer {
         match *self {
             // Note that the z-coordinates must be at least 1 apart...
             //Background => 0.,
-            Object => 1.,
-            // Item => 1.,
+            Object => 1.1,
+            Item => 1.,
             Entity => 1.,
+            EntityPart => 1.1,
             //Ui => 995.
         }
     }
@@ -123,9 +126,10 @@ impl ResourcePlugin {
         register.register_entity(Registry::EntityRegistry {
             id_name:        "human".to_string(),
             id_source:      Some("core".to_string()),
-            id_texture:     "human".to_string(),
+            id_texture_b:   "human".to_string(),
+            id_texture_h:   None,
             entity_type:    EntityType::Humonoid(HumonoidType::Human),
-            health:         Some(100.0)
+            health:         100.0
         });
 
         register.register_test("gun".to_string(), Registry::TestRegistry("gun".to_string()));       // Предмет
@@ -195,6 +199,11 @@ impl ResourcePlugin {
 
                     match dir_name.as_ref() {
                         "Textures" => {
+                            let res_path = path.join("entities");
+                            if res_path.exists() {
+                                Self::process_directory_assets(&mut register, &mut load_buff, &res_path)?;
+                            }
+
                             let assets_path = path.join("items");
                             if assets_path.exists() {
                                 Self::process_directory_assets(&mut register, &mut load_buff, &assets_path)?;
@@ -298,12 +307,18 @@ impl ResourcePlugin {
                     if let Ok(contents) = fs::read_to_string(&path) {
                         if let Ok(module) = serde_json::from_str::<Registry::EntityRegistry>(&contents) {
 
-                            load_buff.reg_entity_tex_path.push(module.id_texture.clone());
+                            load_buff.reg_entity_tex_path.push(module.id_texture_b.clone());
+                            if !module.id_texture_h.is_none() {
+                                if let Some(texture_h) = module.id_texture_h.clone() {
+                                    load_buff.reg_entity_tex_path.push(texture_h);
+                                }
+                            }
 
                             register.register_entity(Registry::EntityRegistry {
                                 id_name:        module.id_name,
                                 id_source:      Some(load_buff.source_id.clone()),
-                                id_texture:     module.id_texture,
+                                id_texture_b:   module.id_texture_b,
+                                id_texture_h:   module.id_texture_h,
                                 entity_type:    module.entity_type,
                                 health:         module.health
                             });

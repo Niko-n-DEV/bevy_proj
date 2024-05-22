@@ -44,9 +44,10 @@ pub struct Registry {
 pub struct EntityRegistry {
     pub id_name:        String,
     pub id_source:      Option<String>,
-    pub id_texture:     String,
+    pub id_texture_b:   String,
+    pub id_texture_h:   Option<String>,
     pub entity_type:    EntityType,
-    pub health:         Option<f32>
+    pub health:         f32
 }
 
 #[derive(Serialize, Deserialize)]
@@ -124,8 +125,8 @@ impl Registry {
         }
     }
 
-    pub fn get_entity(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
-        atlas.get_entity_spritesheet(name)
+    pub fn get_entity_texture(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
+        atlas.get_entity_spritesheet(name) // -> graphic/Atlas
     }
 
     pub fn get_entity_info(&self, name: &str) -> Option<&EntityRegistry> {
@@ -143,7 +144,7 @@ impl Registry {
     }
 
     pub fn get_object_texture(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
-        atlas.get_object_spritesheet(name)
+        atlas.get_object_spritesheet(name) // -> graphic/Atlas
     }
 
     pub fn get_object_info(&self, name: &str) -> Option<&ObjectRegistry> {
@@ -161,7 +162,7 @@ impl Registry {
     }
 
     pub fn get_item_texture(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
-        atlas.get_item_spritesheet(name)
+        atlas.get_item_spritesheet(name) // -> graphic/Atlas
     }
 
     pub fn get_item_info(&self, name: &str) -> Option<&ItemRegistry> {

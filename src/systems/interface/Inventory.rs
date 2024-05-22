@@ -17,7 +17,10 @@ use crate::core::{
         BarGui,
         GameUI
     },
-    UserSystem::User,
+    UserSystem::{
+        UserControl,
+        User,
+    },
     resource::{
         graphic::Atlas::{
             AtlasRes,
@@ -81,7 +84,7 @@ pub fn toggle_inventory_open_event_send<I: ItemTypeEx>(
     player: Query<
         Entity,
         (
-            With<User>,
+            With<UserControl>,
             With<Inventory>,
         ),
     >,
@@ -171,7 +174,7 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
                                 for index in 0..inventory.len() {
                                     let slot = slots.spawn((
                                         Name::new(format!("Slot {index}")),
-                                        InventoryDisplaySlot { index, item: None },
+                                        InventoryDisplaySlot { index, item: None, count: None },
                                         NodeBundle {
                                             style: Style {
                                                 display: Display::Grid,
@@ -213,8 +216,7 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
         game_ui:            Query<&GameUI, With<GameUI>>,
     //    inv_options:        Res<InventoryDisplayOptions>,
         inv_displ_nodes:    Query<(&InventoryDisplayNode, &Children)>,
-        player_inv:        Query<&Inventory, With<User>>,
-    //    items:              Query<&UiRenderInfo, With<I>>,
+        player_inv:        Query<&Inventory, With<UserControl>>,
 ) {
     if game_ui.is_empty() && bar_gui.is_empty() {
         return;
@@ -243,9 +245,11 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
 
             if let Some(item_entity) = &inventory[slot.index] {
                 let render = if let Some(slot_item) = slot.item.clone() {
-                    if item_entity.name != slot_item {
-                        println!("1: {:?}", slot.item);
+                    if item_entity.name != slot_item  {
                         slot.item = Some(item_entity.name.clone());
+                        if let Some(count) = slot.count.clone() {
+                            slot.count = Some(item_entity.count.clone());
+                        }
                         slot_cmd.despawn_descendants();
                         true
                     } else {
@@ -253,12 +257,11 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
                     }
                 } else {
                     slot.item = Some(item_entity.name.clone());
-                    println!("1.1: {:?}", slot.item);
+                    slot.count = Some(item_entity.count.clone());
                     true
                 };
 
                 if render {
-                    println!("2: {:?}", item_entity.id_name);
                     if let Some(info) = register.get_item_info(&item_entity.id_name) {
                         if let Some(img) = atlas.items.extruct_texture(&info.id_texture) {
                             slot_cmd.with_children(|cb| {
@@ -275,6 +278,25 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
                                     },
                                     img.0
                                 ));
+                                cb.spawn(TextBundle {
+                                    style: Style {
+                                        position_type:  PositionType::Absolute,
+                                        top:            Val::Percent(55.0),
+                                        left:            Val::Percent(70.0),
+                                        ..default()
+                                    },
+                                    text: Text {
+                                        sections: vec![TextSection::new(
+                                            format!("{}", item_entity.count),
+                                            TextStyle {
+                                                font_size: 11.0,
+                                                ..default()
+                                            },
+                                        )],
+                                        ..default()
+                                    },
+                                    ..default()
+                                });
                             });
                         } else {
                             bevy::log::error!(
@@ -311,8 +333,9 @@ pub struct InventoryDisplayNode {
 // Для инвентаря
 #[derive(Default, Debug, Clone, PartialEq, Eq, Component)]
 pub struct InventoryDisplaySlot {
-    pub index: usize,
-    pub item: Option<String>,
+    pub index:  usize,
+    pub item:   Option<String>,
+    pub count:  Option<usize>
 }
 
 // Для инвентаря эквипа
