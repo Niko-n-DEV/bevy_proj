@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 #![allow(unused)]
 pub mod chunk;
+pub mod Grid;
 pub mod TileMap;
 pub mod World;
 

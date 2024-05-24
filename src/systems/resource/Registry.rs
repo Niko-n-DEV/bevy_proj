@@ -11,11 +11,13 @@ use serde::{
 use crate::core::{
     ItemType::{
         ItemType,
-        ItemSizeType
+        ItemSizeType,
+        ItemStackType,
     },
     EntityType::EntityType,
     ObjType::ObjectSizeType,
     resource::graphic::Atlas::AtlasRes,
+    Craft::CraftResult,
     Util::{
         IVec2C,
         Vec2C
@@ -43,8 +45,10 @@ pub struct Registry {
 pub struct EntityRegistry {
     pub id_name:        String,
     pub id_source:      Option<String>,
-    pub id_texture:     String,
-    pub entity_type:    EntityType
+    pub id_texture_b:   String,
+    pub id_texture_h:   Option<String>,
+    pub entity_type:    EntityType,
+    pub health:         f32
 }
 
 #[derive(Serialize, Deserialize)]
@@ -52,9 +56,21 @@ pub struct ObjectRegistry {
     pub id_name:        String,
     pub id_source:      Option<String>,
     pub id_texture:     String,
-    //pub size_type:      ObjectSizeType,
     pub size:           IVec2C,
     pub collision:      Vec2C,
+    pub durability:     Option<usize>
+}
+
+// pub struct EntityObjectDefinition {
+//     pub id_name: String,
+//     pub components: HashMap<String, Component>,
+// }
+
+impl ObjectRegistry {
+    /// Получение прочности предмета
+    pub fn get_base_durability(&self) -> Option<usize> {
+        self.durability
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -63,7 +79,28 @@ pub struct ItemRegistry {
     pub id_source:  Option<String>,
     pub id_texture: String,
     pub item_type:  ItemType,
-    pub item_size:  ItemSizeType
+    pub item_size:  ItemSizeType,
+    pub stackable:  Option<ItemStackType>,
+    pub stack_size: Option<usize>,
+    pub durability: Option<usize>
+}
+
+impl ItemRegistry {
+    /// Получение прочности предмета
+    pub fn get_base_durability(&self) -> Option<usize> {
+        self.durability
+    }
+
+    // Получение размера стака
+    pub fn get_stack_size(&self) -> Option<usize> {
+        self.stack_size
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RecipeRegistry {
+    pub request:    Vec<String>,
+    pub result:     CraftResult,
 }
 
 pub struct TestRegistry(pub String);
@@ -100,8 +137,8 @@ impl Registry {
         }
     }
 
-    pub fn get_entity(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
-        atlas.get_entity_spritesheet(name)
+    pub fn get_entity_texture(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
+        atlas.get_entity_spritesheet(name) // -> graphic/Atlas
     }
 
     pub fn get_entity_info(&self, name: &str) -> Option<&EntityRegistry> {
@@ -119,7 +156,7 @@ impl Registry {
     }
 
     pub fn get_object_texture(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
-        atlas.get_object_spritesheet(name)
+        atlas.get_object_spritesheet(name) // -> graphic/Atlas
     }
 
     pub fn get_object_info(&self, name: &str) -> Option<&ObjectRegistry> {
@@ -137,7 +174,7 @@ impl Registry {
     }
 
     pub fn get_item_texture(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
-        atlas.get_item_spritesheet(name)
+        atlas.get_item_spritesheet(name) // -> graphic/Atlas
     }
 
     pub fn get_item_info(&self, name: &str) -> Option<&ItemRegistry> {

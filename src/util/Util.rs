@@ -17,6 +17,26 @@ pub struct Vec2C {
     pub y: f32,
 }
 
+#[derive(Component)]
+pub struct AttachTo {
+    pub offset: Vec2,
+}
+
+#[derive(Component)]
+pub struct ToAttach;
+
+pub fn attach_objects(
+    mut attachto_query:  Query<(&mut Transform, &AttachTo), With<AttachTo>>,
+        toattach_query: Query<&mut Transform, With<ToAttach>>
+) {
+    for transform in toattach_query.iter() {
+        for mut transform_mut in attachto_query.iter_mut() {
+            transform_mut.0.translation =
+                transform.translation + Vec3::new(transform_mut.1.offset.x, transform_mut.1.offset.y, 0.5);
+        }
+    }
+}
+
 // #[derive(Component)]
 // pub struct Follow {
 //     pub target: Entity

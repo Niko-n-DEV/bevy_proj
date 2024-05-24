@@ -18,11 +18,9 @@ mod util;
 /// Совокупность основных модулей, именуемое как `core` , для предоставления быстрого доступа ко всем модулям
 mod core {
     #![allow(non_snake_case)]
-
     pub use crate::AppState;
 
     pub use crate::components::*;
-    #[allow(unused)]
     pub use crate::objects::*;
     pub use crate::items::*;
     pub use crate::entities::*;
@@ -32,12 +30,10 @@ mod core {
 }
 
 use crate::core::{
-    entities::EntitySystem::EntitySystem,
     resource::ResourcePlugin,
     world::World::WorldSystem,
     Camera::CameraController,
     interface::UIPlugin,
-    PlayerSystem::PlayerPlugin,
     UserSystem::UserPlugin
 };
 
@@ -94,11 +90,7 @@ fn main() {
             UIPlugin,           // Инициализация плагина пользовательского графического интерфейса
             UserPlugin          // Инициализация интерфейса взаимодействия пользователя
         ))
-        .add_plugins((
-            EntitySystem,   // Инициализация плагина, отвечающего за работу всех entity
-            PlayerPlugin,   // Инициализация плагина, отвечающего за работу управления entity-player
-            WorldSystem     // Инициализация плагина, отвечающего за работу компонентов "мира"
-        ))
+        .add_plugins(WorldSystem)
         // Инициализация StartUP функции setup
         .add_systems(Startup, setup)
         .run();

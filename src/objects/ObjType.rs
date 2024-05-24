@@ -8,7 +8,7 @@ use crate::core::{
     AppState,
     ItemType::{
         ItemType,
-        Pickupable
+        ItemEntity
     }
 };
 
@@ -141,8 +141,6 @@ pub enum PlantType {
     Tree,
     Bush,
     Flower,
-    Thickets,
-    Vegetation,
 }
 
 /// Структура для того, что может быть собрано

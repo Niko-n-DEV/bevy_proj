@@ -1,0 +1,10 @@
+{
+	"id_name": "cobblestone",
+	"id_texture": "cobblestone",
+	"item_type": {
+        "Item": {
+			"Material": "Cobblestone"
+		}
+    },
+	"item_size": "Small"
+}

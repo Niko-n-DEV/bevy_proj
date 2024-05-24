@@ -1,3 +1,4 @@
+#![allow(unused)]
 pub mod graphic;
 pub mod Registry;
 
@@ -26,6 +27,7 @@ pub enum SpriteLayer {
     Object,
     Item,
     Entity,
+    EntityPart
 }
 
 impl LayerIndex for SpriteLayer {
@@ -34,9 +36,10 @@ impl LayerIndex for SpriteLayer {
         match *self {
             // Note that the z-coordinates must be at least 1 apart...
             //Background => 0.,
-            Object => 1.,
+            Object => 1.1,
             Item => 1.,
             Entity => 1.,
+            EntityPart => 1.0,
             //Ui => 995.
         }
     }
@@ -121,10 +124,12 @@ impl ResourcePlugin {
         mut register:   ResMut<Registry::Registry>,
     ) {
         register.register_entity(Registry::EntityRegistry {
-            id_name: "human".to_string(),
-            id_source: Some("core".to_string()),
-            id_texture: "human".to_string(),
-            entity_type: EntityType::Humonoid(HumonoidType::Human),
+            id_name:        "human".to_string(),
+            id_source:      Some("core".to_string()),
+            id_texture_b:   "human".to_string(),
+            id_texture_h:   None,
+            entity_type:    EntityType::Humonoid(HumonoidType::Human),
+            health:         100.0
         });
 
         register.register_test("gun".to_string(), Registry::TestRegistry("gun".to_string()));       // Предмет
@@ -194,6 +199,11 @@ impl ResourcePlugin {
 
                     match dir_name.as_ref() {
                         "Textures" => {
+                            let res_path = path.join("entities");
+                            if res_path.exists() {
+                                Self::process_directory_assets(&mut register, &mut load_buff, &res_path)?;
+                            }
+
                             let assets_path = path.join("items");
                             if assets_path.exists() {
                                 Self::process_directory_assets(&mut register, &mut load_buff, &assets_path)?;
@@ -297,13 +307,20 @@ impl ResourcePlugin {
                     if let Ok(contents) = fs::read_to_string(&path) {
                         if let Ok(module) = serde_json::from_str::<Registry::EntityRegistry>(&contents) {
 
-                            load_buff.reg_entity_tex_path.push(module.id_texture.clone());
+                            load_buff.reg_entity_tex_path.push(module.id_texture_b.clone());
+                            if !module.id_texture_h.is_none() {
+                                if let Some(texture_h) = module.id_texture_h.clone() {
+                                    load_buff.reg_entity_tex_path.push(texture_h);
+                                }
+                            }
 
                             register.register_entity(Registry::EntityRegistry {
-                                id_name: module.id_name,
-                                id_source: Some(load_buff.source_id.clone()),
-                                id_texture: module.id_texture,
-                                entity_type: module.entity_type,
+                                id_name:        module.id_name,
+                                id_source:      Some(load_buff.source_id.clone()),
+                                id_texture_b:   module.id_texture_b,
+                                id_texture_h:   module.id_texture_h,
+                                entity_type:    module.entity_type,
+                                health:         module.health
                             });
                         }
                     }
@@ -316,11 +333,14 @@ impl ResourcePlugin {
                             load_buff.reg_item_tex_path.push(module.id_texture.clone());
 
                             register.register_item(Registry::ItemRegistry {
-                                id_name: module.id_name,
-                                id_source: Some(load_buff.source_id.clone()),
+                                id_name:    module.id_name,
+                                id_source:  Some(load_buff.source_id.clone()),
                                 id_texture: module.id_texture,
-                                item_type: module.item_type,
-                                item_size: module.item_size
+                                item_type:  module.item_type,
+                                item_size:  module.item_size,
+                                stackable:  module.stackable,
+                                stack_size: module.stack_size,
+                                durability: module.durability
                             });
                         }
                     }
@@ -335,12 +355,12 @@ impl ResourcePlugin {
                             load_buff.reg_object_tex_path.push(module.id_texture.clone());
 
                             register.register_object(Registry::ObjectRegistry {
-                                id_name: module.id_name,
-                                id_source: Some(load_buff.source_id.clone()),
-                                id_texture: module.id_texture,
-                                //size_type: module.size_type,
-                                size: module.size,
-                                collision: module.collision
+                                id_name:        module.id_name,
+                                id_source:      Some(load_buff.source_id.clone()),
+                                id_texture:     module.id_texture,
+                                size:           module.size,
+                                collision:      module.collision,
+                                durability:     module.durability
                             });
                         }
                     }

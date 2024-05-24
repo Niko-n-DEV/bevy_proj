@@ -63,15 +63,15 @@ pub fn setup_ex(
     );
     let atlas_nearest_handle = texture_atlases.add(texture_atlas_nearest);
 
-    // Спавн спрайта атласа ждя debug
-    commands.spawn(SpriteBundle {
-        texture: nearest_texture.clone(),
-        transform: Transform {
-            translation: Vec3 { x: -128., y: -128., z: 1. },
-            ..default()
-        },
-        ..default()
-    });
+    // // Спавн спрайта атласа ждя debug
+    // commands.spawn(SpriteBundle {
+    //     texture: nearest_texture.clone(),
+    //     transform: Transform {
+    //         translation: Vec3 { x: -128., y: -128., z: 1. },
+    //         ..default()
+    //     },
+    //     ..default()
+    // });
 
     handle_cust_atlas.layout =  Some(atlas_nearest_handle.clone());
     handle_cust_atlas.image =   Some(nearest_texture.clone());
@@ -94,6 +94,26 @@ pub fn setup_ex(
     handle_dir_atlas.image =    Some(nearest_texture_atlases.clone());
     handle_dir_atlas.ids =      Some(_hash.clone());
 
+    
+
+    // ==============================
+    // Entity
+    // ==============================
+    let loaded_folder = loaded_folders.get(&resource_module.0).unwrap();
+
+    let (texture_atlas_nearest, entity_texture, entity_hash) = load_and_index_atlas_ex(
+        &load_buff.verified_entity_texture,
+        &loaded_folder,
+        None, //Some(UVec2::splat(1)),
+        Some(ImageSampler::nearest()),
+        &mut textures,
+    );
+    let entity_layout = texture_atlases.add(texture_atlas_nearest);
+
+    atlas.entity.layout =    Some(entity_layout);
+    atlas.entity.image =     Some(entity_texture);
+    atlas.entity.ids =       Some(entity_hash);
+
     // ==============================
     // Items
     // ==============================
@@ -111,6 +131,7 @@ pub fn setup_ex(
     atlas.items.layout =    Some(items_layout);
     atlas.items.image =     Some(items_texture);
     atlas.items.ids =       Some(items_hash);
+
     // ==============================
     // Objects
     // ==============================
@@ -128,13 +149,10 @@ pub fn setup_ex(
     atlas.objects.layout =  Some(object_layout);
     atlas.objects.image =   Some(objects_texture);
     atlas.objects.ids =     Some(objects_hash);
+
     // ==============================
     // Test
     // ==============================
-    atlas.entity.layout =   Some(atlas_dir_nearest_handle);
-    atlas.entity.image =    Some(nearest_texture_atlases);
-    atlas.entity.ids =      Some(_hash);
-
     atlas.test.layout =     Some(atlas_nearest_handle);
     atlas.test.image =      Some(nearest_texture);
     atlas.test.ids =        Some(_hash_t);
@@ -221,6 +239,84 @@ fn create_texture_atlas_ex(
     image.sampler = sampling.unwrap_or_default();
 
     (texture_atlas_layout, texture, textures_ids)
+}
+
+fn load_and_index_atlas_ex(
+    load_buff:  &Vec<String>,
+    folder:     &LoadedFolder,
+    padding:    Option<UVec2>,
+    sampling:   Option<ImageSampler>,
+    textures:   &mut ResMut<Assets<Image>>,
+) -> (TextureAtlasLayout, Handle<Image>, HashMap<String, usize>) {
+    let mut texture_atlas_builder =
+        TextureAtlasBuilder::default().padding(padding.unwrap_or_default());
+
+    let mut textures_ids: HashMap<String, usize> = HashMap::new();
+    let mut num: usize = 0;
+
+    // Прогон по имеющимся текстурам в loadedfolder
+    for handle in folder.handles.iter() {
+        if let Some(path) = handle.path() {
+            if let Some(file_name) = path.to_string().as_str().split('/').last() {
+                if let Some(first) = file_name.rsplit(|c| c == '\\' || c == '/').next() {
+                    // println!("{first}");
+                    for sec in load_buff.clone() {
+                        if let Some(second) = sec.rsplit(|c| c == '\\' || c == '/').next() {
+                            // println!("{second}");
+                            if first == second {
+                                // Получение id у прогоняемой текстуры
+                                let id = handle.id().typed_unchecked::<Image>();
+                                // Проверка, преобразоваемый файл ли в текстуру
+                                let Some(texture) = textures.get(id) else {
+                                    warn!(
+                                        "{:?} did not resolve to an `Image` asset.",
+                                        handle.path().unwrap()
+                                    );
+
+                                    continue;
+                                };
+
+                                // Получение имени загружаемого файла, чтобы использовать это как ключь-имя в hash-таблице
+                                if let Some(path) = handle.path() {
+                                    if let Some(file_name) = path.to_string().as_str().split('/').last() {
+                                        let file_fmt = Path::new(file_name).file_stem().unwrap().to_string_lossy();
+
+                                        println!("Loaded module resource | {}", file_fmt);
+                                        textures_ids.insert(file_fmt.to_string(), num);
+                                    } else {
+                                        warn!("[Error] - An error occurred while reading the file name!")
+                                    }
+                                } else {
+                                    warn!("[Error] - An error occurred while reading the file path!")
+                                }
+
+                                num += 1;
+                                // Добавление на полотно добавляемую текстуру
+                                texture_atlas_builder.add_texture(Some(id), texture);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let (_, texture) = texture_atlas_builder.finish().unwrap();
+    let texture = textures.add(texture);
+
+    // Обновление настройки выборки в атласе текстур
+    let image = textures.get_mut(&texture).unwrap();
+        image.sampler = sampling.unwrap_or_default();
+
+    let layout = TextureAtlasLayout::from_grid(
+        Vec2::new(16. as f32, 16. as f32),
+        SPRITE_SHEET_W,
+        SPRITE_SHEET_H,
+        None,
+        None,
+    );
+
+    (layout, texture, textures_ids)
 }
 // ==============================
 // 
@@ -331,21 +427,14 @@ fn load_and_index_atlas(
         current_index += 1;
         // Добавление на полотно добавляемую текстуру
         texture_atlas_builder.add_texture(Some(id), texture);
-
-        // Если достигнут лимит спрайтов в атласе, сохраняем индекс начала нового атласа
-        // if current_index % (SPRITE_SHEET_W * SPRITE_SHEET_H) == 0 {
-        //     atlas_start_indices.push(current_index);
-        // }
-
-        // current_index += 1;
     }
 
-    let (_texture_atlas_layout, texture) = texture_atlas_builder.finish().unwrap();
+    let (_, texture) = texture_atlas_builder.finish().unwrap();
     let texture = textures.add(texture);
 
     // Обновление настройки выборки в атласе текстур
     let image = textures.get_mut(&texture).unwrap();
-    image.sampler = sampling.unwrap_or_default();
+        image.sampler = sampling.unwrap_or_default();
 
     let layout = TextureAtlasLayout::from_grid(
         Vec2::new(16. as f32, 16. as f32),
@@ -357,26 +446,6 @@ fn load_and_index_atlas(
 
     (layout, texture, textures_ids)
 }
-
-// /// Создание и установка спрайта и атласа
-// fn sprite_from_atlas(
-//     commands: &mut Commands,
-//     sprite_index: usize,
-//     atlas_handle: Handle<TextureAtlasLayout>,
-//     texture: Handle<Image>,
-// ) {
-//     commands.spawn((
-//         SpriteBundle {
-//             transform: Transform { ..default() },
-//             texture,
-//             ..default()
-//         },
-//         TextureAtlas {
-//             layout: atlas_handle,
-//             index: sprite_index,
-//         },
-//     ));
-// }
 
 /*
     Наброски заполнения текстур в атлас и сохранение их id

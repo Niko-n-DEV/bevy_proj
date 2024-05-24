@@ -7,7 +7,10 @@ use crate::core::{
     entities::EntitySystem::EnemySpawner,
     Entity::EntityBase,
     world::World::WorldSystem,
-    UserSystem::User,
+    UserSystem::{
+        UserControl,
+        User,
+    },
     AppState, 
     interface::Styles::*
 };
@@ -676,7 +679,7 @@ pub fn interact_with_toggle_spawners_button(
 pub fn update_position_text(
     mut text: Query<&mut Text, (With<DebugPositionText>, Without<DebugPositionTileText>)>,
     mut text_t: Query<&mut Text, (With<DebugPositionTileText>, Without<DebugPositionText>)>,
-    player: Query<&EntityBase, With<User>>
+    player: Query<&EntityBase, With<UserControl>>
 ) {
     if text.is_empty() || player.is_empty() {
         return;

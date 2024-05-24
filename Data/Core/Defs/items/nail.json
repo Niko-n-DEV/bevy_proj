@@ -1,0 +1,8 @@
+{
+	"id_name": "nail",
+	"id_texture": "nail",
+	"item_type": {
+        "Item": "Ammo"
+    },
+	"item_size": "Small"
+}

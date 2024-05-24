@@ -1,0 +1,12 @@
+{
+	"id_name": "iron_ingot",
+	"id_texture": "iron_ingot",
+	"item_type": {
+        "Item": {
+			"Material": {
+				"Metall": "Iron"
+			}
+		}
+    },
+	"item_size": "Small"
+}

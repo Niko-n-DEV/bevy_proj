@@ -1,3 +1,4 @@
+#![allow(unused)]
 use bevy::prelude::*;
 use bevy_egui::{
     egui,
@@ -8,7 +9,10 @@ use crate::core::{
     interface::GameUI::GameUI, 
     ItemType::*, 
     ContainerSystem::Container, 
-    UserSystem::User
+    UserSystem::{
+        UserControl,
+        User
+    }
 };
 
 #[derive(Default, Resource)]
@@ -79,7 +83,7 @@ pub struct ConsoleInput(pub String);
 
 pub fn cmd_execute(
     mut _commands:  Commands,
-    mut player:     Query<(&mut Transform, &mut Container), With<User>>,
+    mut player:     Query<(&mut Transform, &mut Container), With<UserControl>>,
     mut event:      EventReader<ConsoleInput>
 ) {
     if event.is_empty() {

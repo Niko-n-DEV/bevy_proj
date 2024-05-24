@@ -1,4 +1,4 @@
-use bevy::ecs::system::Resource;
+use bevy::{ecs::system::Resource, math::Vec2};
 
 use serde::{
     Deserialize,
@@ -6,6 +6,22 @@ use serde::{
 };
 
 use std::fs;
+
+// ==============================
+// Window Resolution
+// ==============================
+
+#[allow(unused)]
+#[derive(Resource)]
+struct ResolutionSettings {
+    large: Vec2,
+    medium: Vec2,
+    small: Vec2,
+}
+
+// ==============================
+// Settings
+// ==============================
 
 #[derive(Debug, Serialize, Deserialize, Resource)]
 pub struct Settings {
@@ -18,7 +34,7 @@ pub struct Settings {
 
 impl Settings {
     pub fn load() -> Settings {
-        if let Ok(contents) = fs::read_to_string("G:\\settings.json") {
+        if let Ok(contents) = fs::read_to_string("settings.json") {
             if let Ok(settings) = serde_json::from_str(&contents) {
                 return settings;
             }
@@ -28,7 +44,7 @@ impl Settings {
 
     pub fn save(&self) {
         if let Ok(json) = serde_json::to_string_pretty(self) {
-            fs::write("G:\\settings.json", json).ok();
+            fs::write("settings.json", json).ok();
         }
     }
 }

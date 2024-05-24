@@ -12,25 +12,15 @@ use crate::core::{
         Position
     }, 
     Object::EntityObject,
-    ItemType::Pickupable
+    ItemType::ItemEntity
 };
 
 #[derive(Component, Default)]
 pub struct EntityItem {
     pub id_name:    String,
+    pub name:       String,
     pub health:     Health,
     pub position:   Position,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct ItemPickUpEvent {
-    pub picker: Entity,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct ItemDropEvent {
-    pub droper: Entity,
-    pub item: Entity,
 }
 
 /// Событие спавна предмета
@@ -43,7 +33,7 @@ pub fn spawn_item(
         registry:   Res<Registry>,
     mut chunk_res:  ResMut<Chunk>,
         atlas:      Res<AtlasRes>,
-    mut items:      Query<(Entity, &mut Pickupable), With<Pickupable>>,
+    mut items:      Query<(Entity, &mut ItemEntity), With<ItemEntity>>,
     mut event:      EventReader<ItemSpawn>
 ) {
     if event.is_empty() {
@@ -58,6 +48,7 @@ pub fn spawn_item(
                     .spawn((
                         EntityItem {
                             id_name: info.id_name.clone(),
+                            name: info.id_name.clone(),
                             ..default()
                         },
                         SpriteSheetBundle {
@@ -70,7 +61,7 @@ pub fn spawn_item(
                             },
                             ..default()
                         },
-                        Pickupable {
+                        ItemEntity {
                             item: info.item_type,
                             count: event.2
                         },

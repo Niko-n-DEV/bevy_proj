@@ -8,6 +8,8 @@ use serde::{
 
 use bevy_inspector_egui::InspectorOptions;
 
+use crate::core::ContainerSystem::ItemTypeEx;
+
 #[derive(InspectorOptions, Debug, Default, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
 pub enum ItemSizeType {
     #[default]
@@ -32,6 +34,16 @@ pub enum ItemStackType {
     Fixed
 }
 
+impl ItemStackType {
+    /// 
+    pub fn is_stackable(&self) -> bool {
+        match self {
+            ItemStackType::Scalable => true,
+            ItemStackType::Fixed   => false
+        }
+    }
+}
+
 /// Всё, что может бить предметом
 #[derive(InspectorOptions, Debug, Default, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
 pub enum ItemType {
@@ -41,6 +53,8 @@ pub enum ItemType {
     Weapon(Weapon),
     Item(Item),
 }
+
+impl ItemTypeEx for ItemType {}
 
 /// Всё, что может быть взято как иструмент
 #[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
@@ -69,8 +83,17 @@ pub enum Item {
 #[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
 pub enum Material {
     Wood,
+    Stick,
     Cobblestone,
     Flint,
+    Metall(Metall)
+}
+
+#[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect, Serialize)]
+pub enum Metall {
+    Iron,
+    Copper,
+    Gold,
 }
 
 /// Перечисление того, что является боеприпасом
@@ -85,7 +108,7 @@ pub enum Ammo {
 /// Структура для того, что может быть поднято
 #[allow(unused)]
 #[derive(Component, InspectorOptions)]
-pub struct Pickupable {
+pub struct ItemEntity {
     pub(crate) item: ItemType,
     pub count: usize
 }

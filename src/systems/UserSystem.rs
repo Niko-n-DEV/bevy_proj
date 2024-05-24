@@ -23,8 +23,14 @@ use crate::core::{
     world::chunk::Chunk::Chunk,
     Camera::UserCamera,
     //Object::EntityObject,
+    Entity::{
+        EntityBase,
+        EntityHead,
+        EntitySpawn,
+    },
     Item::ItemSpawn,
     Object::ObjectSpawn,
+    ContainerSystem::Inventory,
     // ItemType::{
     //     Pickupable,
     //     ItemType,
@@ -32,19 +38,32 @@ use crate::core::{
     // }
 };
 
-#[derive(Component, InspectorOptions, Reflect)]
+#[derive(Component, InspectorOptions, Reflect, Resource)]
 #[reflect(Component, InspectorOptions)]
 pub struct User {
-    pub uid: usize,
-    pub user_name: String,
+    pub uid:            usize,
+    pub user_name:      String,
     pub control_entity: Option<Entity>
 }
+
+#[derive(Component)]
+pub struct UserControl {
+    pub uid:            usize,
+    pub user_name:      String,
+}
+
+#[derive(Component)]
+pub struct UserSubControl {
+    pub uid:            usize,
+    pub user_name:      String,
+}
+
 
 impl Default for User {
     fn default() -> Self {
         Self {
             uid: 0,
-            user_name: "Niko_n".to_string(),
+            user_name: "Admin".to_string(),
             control_entity: None
         }
     }
@@ -54,18 +73,59 @@ impl User {
     pub fn user_is_controled_entity(
         user: &User
     ) -> bool {
-        if user.control_entity != None {
-            true
-        } else {
-            false
+        !user.control_entity.is_none()
+    }
+
+    pub fn control_entity_update(
+        mut user:       ResMut<User>,
+            control:    Query<Entity, Added<UserControl>>,
+        // user: &mut User,
+        // entity: Entity
+    ) {
+        if control.is_empty() {
+            return;
+        }
+        
+        if let Ok(entity) = control.get_single() {
+            user.control_entity = Some(entity);
+            println!("place control entity")
         }
     }
 
-    pub fn set_entity_to_control(
-        user: &mut User,
-        entity: Entity
+    pub fn to_control(
+        mut commands:       Commands,
+            user:           Res<User>,
+            cursor:         Res<CursorPosition>,
+            entity_b:       Query<(Entity, &Transform), With<EntityBase>>,
+            entity_h:       Query<(Entity, &EntityHead, &Transform), With<EntityHead>>,
+            keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
-        user.control_entity = Some(entity);
+        if keyboard_input.just_pressed(KeyCode::F5) {
+            if user.control_entity.is_none() {
+                for (entity_b, transform) in &entity_b {
+                    if 8.0 > Vec3::distance(transform.translation, cursor.0.extend(0.5)) {
+                        commands.entity(entity_b)
+                            .insert(UserControl {
+                                uid: user.uid,
+                                user_name: user.user_name.clone()
+                            })
+                            .insert(Inventory::with_capacity(6));
+
+                        for (entity_h, head, transform) in &entity_h {
+                            if head.parent == entity_b {
+                                commands.entity(entity_h)
+                                    .insert(UserSubControl {
+                                        uid: user.uid,
+                                        user_name: user.user_name.clone()
+                                    });
+                            }
+                        }
+
+                        return;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -77,6 +137,7 @@ impl Plugin for UserPlugin {
         app
             // Регистрация типа "User" для индексации параметров в Инспекторе
             .register_type::<User>()
+            .insert_resource(User { ..default() })
             // Использование данных о позиции курсора из CursorPosition
             .init_resource::<CursorPosition>()
             .init_resource::<CursorPlacer>()
@@ -94,6 +155,12 @@ impl Plugin for UserPlugin {
                     attach_to_cursor,
                     create_text_placer,
                     attach_to_cursor
+                ).run_if(in_state(AppState::Game))
+            )
+            .add_systems(Update,
+                (
+                    User::control_entity_update,
+                    User::to_control
                 ).run_if(in_state(AppState::Game))
             )
         ;
@@ -127,6 +194,19 @@ pub fn cursor_track(
 }
 
 // ==============================
+// CursorMode
+// ==============================
+
+#[derive(Default, Resource)]
+enum ClickMode {
+    #[default]
+    None,
+    Placer,
+    Build,
+    Atack,
+}
+
+// ==============================
 // Placer
 // ==============================
 
@@ -144,8 +224,8 @@ fn placer(
         registry:       Res<Registry>,
     mut placer:         ResMut<CursorPlacer>,
     mut obj_event:      EventWriter<ObjectSpawn>,
-    mut item_event:     EventWriter<ItemSpawn>
-    // entity
+    mut item_event:     EventWriter<ItemSpawn>,
+    mut entity_event:   EventWriter<EntitySpawn>
 ) {
     if mouse_input.just_pressed(MouseButton::Left) {
         if let Some(match_type) = placer.placer.clone() {
@@ -156,6 +236,9 @@ fn placer(
                 },
                 "object" => {
                     obj_event.send(ObjectSpawn(match_type.1, WorldSystem::get_currect_chunk_tile(cursor.0.as_ivec2())));
+                },
+                "entity" => {
+                    entity_event.send(EntitySpawn(match_type.1, cursor.0));
                 },
                 _ => warn!("Неверный указанный тип!")
             }
@@ -185,10 +268,14 @@ fn create_text_placer(
                             sections: vec![TextSection::new(
                                 format!("{}", text.1),
                                 TextStyle {
-                                    font_size: 8.0,
+                                    font_size: 12.0,
                                     ..default()
                                 },
                             )],
+                            ..default()
+                        },
+                        transform: Transform {
+                            scale: Vec3::splat(0.5),
                             ..default()
                         },
                         ..default()
@@ -218,6 +305,10 @@ fn attach_to_cursor(
         }
     }
 }
+
+// ==============================
+// ?
+// ==============================
 
 #[derive(Component)]
 pub struct Selectable {
@@ -253,36 +344,8 @@ fn select_object(
 ) {
     if keyboard_input.pressed(KeyCode::ControlLeft) {
         if mouse_buttons.just_pressed(MouseButton::Left) {
-            let cursor_pos = cursor.0;
-            let tiled_pos = WorldSystem::get_currect_chunk_tile(cursor_pos.as_ivec2());
 
-            // Проверка наличие Entity на месте указанном месте
-            // if let Some(selected_entity) = chunk_res.objects_ex.get(&tiled_pos) {
-            //     if let Some(select_entity) = select.select_entity {
-            //         if select_entity != *selected_entity {
-            //             println!("1 - 1");
-            //             commands.entity(*selected_entity).remove::<Selected>();
-            //             select.select_entity = None;
-            //             return;
-            //         } else {
-            //             println!("1 - 2l");
-            //             commands.entity(*selected_entity).remove::<Selected>();
-            //             select.select_entity = None;
-            //             return;
-            //         }
-            //     }
-            //     println!("2 - 1");
-            //     select.select_entity = Some(*selected_entity);
-            //     commands.entity(*selected_entity).insert(Selected);
-            // } else {
-            //     println!("2 - 2");
-            //     if let Some(entity) = select.select_entity {
-            //         commands.entity(entity).remove::<Selected>();
-            //         select.select_entity = None;
-            //     }
-            // }
-
-            if let Some(selected_entity) = chunk_res.objects_ex.get(&tiled_pos) {
+            if let Some(selected_entity) = chunk_res.objects_ex.get(&&WorldSystem::get_currect_chunk_subtile(cursor.0.as_ivec2())) {
                 if select.select_entity != Some(*selected_entity) {
                     // Удаление старого выделения
                     if let Some(entity) = select.select_entity {
@@ -304,6 +367,7 @@ fn select_object(
                 if let Some(entity) = select.select_entity {
                     commands.entity(entity).remove::<Selected>();
                     select.select_entity = None;
+                    return;
                 }
             }
         }
@@ -321,7 +385,7 @@ fn selector_update(
         return;
     }
 
-    println!("selector");
+    // println!("selector");
 
     if select.selector_entity.is_none() {
         if let Ok((_, transform)) = selected.get_single() {
@@ -342,7 +406,7 @@ fn selector_update(
                 Select,
                 Name::new("Selector")
             )).id();
-            println!("selector created");
+            // println!("selector created");
             select.selector_entity = Some(entity);
         }
     }
@@ -357,15 +421,21 @@ fn selector_remove(
         return;
     }
 
-    println!("selected remove");
+    // println!("selected remove");
 
     for entity in removed.read() {
-        if let Some(entity) = select.selector_entity {
-            commands.entity(entity).despawn_recursive();
-            select.selector_entity = None;
-            select.select_entity = None;
+        if let Some(selected_entity) = select.selector_entity {
+            if entity == selected_entity {  // Возможная проблема мульти компонента
+                commands.entity(selected_entity).despawn_recursive();
+                select.selector_entity = None;
+                select.select_entity = None;
 
-            println!("selected removed");
+                // println!("selected removed");
+            } else if select.select_entity.is_none() {
+                commands.entity(selected_entity).despawn_recursive();
+                select.selector_entity = None;
+                // println!("selector removed");
+            }
         }
     }
 }
@@ -443,7 +513,10 @@ pub fn update_select_box(
     }
 }
 
+// ==============================
 // Test
+// ==============================
+
 fn delete_object(
     mut commands:       Commands,
         cursor:         Res<CursorPosition>,

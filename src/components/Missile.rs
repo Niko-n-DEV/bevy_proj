@@ -3,7 +3,10 @@ use bevy::prelude::*;
 use crate::core::{
     //player::PlayerEntity::User, 
     Entity::EntityBase,
-    UserSystem::User
+    UserSystem::{
+        User,
+        UserControl
+    }
 };
 
 pub const BULLET_LIFETIME: f32 = 10.0;
@@ -46,7 +49,7 @@ pub fn update_bullet_hits(
     bullet_query: Query<(&Transform, Entity), (With<Bullet>, Without<EntityBase>)>,
     mut enemy_query: Query<
         (&mut EntityBase, &mut Transform),
-        (Without<Bullet>, Without<User>),
+        (Without<Bullet>, Without<UserControl>),
     >,
 ) {
     if bullet_query.is_empty() {

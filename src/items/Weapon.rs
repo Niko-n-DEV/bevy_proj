@@ -1,3 +1,4 @@
+#![allow(unused)]
 use bevy::prelude::*;
 
 use crate::core::{
@@ -8,6 +9,7 @@ use crate::core::{
     },
     UserSystem::{
         CursorPosition,
+        UserControl,
         User
     },
     Missile::{
@@ -36,7 +38,7 @@ pub fn gun_controls(
         &mut Sprite,
         &mut PlayerAttach,
     )>,
-    mut user_container: Query<&mut Container, With<User>>,
+    mut user_container: Query<&mut Container, With<UserControl>>,
     cursor:             Res<CursorPosition>,
     time:               Res<Time>,
     _buttons:           Res<ButtonInput<MouseButton>>,
@@ -44,7 +46,7 @@ pub fn gun_controls(
     atlas:              Res<AtlasRes>,
     register:           Res<Registry>
 ) {
-    if gun_query.is_empty() && user_container.is_empty() {
+    if gun_query.is_empty() || user_container.is_empty() {
         return;
     }
 
@@ -117,5 +119,39 @@ pub fn gun_controls(
                 attach.offset = Vec2::new(0., -3.);
             }
         }
+    }
+}
+
+// ==============================
+// Melee
+// ==============================
+
+#[derive(Component, Debug, Clone)]
+pub struct AttackTimer(pub Timer);
+
+#[derive(Component, Reflect, Default, Clone)]
+pub struct MeleeAttack;
+
+pub struct CombatPlugin;
+
+impl Plugin for CombatPlugin {
+    fn build(&self, app: &mut App) {
+        // app.with_default_schedule(CoreSchedule::FixedUpdate, |app| {
+        //     app.add_event::<HitEvent>().add_event::<EnemyDeathEvent>();
+        // })
+        // .add_event::<ObjBreakEvent>()
+        // .add_plugin(CollisionPlugion)
+        // .add_systems(
+        //     (
+        //         handle_hits,
+        //         cleanup_marked_for_death_entities.after(handle_enemy_death),
+        //         handle_attack_cooldowns.before(CustomFlush),
+        //         // spawn_hit_spark_effect.after(handle_hits),
+        //         handle_invincibility_frames.after(handle_hits),
+        //         handle_enemy_death.after(handle_hits),
+        //     )
+        //         .in_set(OnUpdate(GameState::Main)),
+        // )
+        // .add_system(apply_system_buffers.in_set(CustomFlush));
     }
 }

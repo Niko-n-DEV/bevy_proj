@@ -1,4 +1,4 @@
-//#![allow(unused)]
+#![allow(unused)]
 use bevy::{
     //input::mouse::{MouseMotion, MouseWheel},
     math::vec3,
@@ -19,7 +19,10 @@ use bevy_pixel_camera::{
 };
 
 use crate::core::{
-    UserSystem::User,
+    UserSystem::{
+        UserControl,
+        User,
+    },
     AppState
 };
 
@@ -27,12 +30,14 @@ use crate::core::{
 
 // Основной компонент камеры
 // Определить параметр зацепа к объекту (option)
-#[derive(Component, InspectorOptions, Reflect)]
-#[reflect(Component, InspectorOptions)]
-pub struct UserCamera {
+#[derive(Resource)]
+pub struct UserCameraRes {
     pub player_fixed: bool,
     pub coef: f32
 }
+
+#[derive(Component)]
+pub struct UserCamera;
 
 // ===== Base =====
 pub struct CameraController;
@@ -41,7 +46,8 @@ impl Plugin for CameraController {
     fn build(&self, app: &mut App) {
         app
             // Register Types
-            .register_type::<UserCamera>()
+            // Init Resource
+            .insert_resource(UserCameraRes { player_fixed: false, coef: 0.066 })
             // Init Plugins
             .add_plugins(PanCamPlugin::default())
             .add_plugins(PixelCameraPlugin)
@@ -61,10 +67,7 @@ impl CameraController {
             .spawn((
                 Camera2dBundle::default(),
                 PixelViewport,
-                UserCamera {
-                    player_fixed: false,
-                    coef: 0.075
-                }
+                UserCamera
             ))
             .insert(PanCam {
                 enabled: false,
@@ -76,44 +79,62 @@ impl CameraController {
 
     /// Переключает возможности камеры PanCam (Приближение и т.д.) при переходе между сценами.
     fn toggle_camera_options(
-        mut cam: Query<(&mut PanCam, &mut UserCamera)>
+        mut cam:    Query<(&mut PanCam)>,
+        mut u_cam:  ResMut<UserCameraRes>,
+            user:   Res<User>
     ) {
-        if let Ok((mut cam, mut user_cam)) = cam.get_single_mut() {
-            (cam.enabled, user_cam.player_fixed) = (!cam.enabled, !user_cam.player_fixed);
+        if let Ok(mut cam) = cam.get_single_mut() {
+            //(cam.enabled, u_cam.player_fixed) = (!cam.enabled, !u_cam.player_fixed);
+            cam.enabled = !cam.enabled;
+            if user.control_entity.is_none() {
+                u_cam.player_fixed = false
+            } else {
+                u_cam.player_fixed = true
+            }
         }
     }
 
     fn camera_follow_player(
-        mut camera_query: Query<(&mut Transform, &UserCamera), (With<Camera2d>, Without<User>)>,
-            player_query: Query<&Transform, With<User>>
+        mut camera_query: Query<&mut Transform, (With<Camera2d>, Without<UserControl>)>,
+            player_query: Query<&Transform, With<UserControl>>,
+            user_camera:  Res<UserCameraRes>
     ) {
         if player_query.is_empty() || camera_query.is_empty() {
             return;
         }
 
         if let Ok(mut camera_transform) = camera_query.get_single_mut() {
-            if camera_transform.1.player_fixed {
+            if user_camera.player_fixed {
                 let player_transform = player_query.single().translation;
                 let (x, y) = (player_transform.x, player_transform.y);
-                camera_transform.0.translation = camera_transform.0.translation.lerp(vec3(x, y, 0.0), camera_transform.1.coef);
+                camera_transform.translation = camera_transform.translation.lerp(vec3(x, y, 0.0), user_camera.coef);
             }
         }
     }
 
     fn toggle_camera_fix(
-        mut cam_query:      Query<(&mut PanCam, &mut UserCamera)>,
+        mut cam_query:      Query<(&mut PanCam)>,
             keyboard_input: Res<ButtonInput<KeyCode>>,
+        mut user_camera:    ResMut<UserCameraRes>,
+            user:           Res<User>
     ) {
         if keyboard_input.just_released(KeyCode::F1) {
             if let Ok(mut cam) = cam_query.get_single_mut() {
-                if cam.1.player_fixed {
-                    cam.0.grab_buttons = vec![MouseButton::Middle];
-                    cam.0.zoom_to_cursor = true;
+                if user_camera.player_fixed {
+                    cam.grab_buttons = vec![MouseButton::Middle];
+                    cam.zoom_to_cursor = true;
                 } else {
-                    cam.0.grab_buttons = vec![];
-                    cam.0.zoom_to_cursor = false;
+                    cam.grab_buttons = vec![];
+                    cam.zoom_to_cursor = false;
                 }
-                cam.1.player_fixed = !cam.1.player_fixed;
+                user_camera.player_fixed = !user_camera.player_fixed;
+            }
+        }
+
+        if user.control_entity.is_none() && !user_camera.player_fixed {
+            if let Ok(mut cam) = cam_query.get_single_mut() {
+                cam.grab_buttons = vec![MouseButton::Middle];
+                cam.zoom_to_cursor = true;
             }
         }
     }

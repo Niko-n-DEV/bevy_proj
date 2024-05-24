@@ -1,34 +1,75 @@
-// #![allow(unused)]
+#![allow(unused)]
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 use std::{
     fmt::Debug,
     hash::Hash,
     ops::{Index, IndexMut},
+    marker::PhantomData
 };
 
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
-    AppState,
-    Item::{
-        ItemPickUpEvent,
-        ItemDropEvent
-    },
-    ItemType::{
-        ItemAndCount,
-        ItemType,
-        Pickupable
-    },
+    interface::Inventory::{
+        inventory_update, 
+        inventory_click_item,
+        toggle_inventory_open, 
+        toggle_inventory_open_event_send, 
+        InventoryDisplayToggleEvent
+    }, 
+    AppState, 
+    ItemType::ItemType
 };
 
-pub struct ContainerPlugin;
+pub struct ContainerPlugin<I: ItemTypeEx> {
+    pub phantom: PhantomData<I>
+}
 
-impl Plugin for ContainerPlugin {
+impl<I: ItemTypeEx> Plugin for ContainerPlugin<I> {
     fn build(&self, app: &mut App) {
-        
+        app
+            // Reg Type
+            .register_type::<Inventory>()
+            // Init Resource
+            .init_resource::<CursorContainer>()
+            // Reg Events
+            .add_event::<InventoryDisplayToggleEvent>()
+            .add_event::<ItemPickUpEvent>()
+            .add_event::<ItemDropEvent>()
+            // Systems
+            .add_systems(Update, 
+                (
+                //  BarGui::spawn_inventory_ui::<I>,
+                    toggle_inventory_open_event_send::<I>,
+                    toggle_inventory_open::<I>,
+                    inventory_click_item
+                ).run_if(in_state(AppState::Game))
+            )
+            .add_systems( Update,
+                (
+                    inventory_update::<I>.after(toggle_inventory_open::<I>)
+                ).run_if(in_state(AppState::Game))
+            )
+        ;
     }
+}
+
+// ==============================
+// Event
+// ==============================
+
+
+#[derive(Event, Debug, Copy, Clone)]
+pub struct ItemPickUpEvent {
+    pub picker: Entity,
+}
+
+#[derive(Event, Debug, Copy, Clone)]
+pub struct ItemDropEvent {
+    pub droper: Entity,
+    pub item: Entity,
 }
 
 // ==============================
@@ -133,20 +174,6 @@ impl Container {
                 });
         }
         None
-    }
-
-    /// Выложить из контейнера слот предмета
-    pub fn upload_from_container(
-        &mut self,
-        item_type: ItemType,
-        count: usize
-    ) {
-
-    }
-
-    /// Выложить из контейнера слот предмета с определённым кол-вом
-    pub fn upload_def_from_container() {
-
     }
 }
 
@@ -257,12 +284,31 @@ impl<I: ItemTypeEx> IndexMut<(I, u8)> for Equipment<I> {
 }
 
 // ==============================
+// Cursor Contain
+// ==============================
+
+#[derive(Resource, Default)]
+pub struct CursorContainer {
+    pub slot: Option<Slot>
+}
+
+// ==============================
 // Inventory
 // ==============================
 
-#[derive(Debug, Clone, Component)]
+#[derive(Debug, Clone, Component, InspectorOptions, Reflect)]
+#[reflect(Component, InspectorOptions)]
 pub struct Inventory {
-    items: Vec<Option<Entity>>,
+    items: Vec<Option<Slot>>,
+}
+
+#[derive(Debug, Clone, Component, InspectorOptions, Reflect)]
+#[reflect(Component, InspectorOptions)]
+pub struct Slot {
+    pub id_name:    String,
+    pub name:       String,
+    pub item_type:  ItemType,
+    pub count:      usize,
 }
 
 impl Default for Inventory {
@@ -272,7 +318,7 @@ impl Default for Inventory {
 }
 
 impl Inventory {
-    pub const DEFAULT_CAPACITY: usize = 16;
+    pub const DEFAULT_CAPACITY: usize = 12;
 
     // Установка размера инвентаря по умолчанию
     pub fn with_capacity(cap: usize) -> Self {
@@ -281,39 +327,112 @@ impl Inventory {
         }
     }
 
-    /// Добавление в первый попавшиеся свободный слот
-    pub fn add(&mut self, item: Entity) -> bool {
-        if let Some((_, e)) = self.items.iter_mut().enumerate().find(|(_, b)| b.is_none()) {
-            *e = Some(item);
-            true
-        } else {
-            false
+    /// Добавление в первый попавшийся свободный слот
+    pub fn add(&mut self, item: (String, ItemType, usize)) -> bool {
+        // Проверяем, есть ли слот с таким же именем
+        if let Some(slot) = self.items.iter_mut().find(|slot| {
+            if let Some(slot) = slot {
+                slot.id_name == item.0 && slot.item_type == item.1
+            } else {
+                false
+            }
+        }) {
+            if let Some(slot) = slot {
+                slot.count += item.2;
+                return true;
+            }
         }
+
+        // Если слот с таким именем не найден, ищем свободный слот
+        if let Some(slot) = self.items.iter_mut().find(|slot| slot.is_none()) {
+            *slot = Some(Slot {
+                id_name: item.0.clone(),
+                name: item.0.clone(),
+                item_type: item.1,
+                count: item.2,
+            });
+            return true;
+        }
+
+        false
     }
 
-    /// Взятие предмета из инвентаря
-    pub fn take(&mut self, item: Entity) -> bool {
-        if let Some((_, e)) = self
-            .items
-            .iter_mut()
-            .enumerate()
-            .find(|(_, b)| b.is_some() && b.unwrap() == item)
-        {
-            *e = None;
-            true
-        } else {
-            false
+    /// Взятие из инвентаря (без выхода)
+    pub fn take(&mut self, item: (String, usize)) -> bool {
+        if let Some(slot) = self.items.iter_mut().find(|slot| {
+            if let Some(slot) = slot {
+                slot.id_name == item.0 && slot.count >= item.1
+            } else {
+                false
+            }
+        }) {
+            if let Some(slot) = slot {
+                if slot.count > item.1 {
+                    slot.count -= item.1;
+                } else {
+                    *slot = Slot {
+                        id_name: "".to_string(),
+                        name: "".to_string(),
+                        item_type: ItemType::None,
+                        count: 0,
+                    };
+                }
+                return true;
+            }
         }
+        
+        false
     }
-    
-    /// Проверка всех слотов и возвращение Предмета
-    pub fn iter_some(&self) -> impl Iterator<Item = Entity> + '_ {
-        self.items.iter().filter_map(|i| *i)
+
+    /// Взяти из инвентаря (с выходом)
+    pub fn take_all_ex(&mut self, name: &str) -> Option<Slot> {
+        if let Some(slot) = self.items.iter_mut().find(|slot_find| {
+            if let Some(slot_find) = slot_find {
+                slot_find.id_name == name || slot_find.name == name
+            } else {
+                false
+            }
+        }) {
+            return slot.take();
+        }
+
+        None
+    }
+
+    /// Поиск в инвентаре
+    pub fn find(&mut self, name: &str) -> bool {
+        if let Some(slot) = self.items.iter_mut().find(|slot_find| {
+            if let Some(slot_find) = slot_find {
+                slot_find.id_name == name || slot_find.name == name
+            } else {
+                false
+            }
+        }) {
+            return true;
+        }
+
+        false
+    }
+
+    /// 
+    pub fn find_slot_index(&self, name: &str) -> Option<usize> {
+        self.items.iter().position(|slot| {
+            if let Some(slot) = slot {
+                slot.name == name
+            } else {
+                false
+            }
+        })
+    }
+
+    /// Проверка всех слотов и возвращение предметов
+    pub fn iter_some(&self) -> impl Iterator<Item = &Slot> + '_ {
+        self.items.iter().filter_map(|slot| slot.as_ref())
     }
 
     /// Проверка, полон ли инвентарь
     pub fn is_full(&self) -> bool {
-        self.items.iter().all(|i| i.is_some())
+        self.items.iter().all(|slot| slot.is_some())
     }
 
     /// Размер занимаемого пространства
@@ -323,12 +442,12 @@ impl Inventory {
 
     /// Проверка, пуст ли инвентарь
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.items.iter().all(|slot| slot.is_none())
     }
 }
 
 impl Index<usize> for Inventory {
-    type Output = Option<Entity>;
+    type Output = Option<Slot>;
 
     /// Возвращает элемент по указанному индексу
     fn index(&self, index: usize) -> &Self::Output {
