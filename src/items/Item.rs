@@ -12,7 +12,7 @@ use crate::core::{
         Position
     }, 
     Object::EntityObject,
-    ItemType::Pickupable
+    ItemType::ItemEntity
 };
 
 #[derive(Component, Default)]
@@ -33,7 +33,7 @@ pub fn spawn_item(
         registry:   Res<Registry>,
     mut chunk_res:  ResMut<Chunk>,
         atlas:      Res<AtlasRes>,
-    mut items:      Query<(Entity, &mut Pickupable), With<Pickupable>>,
+    mut items:      Query<(Entity, &mut ItemEntity), With<ItemEntity>>,
     mut event:      EventReader<ItemSpawn>
 ) {
     if event.is_empty() {
@@ -61,7 +61,7 @@ pub fn spawn_item(
                             },
                             ..default()
                         },
-                        Pickupable {
+                        ItemEntity {
                             item: info.item_type,
                             count: event.2
                         },

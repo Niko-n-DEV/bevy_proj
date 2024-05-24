@@ -17,6 +17,7 @@ use crate::core::{
     EntityType::EntityType,
     ObjType::ObjectSizeType,
     resource::graphic::Atlas::AtlasRes,
+    Craft::CraftResult,
     Util::{
         IVec2C,
         Vec2C
@@ -60,6 +61,11 @@ pub struct ObjectRegistry {
     pub durability:     Option<usize>
 }
 
+// pub struct EntityObjectDefinition {
+//     pub id_name: String,
+//     pub components: HashMap<String, Component>,
+// }
+
 impl ObjectRegistry {
     /// Получение прочности предмета
     pub fn get_base_durability(&self) -> Option<usize> {
@@ -89,6 +95,12 @@ impl ItemRegistry {
     pub fn get_stack_size(&self) -> Option<usize> {
         self.stack_size
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RecipeRegistry {
+    pub request:    Vec<String>,
+    pub result:     CraftResult,
 }
 
 pub struct TestRegistry(pub String);

@@ -2,9 +2,6 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
-//, window::PrimaryWindow};
-//use rand::Rng;
-
 use crate::
     core::{
         UserSystem::{
@@ -25,10 +22,6 @@ use crate::
             EntityHead,
             Health,
             Position,
-            // Body,
-            // Head
-            //Speed,
-            //Velocity,
         },
         EntityType::{
             EntityType,
@@ -37,7 +30,6 @@ use crate::
         },
         Movement::DirectionState,
         Missile::{update_bullet_hits, update_bullets},
-        // ContainerSystem::Container,
         AppState
     };
 
@@ -51,6 +43,16 @@ pub struct EnemySpawner {
     pub is_active: bool,
     pub cooldown: f32,
     pub timer: f32,
+}
+
+impl Default for EnemySpawner {
+    fn default() -> Self {
+        Self {
+            is_active:  false,
+            cooldown:   1.,
+            timer:      1.
+        }
+    }
 }
 
 #[derive(Component)]
@@ -258,8 +260,6 @@ fn inertia_attenuation(
             if vel.linvel.abs().max_element() < min_threshold {
                 vel.linvel = Vec2::ZERO;
             }
-
-            // println!("{}", vel.linvel);
         }
     }
 }
@@ -410,7 +410,7 @@ pub fn change_dir_velocity(
 
 
 pub fn change_dir_head(
-    mut gizmos:     Gizmos,
+    // mut gizmos:     Gizmos,
     // Сущность которая меняет направление в зависимости от 
     mut query_h:    Query<(&mut EntityHead, &mut TextureAtlas), With<EntityHead>>,
     mut query_b:    Query<(Entity, &EntityBase, &Transform), With<EntityBase>>,

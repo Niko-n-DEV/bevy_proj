@@ -18,11 +18,9 @@ mod util;
 /// Совокупность основных модулей, именуемое как `core` , для предоставления быстрого доступа ко всем модулям
 mod core {
     #![allow(non_snake_case)]
-
     pub use crate::AppState;
 
     pub use crate::components::*;
-    #[allow(unused)]
     pub use crate::objects::*;
     pub use crate::items::*;
     pub use crate::entities::*;

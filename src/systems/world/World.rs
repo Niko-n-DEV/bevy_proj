@@ -62,7 +62,7 @@ use crate::core::{
         Ammo, 
         Item, 
         ItemType, 
-        Pickupable,
+        ItemEntity,
         Material
     }, 
     Object::{
@@ -80,7 +80,8 @@ use crate::core::{
         PlayerPlugin,
         PlayerAttach,
     }, 
-    Weapon::GunController, 
+    Weapon::GunController,
+    interact::Damage::DamageSystem
 };
 
 pub struct WorldSystem;
@@ -101,6 +102,7 @@ impl Plugin for WorldSystem {
             .add_plugins((
                 EntitySystem,   // Инициализация плагина, отвечающего за работу всех entity
                 PlayerPlugin,   // Инициализация плагина, отвечающего за работу управления entity-player
+                DamageSystem,
                 ContainerPlugin::<ItemType> {
                     phantom: PhantomData {}
                 },

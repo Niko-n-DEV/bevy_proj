@@ -108,7 +108,7 @@ pub enum Ammo {
 /// Структура для того, что может быть поднято
 #[allow(unused)]
 #[derive(Component, InspectorOptions)]
-pub struct Pickupable {
+pub struct ItemEntity {
     pub(crate) item: ItemType,
     pub count: usize
 }

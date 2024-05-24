@@ -103,13 +103,13 @@ impl User {
         if keyboard_input.just_pressed(KeyCode::F5) {
             if user.control_entity.is_none() {
                 for (entity_b, transform) in &entity_b {
-                    if 16.0 > Vec3::distance(transform.translation, cursor.0.extend(0.5)) {
+                    if 8.0 > Vec3::distance(transform.translation, cursor.0.extend(0.5)) {
                         commands.entity(entity_b)
                             .insert(UserControl {
                                 uid: user.uid,
                                 user_name: user.user_name.clone()
                             })
-                            .insert(Inventory::with_capacity(12));
+                            .insert(Inventory::with_capacity(6));
 
                         for (entity_h, head, transform) in &entity_h {
                             if head.parent == entity_b {
@@ -194,6 +194,19 @@ pub fn cursor_track(
 }
 
 // ==============================
+// CursorMode
+// ==============================
+
+#[derive(Default, Resource)]
+enum ClickMode {
+    #[default]
+    None,
+    Placer,
+    Build,
+    Atack,
+}
+
+// ==============================
 // Placer
 // ==============================
 
@@ -255,10 +268,14 @@ fn create_text_placer(
                             sections: vec![TextSection::new(
                                 format!("{}", text.1),
                                 TextStyle {
-                                    font_size: 8.0,
+                                    font_size: 12.0,
                                     ..default()
                                 },
                             )],
+                            ..default()
+                        },
+                        transform: Transform {
+                            scale: Vec3::splat(0.5),
                             ..default()
                         },
                         ..default()
@@ -288,6 +305,10 @@ fn attach_to_cursor(
         }
     }
 }
+
+// ==============================
+// ?
+// ==============================
 
 #[derive(Component)]
 pub struct Selectable {
@@ -323,36 +344,8 @@ fn select_object(
 ) {
     if keyboard_input.pressed(KeyCode::ControlLeft) {
         if mouse_buttons.just_pressed(MouseButton::Left) {
-            let cursor_pos = cursor.0;
-            let tiled_pos = WorldSystem::get_currect_chunk_tile(cursor_pos.as_ivec2());
 
-            // Проверка наличие Entity на месте указанном месте
-            // if let Some(selected_entity) = chunk_res.objects_ex.get(&tiled_pos) {
-            //     if let Some(select_entity) = select.select_entity {
-            //         if select_entity != *selected_entity {
-            //             println!("1 - 1");
-            //             commands.entity(*selected_entity).remove::<Selected>();
-            //             select.select_entity = None;
-            //             return;
-            //         } else {
-            //             println!("1 - 2l");
-            //             commands.entity(*selected_entity).remove::<Selected>();
-            //             select.select_entity = None;
-            //             return;
-            //         }
-            //     }
-            //     println!("2 - 1");
-            //     select.select_entity = Some(*selected_entity);
-            //     commands.entity(*selected_entity).insert(Selected);
-            // } else {
-            //     println!("2 - 2");
-            //     if let Some(entity) = select.select_entity {
-            //         commands.entity(entity).remove::<Selected>();
-            //         select.select_entity = None;
-            //     }
-            // }
-
-            if let Some(selected_entity) = chunk_res.objects_ex.get(&tiled_pos) {
+            if let Some(selected_entity) = chunk_res.objects_ex.get(&&WorldSystem::get_currect_chunk_subtile(cursor.0.as_ivec2())) {
                 if select.select_entity != Some(*selected_entity) {
                     // Удаление старого выделения
                     if let Some(entity) = select.select_entity {
@@ -374,6 +367,7 @@ fn select_object(
                 if let Some(entity) = select.select_entity {
                     commands.entity(entity).remove::<Selected>();
                     select.select_entity = None;
+                    return;
                 }
             }
         }
@@ -391,7 +385,7 @@ fn selector_update(
         return;
     }
 
-    println!("selector");
+    // println!("selector");
 
     if select.selector_entity.is_none() {
         if let Ok((_, transform)) = selected.get_single() {
@@ -412,7 +406,7 @@ fn selector_update(
                 Select,
                 Name::new("Selector")
             )).id();
-            println!("selector created");
+            // println!("selector created");
             select.selector_entity = Some(entity);
         }
     }
@@ -427,15 +421,21 @@ fn selector_remove(
         return;
     }
 
-    println!("selected remove");
+    // println!("selected remove");
 
     for entity in removed.read() {
-        if let Some(entity) = select.selector_entity {
-            commands.entity(entity).despawn_recursive();
-            select.selector_entity = None;
-            select.select_entity = None;
+        if let Some(selected_entity) = select.selector_entity {
+            if entity == selected_entity {  // Возможная проблема мульти компонента
+                commands.entity(selected_entity).despawn_recursive();
+                select.selector_entity = None;
+                select.select_entity = None;
 
-            println!("selected removed");
+                // println!("selected removed");
+            } else if select.select_entity.is_none() {
+                commands.entity(selected_entity).despawn_recursive();
+                select.selector_entity = None;
+                // println!("selector removed");
+            }
         }
     }
 }
@@ -513,7 +513,10 @@ pub fn update_select_box(
     }
 }
 
+// ==============================
 // Test
+// ==============================
+
 fn delete_object(
     mut commands:       Commands,
         cursor:         Res<CursorPosition>,

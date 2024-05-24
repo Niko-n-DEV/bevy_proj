@@ -39,7 +39,7 @@ impl LayerIndex for SpriteLayer {
             Object => 1.1,
             Item => 1.,
             Entity => 1.,
-            EntityPart => 1.1,
+            EntityPart => 1.0,
             //Ui => 995.
         }
     }

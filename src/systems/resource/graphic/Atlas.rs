@@ -104,7 +104,7 @@ pub struct ItemsAtlas {
 }
 
 impl ItemsAtlas {
-    pub fn extruct_texture(&self, name: &str) -> Option<(TextureAtlas, UiImage)> {
+    pub fn extruct_texture(&self, name: &str) -> Option<(TextureAtlas, Handle<Image>)> {
         if let Some(index) = &self.ids {
             if let Some(index) = index.get(name) {
                 if let Some(atlas_texture) = &self.image {
@@ -113,8 +113,8 @@ impl ItemsAtlas {
                             layout: atlas_layout.clone(),
                             index: *index
                         };
-                        let img = UiImage::new(atlas_texture.clone());
-                        return Some((atlas, img));
+                        // let img = UiImage::new(atlas_texture.clone());
+                        return Some((atlas, atlas_texture.clone()));
                     }
                 }
             }

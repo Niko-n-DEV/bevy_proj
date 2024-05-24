@@ -20,8 +20,8 @@ use crate::core::{
         EntityBase,
         EntityHead, 
         Position,
-        // Head
     },
+    Object::EntityObject,
     UserSystem::CursorPosition,
     Missile::*,
     Movement::DirectionState,
@@ -33,7 +33,7 @@ use crate::core::{
     },
     Item::EntityItem,
     ItemType::{
-        Pickupable,
+        ItemEntity,
         ItemType
     },
     world::chunk::Chunk::Chunk,
@@ -43,7 +43,8 @@ use crate::core::{
         Container,
         Inventory,
         ItemTypeEx
-    }
+    },
+    interact::Damage::DamageObject
 };
 
 #[derive(Default, Reflect, GizmoConfigGroup)]
@@ -59,6 +60,8 @@ impl Plugin for PlayerPlugin {
             .add_systems(Update, Self::player_movement.run_if(in_state(AppState::Game)))
             // Подбирание игроком предметов поддающиеся к подниманию
             .add_systems(Update, Self::player_pickup.run_if(in_state(AppState::Game)))
+            // Удар игроков по объекту
+            .add_systems(Update, Self::player_atack.run_if(in_state(AppState::Game)))
             // [Test] Обновление системы управления оружием
             .add_systems(Update, gun_controls.run_if(in_state(AppState::Game)))
             // [Test] Соединение оружия и игрока
@@ -110,24 +113,41 @@ impl PlayerPlugin {
     }
 
     fn head_movement(
-        // mut gizmos:     Gizmos,
-        // mut my_gizmos:  Gizmos<MyRoundGizmos>,
-        
         mut head:   Query<&mut EntityHead, With<UserSubControl>>,
             cursor: Res<CursorPosition>,
-        // Курсор
-        // Местоположение игрока player: Query<&EntityBase, With<EntityBase>>
     ) {
         if head.is_empty() {
             return;
         }
 
         if let Ok(mut head) = head.get_single_mut() {
-            // gizmos.line_2d(player_pos.translation.truncate(), cursor.0, Color::YELLOW)
             if head.look_at != cursor.0 {
                 head.look_at = cursor.0
             }
         }
+    }
+
+    #[allow(unused)]
+    fn player_atack(
+        mut chunk_res:      ResMut<Chunk>,
+            cursor:         Res<CursorPosition>,
+            mouse_input:    Res<ButtonInput<MouseButton>>,
+            user:           Query<(&EntityBase ,&Transform), With<UserControl>>,
+            object:         Query<(Entity, &Transform), With<EntityObject>>,
+        // entity: Query<(&mut EntityBase, &Transform), With<EntityBase>>,
+        mut event:          EventWriter<DamageObject>
+    ) {
+        if user.is_empty() {
+            return;
+        }
+
+        if mouse_input.just_pressed(MouseButton::Left) {
+            if let Ok(player_pos) = user.get_single() {
+                if player_pos.0.interaction_radius > Vec3::distance(cursor.0.extend(0.5), player_pos.1.translation) {
+                    event.send(DamageObject(WorldSystem::get_currect_chunk_tile(cursor.0.as_ivec2()), 1.0));
+                }
+            }
+        }   
     }
 
     fn player_pickup(
@@ -135,7 +155,7 @@ impl PlayerPlugin {
         mut chunk_res:          ResMut<Chunk>,
         mut user:               Query<(&mut Inventory, &EntityBase, &Transform), With<UserControl>>,
             keyboard_input:     Res<ButtonInput<KeyCode>>,
-            pickupable_quety:   Query<(Entity, &Transform, &Pickupable, &EntityItem), Without<UserControl>>
+            pickupable_quety:   Query<(Entity, &Transform, &ItemEntity, &EntityItem), Without<UserControl>>
     ) {
         if pickupable_quety.is_empty() || user.is_empty() {
             return;

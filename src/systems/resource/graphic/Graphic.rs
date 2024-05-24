@@ -63,15 +63,15 @@ pub fn setup_ex(
     );
     let atlas_nearest_handle = texture_atlases.add(texture_atlas_nearest);
 
-    // Спавн спрайта атласа ждя debug
-    commands.spawn(SpriteBundle {
-        texture: nearest_texture.clone(),
-        transform: Transform {
-            translation: Vec3 { x: -128., y: -128., z: 1. },
-            ..default()
-        },
-        ..default()
-    });
+    // // Спавн спрайта атласа ждя debug
+    // commands.spawn(SpriteBundle {
+    //     texture: nearest_texture.clone(),
+    //     transform: Transform {
+    //         translation: Vec3 { x: -128., y: -128., z: 1. },
+    //         ..default()
+    //     },
+    //     ..default()
+    // });
 
     handle_cust_atlas.layout =  Some(atlas_nearest_handle.clone());
     handle_cust_atlas.image =   Some(nearest_texture.clone());
@@ -93,6 +93,8 @@ pub fn setup_ex(
     handle_dir_atlas.layout =   Some(atlas_dir_nearest_handle.clone());
     handle_dir_atlas.image =    Some(nearest_texture_atlases.clone());
     handle_dir_atlas.ids =      Some(_hash.clone());
+
+    
 
     // ==============================
     // Entity

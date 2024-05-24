@@ -14,6 +14,7 @@ use bevy_inspector_egui::InspectorOptions;
 use crate::core::{
     interface::Inventory::{
         inventory_update, 
+        inventory_click_item,
         toggle_inventory_open, 
         toggle_inventory_open_event_send, 
         InventoryDisplayToggleEvent
@@ -31,6 +32,8 @@ impl<I: ItemTypeEx> Plugin for ContainerPlugin<I> {
         app
             // Reg Type
             .register_type::<Inventory>()
+            // Init Resource
+            .init_resource::<CursorContainer>()
             // Reg Events
             .add_event::<InventoryDisplayToggleEvent>()
             .add_event::<ItemPickUpEvent>()
@@ -38,9 +41,10 @@ impl<I: ItemTypeEx> Plugin for ContainerPlugin<I> {
             // Systems
             .add_systems(Update, 
                 (
-                //    BarGui::spawn_inventory_ui::<I>,
+                //  BarGui::spawn_inventory_ui::<I>,
                     toggle_inventory_open_event_send::<I>,
                     toggle_inventory_open::<I>,
+                    inventory_click_item
                 ).run_if(in_state(AppState::Game))
             )
             .add_systems( Update,
@@ -280,6 +284,15 @@ impl<I: ItemTypeEx> IndexMut<(I, u8)> for Equipment<I> {
 }
 
 // ==============================
+// Cursor Contain
+// ==============================
+
+#[derive(Resource, Default)]
+pub struct CursorContainer {
+    pub slot: Option<Slot>
+}
+
+// ==============================
 // Inventory
 // ==============================
 
@@ -344,7 +357,7 @@ impl Inventory {
         false
     }
 
-    /// Взятие предмета из инвентаря
+    /// Взятие из инвентаря (без выхода)
     pub fn take(&mut self, item: (String, usize)) -> bool {
         if let Some(slot) = self.items.iter_mut().find(|slot| {
             if let Some(slot) = slot {
@@ -369,6 +382,47 @@ impl Inventory {
         }
         
         false
+    }
+
+    /// Взяти из инвентаря (с выходом)
+    pub fn take_all_ex(&mut self, name: &str) -> Option<Slot> {
+        if let Some(slot) = self.items.iter_mut().find(|slot_find| {
+            if let Some(slot_find) = slot_find {
+                slot_find.id_name == name || slot_find.name == name
+            } else {
+                false
+            }
+        }) {
+            return slot.take();
+        }
+
+        None
+    }
+
+    /// Поиск в инвентаре
+    pub fn find(&mut self, name: &str) -> bool {
+        if let Some(slot) = self.items.iter_mut().find(|slot_find| {
+            if let Some(slot_find) = slot_find {
+                slot_find.id_name == name || slot_find.name == name
+            } else {
+                false
+            }
+        }) {
+            return true;
+        }
+
+        false
+    }
+
+    /// 
+    pub fn find_slot_index(&self, name: &str) -> Option<usize> {
+        self.items.iter().position(|slot| {
+            if let Some(slot) = slot {
+                slot.name == name
+            } else {
+                false
+            }
+        })
     }
 
     /// Проверка всех слотов и возвращение предметов

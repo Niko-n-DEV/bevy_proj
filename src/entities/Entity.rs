@@ -21,7 +21,7 @@ use crate::core::{
 };
 
 /// Компонент отвечающий за [Здоровье]
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect, Default, Debug)]
 pub struct Health(pub f32);
 
 /// Компонент отвечающий за [Скорость]
@@ -31,7 +31,7 @@ pub struct Health(pub f32);
 pub struct Speed(pub f32, pub f32, pub f32);
 
 /// Компонент отвечающий за [Позицию]
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect, Default, Debug)]
 pub struct Position(pub Vec2);
 
 /// Компонент отвечающий за [Направление движения]

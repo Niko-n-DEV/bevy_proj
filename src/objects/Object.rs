@@ -18,10 +18,11 @@ use crate::core::{
 
 #[derive(Component)]
 pub struct EntityObject {
-    pub health: Health,
-    pub position: Position,
-    pub direction: DirectionState,
-    pub movable: bool,
+    pub id_name:    String,
+    pub health:     Health,
+    pub position:   Position,
+    pub direction:  DirectionState,
+    pub movable:    bool,
 }
 
 
@@ -29,10 +30,11 @@ pub struct EntityObject {
 impl Default for EntityObject {
     fn default() -> Self {
         Self {
-            health: Health(1.),
-            position: Position(Vec2::ZERO),
-            direction: DirectionState::South,
-            movable: true,
+            id_name:    "Object".to_string(),
+            health:     Health(2.),
+            position:   Position(Vec2::ZERO),
+            direction:  DirectionState::South,
+            movable:    true,
         }
     }
 }
@@ -59,7 +61,10 @@ pub fn spawn_object(
                 if let Some(sprite) = registry.get_object_texture(&info.id_texture, &atlas) {
                     let entity = commands
                         .spawn((
-                            EntityObject::default(),
+                            EntityObject {
+                                id_name: info.id_name.clone(),
+                                ..default()
+                            },
                             SpriteSheetBundle {
                                 texture: sprite.texture,
                                 atlas: sprite.atlas,
