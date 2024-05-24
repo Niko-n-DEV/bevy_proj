@@ -12,13 +12,19 @@ use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
-    interface::Inventory::{
-        inventory_update, 
-        inventory_click_item,
-        toggle_inventory_open, 
-        toggle_inventory_open_event_send, 
-        InventoryDisplayToggleEvent
-    }, 
+    interface::{
+        Inventory::{
+            inventory_update, 
+            inventory_click_item,
+            toggle_inventory_open, 
+            toggle_inventory_open_event_send, 
+            InventoryDisplayToggleEvent
+        },
+        Info::{
+            cursor_grab,
+            hover_item
+        },
+    },
     AppState, 
     ItemType::ItemType
 };
@@ -44,10 +50,13 @@ impl<I: ItemTypeEx> Plugin for ContainerPlugin<I> {
                 //  BarGui::spawn_inventory_ui::<I>,
                     toggle_inventory_open_event_send::<I>,
                     toggle_inventory_open::<I>,
-                    inventory_click_item
+                    inventory_click_item,
+                    hover_item
                 ).run_if(in_state(AppState::Game))
             )
-            .add_systems( Update,
+            .add_systems(PostUpdate, cursor_grab.run_if(in_state(AppState::Game))
+            )
+            .add_systems(Update,
                 (
                     inventory_update::<I>.after(toggle_inventory_open::<I>)
                 ).run_if(in_state(AppState::Game))
@@ -443,6 +452,23 @@ impl Inventory {
     /// Проверка, пуст ли инвентарь
     pub fn is_empty(&self) -> bool {
         self.items.iter().all(|slot| slot.is_none())
+    }
+
+    // ==========
+    // Test
+    // ==========
+    pub fn get_slot(&self, index: usize) -> Option<&Option<Slot>> {
+        self.items.get(index)
+    }
+
+    pub fn get_slot_mut(&mut self, index: usize) -> Option<&mut Option<Slot>> {
+        self.items.get_mut(index)
+    }
+
+    pub fn add_to_slot(&mut self, index: usize, slot: Option<Slot>) {
+        if let Some(s) = self.items.get_mut(index) {
+            *s = slot;
+        }
     }
 }
 

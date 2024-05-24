@@ -175,7 +175,7 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
                                 for index in 0..inventory.len() {
                                     let slot = slots.spawn((
                                         Name::new(format!("Slot {index}")),
-                                        InventoryDisplaySlot { index, slot: None, item: None, count: None },
+                                        InventoryDisplaySlot { index, slot: None },
                                         Interaction::default(),
                                         NodeBundle {
                                             style: Style {
@@ -204,11 +204,6 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
             }
         }                    
     }
-}
-
-#[derive(Component)]
-pub struct GuiSlot {
-    pub contain_slot:   Slot
 }
 
 pub(crate) fn inventory_update<I: ItemTypeEx>(
@@ -247,27 +242,18 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
             let mut slot_cmd = cmd.entity(slot_entity);
 
             if let Some(item_entity) = &inventory[slot.index] {
-                let render = if let Some(slot_item) = slot.item.clone() {
-                    if let Some(slot_count) = slot.count.clone() {
-                        if item_entity.name != slot_item || (item_entity.name == slot_item && slot_count != item_entity.count) {
-                            slot.slot = Some(item_entity.clone());
-
-                            slot.item = Some(item_entity.name.clone());
-                            slot.count = Some(item_entity.count.clone());
-                
-                            slot_cmd.despawn_descendants();
-                            true
-                        } else {
-                            false
-                        }
+                let render = if let Some(slot_item) = slot.slot.clone() {
+                    if item_entity.name != slot_item.name || (item_entity.name == slot_item.name && slot_item.count != item_entity.count) {
+                        slot.slot = Some(item_entity.clone());
+                        
+                        slot_cmd.despawn_descendants();
+                        true
                     } else {
                         false
                     }
                 } else {
                     slot.slot = Some(item_entity.clone());
 
-                    slot.item = Some(item_entity.name.clone());
-                    slot.count = Some(item_entity.count.clone());
                     true
                 };
 
@@ -281,10 +267,7 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
                                         image: UiImage::new(img.1),
                                         ..default()
                                     },
-                                    img.0,
-                                    GuiSlot {
-                                        contain_slot:   item_entity.clone()
-                                    },
+                                    img.0
                                 ));
                                 cb.spawn(TextBundle {
                                     style: Style {
@@ -314,7 +297,7 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
                     }
                 }
             } else {
-                slot.item = None;
+                slot.slot = None;
                 slot_cmd.despawn_descendants();
             }
         }
@@ -324,24 +307,44 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
 pub fn inventory_click_item(
     mut cursor_inv:     ResMut<CursorContainer>,
     mut player_inv:     Query<&mut Inventory, With<UserControl>>,
-        interact_slots: Query<(&Interaction, &GuiSlot)>,
+    mut interact_slots: Query<(&Interaction, &mut BackgroundColor, &InventoryDisplaySlot), Changed<Interaction>>,
     //     items:                  Query<&I>,
 ) {
-    for (interaction, slot) in &interact_slots {
-        if *interaction == Interaction::Pressed {
-            println!("Click on a Slot");
+    for (interaction, mut color, slot) in &mut interact_slots {
+        match *interaction {
+            Interaction::Pressed => {
+                if let Ok(mut inv) = player_inv.get_single_mut() {
+                    // Буферная переменная для временного хранения предмета из курсора
+                    let mut buffer_item = None;
 
-            // Перемещение значений слота инвентаря в "курсор" (Слот в инвентаре автоматически удалится)
-            // - Автоматически определить слот в инвентаре с информацией gui-слота
-            // Если в курсоре имеется уже "слот" - поместить на то место, от куда был взят другой "слот"
-            // (другая функция) Если слот свободен, то поместить в тот индекс в инвентарь "слот"
+                    // Если в курсоре есть предмет
+                    if let Some(cursor_item) = cursor_inv.slot.take() {
+                        // Если в слоте есть предмет, помещаем его в курсор
+                        if let Some(slot_item) = inv.get_slot_mut(slot.index).and_then(|slot_mut| slot_mut.take()) {
+                            cursor_inv.slot = Some(slot_item);
+                            // Помещаем предмет из курсора в буфер
+                            buffer_item = Some(cursor_item);
+                        } else {
+                            // Если в слоте нет предмета, помещаем предмет из курсора в слот
+                            inv.add_to_slot(slot.index, Some(cursor_item));
+                        }
+                    } 
+                    // Если в курсоре нет предмета, но есть предмет в слоте, забираем его
+                    else if let Some(slot_item) = inv.get_slot_mut(slot.index).and_then(|slot_mut| slot_mut.take()) {
+                        cursor_inv.slot = Some(slot_item);
+                    }
 
-            if let Ok(mut inv) = player_inv.get_single_mut() {
-                if inv.find(&slot.contain_slot.name) {
-                    if cursor_inv.slot.is_none() {
-                        cursor_inv.slot = inv.take_all_ex(&slot.contain_slot.name);
+                    // Если буфер не пуст, помещаем его в слот
+                    if let Some(buffer_item) = buffer_item {
+                        inv.add_to_slot(slot.index, Some(buffer_item));
                     }
                 }
+            }
+            Interaction::Hovered => {
+                *color = Color::rgb(0.28, 0.28, 0.28).into();
+            }
+            Interaction::None => {
+                *color = Color::rgb(0.24, 0.24, 0.24).into();
             }
         }
     }
@@ -370,8 +373,6 @@ pub struct InventoryDisplayNode {
 pub struct InventoryDisplaySlot {
     pub index:  usize,
     pub slot:   Option<Slot>,
-    pub item:   Option<String>,
-    pub count:  Option<usize>
 }
 
 // // Для инвентаря эквипа

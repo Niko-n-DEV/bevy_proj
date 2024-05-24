@@ -51,8 +51,6 @@ impl Plugin for UIPlugin {
             .add_systems(Update, 
                 (
                 Info::info_item_panel,
-                Info::cursor_grab,
-                Info::hover_item
                 ).run_if(in_state(AppState::Game))
             )
             // GameUI === DEBUG

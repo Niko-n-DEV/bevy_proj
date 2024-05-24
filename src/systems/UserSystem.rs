@@ -109,7 +109,7 @@ impl User {
                                 uid: user.uid,
                                 user_name: user.user_name.clone()
                             })
-                            .insert(Inventory::with_capacity(6));
+                            .insert(Inventory::with_capacity(12));
 
                         for (entity_h, head, transform) in &entity_h {
                             if head.parent == entity_b {
@@ -140,6 +140,7 @@ impl Plugin for UserPlugin {
             .insert_resource(User { ..default() })
             // Использование данных о позиции курсора из CursorPosition
             .init_resource::<CursorPosition>()
+            .init_resource::<CursorProcentPos>()
             .init_resource::<CursorPlacer>()
             .insert_resource(Selector { selector_entity: None, select_entity: None })
             // Обновление информации о позиции курсора
@@ -171,13 +172,17 @@ impl Plugin for UserPlugin {
 // Cursor Position
 // ==============================
 
-/// Позиция курсора на глобальной координатной сетке
+/// Позиция курсора на на окне
 #[derive(Resource, Default)]
 pub struct CursorPosition(pub Vec2);
 
-/// Получение координат чанка по глобальной координатной системе
+/// Процентная позиция курсора с учётом размера окна
+#[derive(Resource, Default)]
+pub struct CursorProcentPos(pub Vec2);
+
 pub fn cursor_track(
     mut cursor_pos:     ResMut<CursorPosition>,
+    mut cursor_procent: ResMut<CursorProcentPos>,
         window:         Query<&Window, With<PrimaryWindow>>,
         camera:         Query<(&Camera, &GlobalTransform), With<UserCamera>>,
 ) {
@@ -191,7 +196,16 @@ pub fn cursor_track(
     {
         cursor_pos.0 = world_position;
     }
+
+    if let Some(position) = window.cursor_position() {
+        cursor_procent.0 = Vec2::new(
+            (position.x / window.resolution.physical_width() as f32) * 100.0, 
+            (position.y / window.resolution.physical_height() as f32) * 100.0
+        );
+    }
 }
+
+
 
 // ==============================
 // CursorMode

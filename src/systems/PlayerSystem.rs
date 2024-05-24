@@ -31,13 +31,17 @@ use crate::core::{
         UserSubControl,
         User,
     },
-    Item::EntityItem,
+    Item::{
+        ItemSpawn,
+        EntityItem,
+    },
     ItemType::{
         ItemEntity,
         ItemType
     },
     world::chunk::Chunk::Chunk,
     ContainerSystem::{
+        CursorContainer,
         ItemPickUpEvent,
         ItemDropEvent,
         Container,
@@ -59,7 +63,12 @@ impl Plugin for PlayerPlugin {
             // Передвижение игрока
             .add_systems(Update, Self::player_movement.run_if(in_state(AppState::Game)))
             // Подбирание игроком предметов поддающиеся к подниманию
-            .add_systems(Update, Self::player_pickup.run_if(in_state(AppState::Game)))
+            .add_systems(Update, 
+                (
+                    Self::player_pickup,
+                    Self::item_drop
+                ).run_if(in_state(AppState::Game))
+            )
             // Удар игроков по объекту
             .add_systems(Update, Self::player_atack.run_if(in_state(AppState::Game)))
             // [Test] Обновление системы управления оружием
@@ -171,6 +180,28 @@ impl PlayerPlugin {
                         
                         commands.entity(entity).despawn_recursive();
                     }
+                }
+            }
+        }
+    }
+
+    fn item_drop(
+        mut cursor_c:       ResMut<CursorContainer>,
+        mut spawn_i:        EventWriter<ItemSpawn>,
+            user:           Query<(&EntityBase, &Transform), With<UserControl>>,
+            cursor:         Res<CursorPosition>,
+            keyboard_input: Res<ButtonInput<KeyCode>>,
+        //    mouse_input:    Res<ButtonInput<MouseButton>>,
+    ) {
+        if cursor_c.slot.is_none() && user.is_empty() {
+            return;
+        }
+
+        if keyboard_input.just_pressed(KeyCode::KeyQ) {
+            let player = user.single();
+            if player.0.interaction_radius > Vec3::distance(cursor.0.extend(0.5), player.1.translation) {
+                if let Some(slot) = cursor_c.slot.take() {
+                    spawn_i.send(ItemSpawn(slot.id_name, WorldSystem::get_currect_chunk_subtile(cursor.0.as_ivec2()), slot.count));
                 }
             }
         }
