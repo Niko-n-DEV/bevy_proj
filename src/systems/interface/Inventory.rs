@@ -8,14 +8,18 @@ use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
     ContainerSystem::{
+        Slot,
         Inventory,
         Container,
         ItemTypeEx,
-        InventoryItemSlot
+        CursorContainer,
+        InventoryItemSlot,
     },
-    interface::GameUI::{
-        BarGui,
-        GameUI
+    interface::{
+        GameUI::{
+            BarGui,
+            GameUI,
+        },
     },
     UserSystem::{
         UserControl,
@@ -142,7 +146,6 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
                                 Name::new("Inventory"),
                                 InventoryDisplayOwner   { actor: e.actor },
                                 InventoryDisplayNode    { id: e.actor },
-                                Interaction::default(),
                                 NodeBundle {
                                     style: Style {
                                         display:    Display::Grid,
@@ -169,12 +172,11 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
                                 },
                                 Inventory::with_capacity(12)
                             )).with_children(|slots| {
-                                //let mut slot_entities = Vec::new();
-                                
                                 for index in 0..inventory.len() {
                                     let slot = slots.spawn((
                                         Name::new(format!("Slot {index}")),
-                                        InventoryDisplaySlot { index, item: None, count: None },
+                                        InventoryDisplaySlot { index, slot: None, item: None, count: None },
+                                        Interaction::default(),
                                         NodeBundle {
                                             style: Style {
                                                 display: Display::Grid,
@@ -192,10 +194,7 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
                                             ..default()
                                         }
                                     )).id();
-                                    
-                                    //slot_entities.push(slot);
                                 }
-                                // event.send(InvSlotsBuild(slot_entities));
                             });
                         });
 
@@ -207,6 +206,11 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
     }
 }
 
+#[derive(Component)]
+pub struct GuiSlot {
+    pub contain_slot:   Slot
+}
+
 pub(crate) fn inventory_update<I: ItemTypeEx>(
     mut cmd:                Commands,
     mut inv_slots:          Query<&mut InventoryDisplaySlot>,
@@ -214,9 +218,8 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
         register:           Res<Registry>,
         atlas:              Res<AtlasRes>,
         game_ui:            Query<&GameUI, With<GameUI>>,
-    //    inv_options:        Res<InventoryDisplayOptions>,
         inv_displ_nodes:    Query<(&InventoryDisplayNode, &Children)>,
-        player_inv:        Query<&Inventory, With<UserControl>>,
+        player_inv:         Query<&Inventory, With<UserControl>>,
 ) {
     if game_ui.is_empty() && bar_gui.is_empty() {
         return;
@@ -245,17 +248,24 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
 
             if let Some(item_entity) = &inventory[slot.index] {
                 let render = if let Some(slot_item) = slot.item.clone() {
-                    if item_entity.name != slot_item  {
-                        slot.item = Some(item_entity.name.clone());
-                        if let Some(count) = slot.count.clone() {
+                    if let Some(slot_count) = slot.count.clone() {
+                        if item_entity.name != slot_item || (item_entity.name == slot_item && slot_count != item_entity.count) {
+                            slot.slot = Some(item_entity.clone());
+
+                            slot.item = Some(item_entity.name.clone());
                             slot.count = Some(item_entity.count.clone());
+                
+                            slot_cmd.despawn_descendants();
+                            true
+                        } else {
+                            false
                         }
-                        slot_cmd.despawn_descendants();
-                        true
                     } else {
                         false
                     }
                 } else {
+                    slot.slot = Some(item_entity.clone());
+
                     slot.item = Some(item_entity.name.clone());
                     slot.count = Some(item_entity.count.clone());
                     true
@@ -267,16 +277,14 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
                             slot_cmd.with_children(|cb| {
                                 cb.spawn((
                                     Interaction::default(),
-                                    //UiHoverTip::new(item_entity),
-                                    // Equipable {
-                                    //     actor: display_node.id,
-                                    //     item: item_entity,
-                                    // },
                                     ImageBundle {
-                                        image: img.1,
+                                        image: UiImage::new(img.1),
                                         ..default()
                                     },
-                                    img.0
+                                    img.0,
+                                    GuiSlot {
+                                        contain_slot:   item_entity.clone()
+                                    },
                                 ));
                                 cb.spawn(TextBundle {
                                     style: Style {
@@ -313,6 +321,32 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
     }
 }
 
+pub fn inventory_click_item(
+    mut cursor_inv:     ResMut<CursorContainer>,
+    mut player_inv:     Query<&mut Inventory, With<UserControl>>,
+        interact_slots: Query<(&Interaction, &GuiSlot)>,
+    //     items:                  Query<&I>,
+) {
+    for (interaction, slot) in &interact_slots {
+        if *interaction == Interaction::Pressed {
+            println!("Click on a Slot");
+
+            // Перемещение значений слота инвентаря в "курсор" (Слот в инвентаре автоматически удалится)
+            // - Автоматически определить слот в инвентаре с информацией gui-слота
+            // Если в курсоре имеется уже "слот" - поместить на то место, от куда был взят другой "слот"
+            // (другая функция) Если слот свободен, то поместить в тот индекс в инвентарь "слот"
+
+            if let Ok(mut inv) = player_inv.get_single_mut() {
+                if inv.find(&slot.contain_slot.name) {
+                    if cursor_inv.slot.is_none() {
+                        cursor_inv.slot = inv.take_all_ex(&slot.contain_slot.name);
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ==============================
 // Other Inventories
 // ==============================
@@ -331,20 +365,22 @@ pub struct InventoryDisplayNode {
 }
 
 // Для инвентаря
-#[derive(Default, Debug, Clone, PartialEq, Eq, Component)]
+// #[derive(Default, Debug, Clone, PartialEq, Eq, Component)]
+#[derive(Default, Debug, Clone, Component)]
 pub struct InventoryDisplaySlot {
     pub index:  usize,
+    pub slot:   Option<Slot>,
     pub item:   Option<String>,
     pub count:  Option<usize>
 }
 
-// Для инвентаря эквипа
-#[derive(Default, Debug, Clone, Component)]
-pub struct EquipmentDisplaySlot<I: ItemTypeEx> {
-    pub index: (I, u8),
-    pub item: Option<Entity>,
-    pub is_dummy_rendered: bool,
-}
+// // Для инвентаря эквипа
+// #[derive(Default, Debug, Clone, Component)]
+// pub struct EquipmentDisplaySlot<I: ItemTypeEx> {
+//     pub index: (I, u8),
+//     pub item: Option<Entity>,
+//     pub is_dummy_rendered: bool,
+// }
 
 #[derive(Event, Debug, Copy, Clone)]
 pub struct InventoryDisplayToggleEvent {
