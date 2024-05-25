@@ -11,12 +11,12 @@ use crate::core::{
     resource::{
         graphic::Atlas::{
             AtlasRes,
-            DirectionAtlas, 
-            TestTextureAtlas
+            // DirectionAtlas, 
+            // TestTextureAtlas
         },
         //Registry::Registry,
         LoadingBuffer,
-        ResourceFolder,
+        // ResourceFolder,
         ResourceModule
     },
     AppState,
@@ -25,74 +25,77 @@ use crate::core::{
 /// Проверка чего-то с каждым обновлением
 pub fn check_textures(
     mut next_state:         ResMut<NextState<AppState>>,
-        resource_folder:    Res<ResourceFolder>,
+    //    resource_folder:    Res<ResourceFolder>,
+        resource_module:    Res<ResourceModule>,
     mut events:             EventReader<AssetEvent<LoadedFolder>>,
 ) {
     for event in events.read() {
-        if event.is_loaded_with_dependencies(&resource_folder.0) {
+        // if event.is_loaded_with_dependencies(&resource_folder.0) {
+        //     next_state.set(AppState::ResourceLoading);
+        // }
+
+        if event.is_loaded_with_dependencies(&resource_module.0) {
             next_state.set(AppState::ResourceLoading);
         }
     }
 }
 
 pub fn setup_ex(
-    mut commands:           Commands,
-        resource_handle:    Res<ResourceFolder>,
+    // mut commands:           Commands,
+    //    resource_handle:    Res<ResourceFolder>,
         resource_module:    Res<ResourceModule>,
-    mut handle_cust_atlas:  ResMut<TestTextureAtlas>,
-    mut handle_dir_atlas:   ResMut<DirectionAtlas>,
+    // mut handle_cust_atlas:  ResMut<TestTextureAtlas>,
+    // mut handle_dir_atlas:   ResMut<DirectionAtlas>,
         loaded_folders:     Res<Assets<LoadedFolder>>,
-    // mut register:           ResMut<Registry>,
     mut atlas:              ResMut<AtlasRes>,
-    //    asset_server:       Res<AssetServer>,
     mut texture_atlases:    ResMut<Assets<TextureAtlasLayout>>,
     mut textures:           ResMut<Assets<Image>>,
     mut next_state:         ResMut<NextState<AppState>>,
-    load_buff:              ResMut<LoadingBuffer>
+        load_buff:          ResMut<LoadingBuffer>
 ) {
-    // ==============================
-    // Сборка текстур в единый атлас
-    // ==============================
-    let loaded_folder = loaded_folders.get(&resource_handle.0).unwrap();
+    // // ==============================
+    // // Сборка текстур в единый атлас
+    // // ==============================
+    // let loaded_folder = loaded_folders.get(&resource_handle.0).unwrap();
 
-    let (texture_atlas_nearest, nearest_texture, _hash_t) = create_texture_atlas(
-        &loaded_folder,
-        Some(UVec2::splat(1)),
-        Some(ImageSampler::nearest()),
-        &mut textures,
-    );
-    let atlas_nearest_handle = texture_atlases.add(texture_atlas_nearest);
+    // let (texture_atlas_nearest, nearest_texture, _hash_t) = create_texture_atlas(
+    //     &loaded_folder,
+    //     Some(UVec2::splat(1)),
+    //     Some(ImageSampler::nearest()),
+    //     &mut textures,
+    // );
+    // let atlas_nearest_handle = texture_atlases.add(texture_atlas_nearest);
 
-    // // Спавн спрайта атласа ждя debug
-    // commands.spawn(SpriteBundle {
-    //     texture: nearest_texture.clone(),
-    //     transform: Transform {
-    //         translation: Vec3 { x: -128., y: -128., z: 1. },
-    //         ..default()
-    //     },
-    //     ..default()
-    // });
+    // // // Спавн спрайта атласа ждя debug
+    // // commands.spawn(SpriteBundle {
+    // //     texture: nearest_texture.clone(),
+    // //     transform: Transform {
+    // //         translation: Vec3 { x: -128., y: -128., z: 1. },
+    // //         ..default()
+    // //     },
+    // //     ..default()
+    // // });
 
-    handle_cust_atlas.layout =  Some(atlas_nearest_handle.clone());
-    handle_cust_atlas.image =   Some(nearest_texture.clone());
-    handle_cust_atlas.ids =     Some(_hash_t.clone());
+    // handle_cust_atlas.layout =  Some(atlas_nearest_handle.clone());
+    // handle_cust_atlas.image =   Some(nearest_texture.clone());
+    // handle_cust_atlas.ids =     Some(_hash_t.clone());
 
-    // ==============================
-    // Сборка атласов в единый атлас
-    // ==============================
-    let loaded_folder = loaded_folders.get(&resource_handle.1).unwrap();
-    let (texture_atlas_dir_atlases, nearest_texture_atlases, _hash) = load_and_index_atlas(
-        &loaded_folder,
-        Some(UVec2::splat(1)),
-        Some(ImageSampler::nearest()),
-        &mut textures,
-    );
+    // // ==============================
+    // // Сборка атласов в единый атлас
+    // // ==============================
+    // let loaded_folder = loaded_folders.get(&resource_handle.1).unwrap();
+    // let (texture_atlas_dir_atlases, nearest_texture_atlases, _hash) = load_and_index_atlas(
+    //     &loaded_folder,
+    //     Some(UVec2::splat(1)),
+    //     Some(ImageSampler::nearest()),
+    //     &mut textures,
+    // );
 
-    let atlas_dir_nearest_handle = texture_atlases.add(texture_atlas_dir_atlases);
+    // let atlas_dir_nearest_handle = texture_atlases.add(texture_atlas_dir_atlases);
 
-    handle_dir_atlas.layout =   Some(atlas_dir_nearest_handle.clone());
-    handle_dir_atlas.image =    Some(nearest_texture_atlases.clone());
-    handle_dir_atlas.ids =      Some(_hash.clone());
+    // handle_dir_atlas.layout =   Some(atlas_dir_nearest_handle.clone());
+    // handle_dir_atlas.image =    Some(nearest_texture_atlases.clone());
+    // handle_dir_atlas.ids =      Some(_hash.clone());
 
     
 
@@ -153,9 +156,9 @@ pub fn setup_ex(
     // ==============================
     // Test
     // ==============================
-    atlas.test.layout =     Some(atlas_nearest_handle);
-    atlas.test.image =      Some(nearest_texture);
-    atlas.test.ids =        Some(_hash_t);
+    // atlas.test.layout =     Some(atlas_nearest_handle);
+    // atlas.test.image =      Some(nearest_texture);
+    // atlas.test.ids =        Some(_hash_t);
     // ==============================
     // 
     // ==============================
@@ -322,6 +325,7 @@ fn load_and_index_atlas_ex(
 // 
 // ==============================
 
+#[allow(unused)]
 /// Создание атласа текстур с заданными настройками заполнения и выборки из отдельных спрайтов в данной папке
 fn create_texture_atlas(
     folder:     &LoadedFolder,
@@ -387,6 +391,7 @@ fn create_texture_atlas(
 const SPRITE_SHEET_W: usize = 16; // размер одного фрагмента по ширине
 const SPRITE_SHEET_H: usize = 16; // размер одного фрагмента по высоте
 
+#[allow(unused)]
 /// Индексирование атласа, путём его разбиения на сетку.
 fn load_and_index_atlas(
     folder:     &LoadedFolder,

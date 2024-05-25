@@ -1,7 +1,4 @@
-#![allow(unused)]
-use bevy::{
-    prelude::*,
-};
+use bevy::prelude::*;
 
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
@@ -10,26 +7,17 @@ use crate::core::{
     ContainerSystem::{
         Slot,
         Inventory,
-        Container,
         ItemTypeEx,
         CursorContainer,
         InventoryItemSlot,
     },
-    interface::{
-        GameUI::{
+    interface::game_ui::{
             BarGui,
             GameUI,
         },
-    },
-    UserSystem::{
-        UserControl,
-        User,
-    },
+    UserSystem::UserControl,
     resource::{
-        graphic::Atlas::{
-            AtlasRes,
-            UiImageAtlas
-        },
+        graphic::Atlas::AtlasRes,
         Registry::Registry
     },
 };
@@ -150,7 +138,6 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
                                     style: Style {
                                         display:    Display::Grid,
                                         left:       Val::Px(-176.0),
-                                        bottom:     Val::Px(4.0),
                                         width:      Val::Px(136.0),
                                         height:     Val::Px(104.0),
                                         border: UiRect { 
@@ -173,7 +160,7 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
                                 Inventory::with_capacity(12)
                             )).with_children(|slots| {
                                 for index in 0..inventory.len() {
-                                    let slot = slots.spawn((
+                                    slots.spawn((
                                         Name::new(format!("Slot {index}")),
                                         InventoryDisplaySlot { index, slot: None },
                                         Interaction::default(),
@@ -193,7 +180,7 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
                                             border_color:       Color::rgb(0.13, 0.13, 0.13).into(),
                                             ..default()
                                         }
-                                    )).id();
+                                    ));
                                 }
                             });
                         });
@@ -209,14 +196,13 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
 pub(crate) fn inventory_update<I: ItemTypeEx>(
     mut cmd:                Commands,
     mut inv_slots:          Query<&mut InventoryDisplaySlot>,
-    mut bar_gui:            Query<(Entity, &mut BarGui), With<BarGui>>,
         register:           Res<Registry>,
         atlas:              Res<AtlasRes>,
         game_ui:            Query<&GameUI, With<GameUI>>,
         inv_displ_nodes:    Query<(&InventoryDisplayNode, &Children)>,
         player_inv:         Query<&Inventory, With<UserControl>>,
 ) {
-    if game_ui.is_empty() && bar_gui.is_empty() {
+    if game_ui.is_empty() {
         return;
     }
     
@@ -393,37 +379,37 @@ pub struct InventoryDisplayToggleEvent {
 // Item Type Interaction
 // ==============================
 
-#[derive(Debug, Clone, Component)]
-pub struct Equipable {
-    actor: Entity,
-    item: Entity,
-}
+// #[derive(Debug, Clone, Component)]
+// pub struct Equipable {
+//     actor: Entity,
+//     item: Entity,
+// }
 
-#[derive(Debug, Clone, Component)]
-pub struct Unequipable {
-    actor: Entity,
-    item: Entity,
-}
+// #[derive(Debug, Clone, Component)]
+// pub struct Unequipable {
+//     actor: Entity,
+//     item: Entity,
+// }
 
 // ==============================
 // UiRender Image
 // Сомнительно, ну, окей
 // ==============================
 
-/// Указывает, как отображать материал, если он размещен на дисплее инвентаря или оборудования
-#[derive(Default, Debug, Clone, Component)]
-pub struct UiRenderInfo {
-    pub image: UiImage,
-}
+// /// Указывает, как отображать материал, если он размещен на дисплее инвентаря или оборудования
+// #[derive(Default, Debug, Clone, Component)]
+// pub struct UiRenderInfo {
+//     pub image: UiImage,
+// }
 
-pub trait ItemTypeUiImage<I: ItemTypeEx>: Resource {
-    fn get_image(&self, item_type: I) -> UiImage;
-}
+// pub trait ItemTypeUiImage<I: ItemTypeEx>: Resource {
+//     fn get_image(&self, item_type: I) -> UiImage;
+// }
 
-// Для хранения изображения слота, когда курсор наведён на слот и шрифт
-#[derive(Debug, Clone, Resource)]
-pub struct InventoryUiAssets {
-    pub slot:               Handle<Image>,  // Относительно
-    pub hover_cursor_image: Handle<Image>,  // Возможно
-    pub font:               Handle<Font>,
-}
+// // Для хранения изображения слота, когда курсор наведён на слот и шрифт
+// #[derive(Debug, Clone, Resource)]
+// pub struct InventoryUiAssets {
+//     pub slot:               Handle<Image>,  // Относительно
+//     pub hover_cursor_image: Handle<Image>,  // Возможно
+//     pub font:               Handle<Font>,
+// }

@@ -1,3 +1,4 @@
+#![allow(unused)]
 use bevy::prelude::*;
 
 use crate::core::{

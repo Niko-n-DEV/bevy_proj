@@ -1,18 +1,19 @@
+pub mod Console;
+pub mod Info;
+pub mod Inventory;
+
 use bevy::prelude::*;
+
+use bevy_inspector_egui::prelude::ReflectInspectorOptions;
+use bevy_inspector_egui::InspectorOptions;
+
 use bevy_egui::{
     egui,
     EguiContexts
 };
 
 use crate::core::{
-    interface::{
-        Styles::*,
-        Inventory::{
-            InventoryGui,
-            InventorySlot,
-            InventoryDisplayToggleEvent
-        }
-    },
+    interface::Styles::*,
     world::World::WorldSystem,
     Entity::EntityBase,
     entities::EntitySystem::EnemySpawner,
@@ -21,12 +22,7 @@ use crate::core::{
         UserControl,
         CursorPlacer
     },
-    ContainerSystem::{
-        Container,
-        Inventory,
-        ItemTypeEx,
-    },
-    ItemType::*,
+    ContainerSystem::Inventory as Container,
     resource::Registry::Registry,
     AppState
 };
@@ -34,7 +30,8 @@ use crate::core::{
 // ==============================
 // 
 // ==========  GameUI  ==========
-#[derive(Component, Resource)]
+#[derive(Component, InspectorOptions, Reflect, Resource)]
+#[reflect(Component, InspectorOptions)]
 pub struct GameUI {
     pub bargui_is_open: bool,
     pub console_toggle: bool,
@@ -189,7 +186,7 @@ impl DebugInfoPanel {
             player:         Query<&EntityBase, With<UserControl>>,
             keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
-        if parent_query.is_empty() || spawners.is_empty() {
+        if parent_query.is_empty() {
             return;
         }
 
@@ -200,9 +197,6 @@ impl DebugInfoPanel {
             }
 
             if game_ui.debug_toggle {
-                //let player_pos = player.single();
-                
-
                 egui::Window::new("Debug")
                     .show(contexts.ctx_mut(), |ui| {
                         ui.label("Position");
@@ -214,7 +208,7 @@ impl DebugInfoPanel {
                         }
 
                         ui.horizontal(|ui| {
-                            if ui.button("Spawners").clicked() {
+                            if ui.button("Spawners").clicked() && !spawners.is_empty() {
                                 for mut spawner in spawners.iter_mut() {
                                     spawner.is_active = !spawner.is_active
                                 }
@@ -312,13 +306,18 @@ impl BarGui {
                                 left:           Val::Percent(42.0),
                                 bottom:         Val::Percent(0.0),
                                 width:          Val::Percent(25.0),
-                                height:         Val::Percent(14.0),
-                                max_height:     Val::Px(100.0),
+                                height:         Val::Percent(15.0),
+                                max_height:     Val::Px(104.0),
                                 max_width:      Val::Px(300.0),
                                 align_self:     AlignSelf::Center,
+                                border: UiRect {
+                                    right:  Val::Px(3.),
+                                    ..default()
+                                },
                                 ..default()
                             },
-                            background_color: DARK_LLGRAY_COLOR.into(),
+                            background_color:   Color::rgb(0.15, 0.15, 0.15).into(),
+                            border_color:       Color::rgb(0.19, 0.19, 0.19).into(),
                             ..default()
                         },
                         Name::new("BarGui"),
@@ -331,14 +330,21 @@ impl BarGui {
                             NodeBundle {
                                 style: Style {
                                     position_type: PositionType::Absolute,
-                                    bottom: Val::Px(101.0),
+                                    bottom: Val::Px(108.5),
                                     width:  Val::Px(125.0),
                                     height: Val::Px(15.0),
-                                    align_items: AlignItems::Center,
-                                    padding: UiRect::all(Val::Px(4.0)),
+                                    align_items:    AlignItems::Center,
+                                    padding:        UiRect::all(Val::Px(4.0)),
+                                    border:         UiRect { 
+                                        left:   Val::Px(1.), 
+                                        right:  Val::Px(1.), 
+                                        top:    Val::Px(1.), 
+                                        bottom: Val::Px(1.) 
+                                    },
                                     ..default()
                                 },
-                                background_color: Color::rgb(0.18, 0.18, 0.18).into(),
+                                background_color:   Color::rgb(0.18, 0.18, 0.18).into(),
+                                border_color:       Color::rgb(0.20, 0.20, 0.20).into(),
                                 ..default()
                             },
                             Name::new("HealthBar")
@@ -411,7 +417,7 @@ impl BarGui {
                                     position_type: PositionType::Absolute,
                                     left:   Val::Px(-40.0),
                                     width:  Val::Px(40.0),
-                                    height: Val::Px(100.0),
+                                    height: Val::Px(104.0),
                                     border: UiRect { 
                                         left:   Val::Px(2.), 
                                         right:  Val::Px(2.), 
@@ -449,177 +455,6 @@ impl BarGui {
         }
     }
 
-    #[allow(unused)]
-    pub fn spawn_inventory_ui<I: ItemTypeEx>(
-        mut commands:   Commands,
-        // mut inv_toggle: EventReader<InventoryDisplayToggleEvent>,
-        mut bar_gui:    Query<(Entity, &mut BarGui), With<BarGui>>,
-        mut event:      EventWriter<InvSlotsBuild>,
-            game_ui:    Query<&GameUI, With<GameUI>>,
-    ) {
-        if bar_gui.is_empty() {
-            return;
-        }
-
-        if let Ok(game_ui) = game_ui.get_single() {
-            if game_ui.bargui_is_open {
-                if let Ok(mut bar_gui) = bar_gui.get_single_mut() {
-                    if !bar_gui.1.inventory_open {
-                        commands.entity(bar_gui.0).with_children(|parent| {
-                            parent.spawn((
-                                Name::new("Inventory"),
-                                NodeBundle {
-                                    style: Style {
-                                        display:    Display::Grid,
-                                        left:       Val::Px(-176.0),
-                                        bottom:     Val::Px(2.0),
-                                        width:      Val::Px(136.0),
-                                        height:     Val::Px(104.0),
-                                        border: UiRect { 
-                                            left:   Val::Px(4.), 
-                                            right:  Val::Px(4.), 
-                                            top:    Val::Px(4.), 
-                                            bottom: Val::Px(4.) 
-                                        },
-                                        grid_template_columns: vec![GridTrack::px(32.), GridTrack::px(32.), GridTrack::px(32.), GridTrack::px(32.)],
-                                        grid_template_rows: vec![
-                                            GridTrack::px(32.),
-                                            GridTrack::px(32.)
-                                        ],
-                                        ..default()
-                                    },
-                                    background_color:   Color::rgb(0.13, 0.13, 0.13).into(),
-                                    border_color:       Color::rgb(0.19, 0.19, 0.19).into(),
-                                    ..default()
-                                },
-                                InventoryGui {
-                                    slots: [InventorySlot::default(); 12]
-                                }
-                            )).with_children(|slots| {
-                                let mut slot_entities = Vec::new();
-                                for i in 0..12 {
-                                    let slot = slots.spawn(NodeBundle {
-                                        style: Style {
-                                            display: Display::Grid,
-                                            border: UiRect { 
-                                                left:   Val::Px(5.), 
-                                                right:  Val::Px(5.), 
-                                                top:    Val::Px(5.), 
-                                                bottom: Val::Px(5.) 
-                                            },
-                                            aspect_ratio: Some(1.0),
-                                            ..default()
-                                        },
-                                        background_color:   Color::rgb(0.24, 0.24, 0.24).into(),
-                                        border_color:       Color::rgb(0.13, 0.13, 0.13).into(),
-                                        ..default()
-                                    })
-                                    .insert(Name::new(format!("Slot {i}")))
-                                    .id();
-                                    
-                                    slot_entities.push(slot);
-                                }
-                                event.send(InvSlotsBuild(slot_entities));
-                            });
-                        });
-                        bar_gui.1.inventory_open = !bar_gui.1.inventory_open;
-                    }
-                }
-            }
-        }
-    }
-
-    #[allow(unused)]
-    pub fn build_inv_slots(
-        mut inventory:  Query<(Entity, &mut InventoryGui), With<InventoryGui>>,
-        mut event:      EventReader<InvSlotsBuild>
-    ) {
-        if event.is_empty() || inventory.is_empty() {
-            return;
-        }
-
-        if let Ok(mut inv) = inventory.get_single_mut() {
-            for event in event.read() {
-                for (i, entity) in event.0.iter().enumerate() {
-                    inv.1.slots[i] = InventorySlot::new(Some(i), Some(*entity))
-                }
-            }
-        }
-    }
-
-    #[allow(unused)]
-    pub fn update_inventory_ui(
-        mut commands:           Commands,
-        mut inventoty_gui:      Query<(Entity, &mut InventoryGui), With<InventoryGui>>,
-        mut inventoty:          Query<&mut Container, With<User>>,
-        //    registry:           Res<Registry>
-    ) {
-        if inventoty_gui.is_empty() || inventoty.is_empty() {
-            return;
-        }
-
-        if let Ok((_, mut inv_gui)) = inventoty_gui.get_single_mut() {
-            if let Ok(mut inv_container) = inventoty.get_single_mut() {
-                for i in 0..inv_gui.slots.len() {
-                    if i >= inv_container.slots.len() {
-                        break;
-                    }
-    
-                    // Получаем слот инвентаря и его UI аналог
-                    let inv_slot = &mut inv_container.slots[i];
-                    let inv_gui_slot = &mut inv_gui.slots[i];
-    
-                    // Если слот инвентаря не пустой, обновляем информацию в UI
-                    if inv_slot.item_stack.item_type != ItemType::None {
-                        // Если слот UI уже содержит информацию о том же предмете, пропускаем обновление
-                        if let Some(contain) = &inv_gui_slot.contain {
-                            if contain.item_stack.item_type == inv_slot.item_stack.item_type {
-                                continue;
-                            }
-                        }
-    
-                        // Очищаем дочерние элементы UI слота
-                        if let Some(entity) = inv_gui_slot.entity {
-                            commands.entity(entity).clear_children();
-                        }
-    
-                        // Обновляем UI слота с новыми данными из инвентаря
-                        if let Some(entity) = inv_gui_slot.entity {
-                            commands.entity(entity).with_children(|parent| {
-                                //if let Some(sprite) = registry.get_item_texture(name, atlas)
-                                //parent.spawn(bundle)
-                                parent.spawn(TextBundle {
-                                    text: Text {
-                                        sections: vec![TextSection::new(
-                                            "TEST",
-                                            TextStyle {
-                                                font_size: 11.0,
-                                                ..Default::default()
-                                            },
-                                        )],
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                });
-                            });
-                        }
-    
-                        // Обновляем информацию UI слота инвентаря
-                        inv_gui_slot.contain = Some(*inv_slot);
-                    } else {
-                        // Если слот инвентаря пустой, очищаем UI слота
-                        if let Some(entity) = inv_gui_slot.entity {
-                            commands.entity(entity).clear_children();
-                        }
-    
-                        // Очищаем информацию UI слота инвентаря
-                        inv_gui_slot.contain = None;
-                    }
-                }
-            }
-        }
-    }
-
     pub fn interact_with_to_inv_visible_button(
         mut button_query: Query<
             (&Interaction, &mut BackgroundColor),
@@ -629,10 +464,10 @@ impl BarGui {
             Entity,
             (
                 With<UserControl>,
-                With<Inventory>,
+                With<Container>,
             ),
         >,
-        mut inventory_toggle_writer: EventWriter<InventoryDisplayToggleEvent>,
+        mut inventory_toggle_writer: EventWriter<Inventory::InventoryDisplayToggleEvent>,
     ) {
         if button_query.is_empty() {
             return;
@@ -643,7 +478,7 @@ impl BarGui {
                 Interaction::Pressed => {
                     *background_color = PRESSED_BUTTON_COLOR.into();
                     if let Ok(player) = player.get_single() {
-                        inventory_toggle_writer.send(InventoryDisplayToggleEvent { actor: player });
+                        inventory_toggle_writer.send(Inventory::InventoryDisplayToggleEvent { actor: player });
                     }
                 }
                 Interaction::Hovered => {
@@ -706,7 +541,3 @@ impl BarGui {
         }
     }
 }
-
-
-#[derive(Event)]
-pub struct InvSlotsBuild(pub Vec<Entity>);

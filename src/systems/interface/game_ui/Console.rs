@@ -6,7 +6,7 @@ use bevy_egui::{
 };
 
 use crate::core::{
-    interface::GameUI::GameUI, 
+    interface::game_ui::GameUI, 
     ItemType::*, 
     ContainerSystem::Container, 
     UserSystem::{

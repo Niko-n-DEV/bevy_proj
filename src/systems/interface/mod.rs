@@ -1,12 +1,8 @@
 #![allow(non_snake_case)]
-pub mod Console;
-pub mod GameUI;
-pub mod Info;
-pub mod Inventory;
-//pub mod LogoUi;
+pub mod game_ui;
+// pub mod LogoUi;
 pub mod MenuUI;
 pub mod Styles;
-// pub mod UI;
 
 use bevy::prelude::*;
 
@@ -18,13 +14,13 @@ impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app
             // Init resources
-            .init_resource::<Console::Console>()
+            .init_resource::<game_ui::Console::Console>()
             // Register Types (Inspector)
-            .register_type::<Inventory::InventoryGui>()
-            .register_type::<Inventory::InventorySlot>()
+            .register_type::<game_ui::GameUI>()
+            .register_type::<game_ui::Inventory::InventoryGui>()
+            .register_type::<game_ui::Inventory::InventorySlot>()
             // Init events
-            .add_event::<GameUI::InvSlotsBuild>()
-            .add_event::<Console::ConsoleInput>()
+            .add_event::<game_ui::Console::ConsoleInput>()
             // Init Plugins
             // Init Systems ==========
             // LogoUI
@@ -39,29 +35,29 @@ impl Plugin for UIPlugin {
             )
             .add_systems(OnExit(AppState::MainMenu), MenuUI::MainMenu::despawn_main_menu)
             // GameUI
-            .add_systems(OnEnter(AppState::Game), GameUI::GameUI::spawn_game_ui)
+            .add_systems(OnEnter(AppState::Game), game_ui::GameUI::spawn_game_ui)
             .add_systems(Update, (
-                    GameUI::BarGui::build_gui,
-                    GameUI::BarGui::update_player_info,
-                    GameUI::BarGui::interact_with_to_inv_visible_button,
-                    GameUI::GameUI::interact_with_to_menu_button
+                    game_ui::BarGui::build_gui,
+                    game_ui::BarGui::update_player_info,
+                    game_ui::BarGui::interact_with_to_inv_visible_button,
+                    game_ui::GameUI::interact_with_to_menu_button
                 ).run_if(in_state(AppState::Game))
             )
             // GameUI === Info
             .add_systems(Update, 
                 (
-                Info::info_item_panel,
+                game_ui::Info::info_item_panel,
                 ).run_if(in_state(AppState::Game))
             )
             // GameUI === DEBUG
-            .add_systems(Update, GameUI::DebugInfoPanel::toggle_debug_window.run_if(in_state(AppState::Game)))
+            .add_systems(Update, game_ui::DebugInfoPanel::toggle_debug_window.run_if(in_state(AppState::Game)))
             // GameUI === Console
             .add_systems(Update, (
-                    Console::toggle_console,
-                    Console::cmd_execute
+                    game_ui::Console::toggle_console,
+                    game_ui::Console::cmd_execute
                 ).run_if(in_state(AppState::Game))
             )
-            .add_systems(OnExit(AppState::Game), GameUI::GameUI::despawn_game_ui)
+            .add_systems(OnExit(AppState::Game), game_ui::GameUI::despawn_game_ui)
         ;
     }
 }

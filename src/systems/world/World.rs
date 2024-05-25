@@ -258,27 +258,27 @@ impl WorldSystem {
         //     println!("ERROR - Spawn Player!")
         // }
 
-        // Точка спавна для спавна "болванчиков", которые двигаются к игроку
-        commands
-            .spawn((
-                SpriteSheetBundle {
-                    texture: handle.image.clone().unwrap(),
-                    atlas: TextureAtlas {
-                        layout: handle.layout.clone().unwrap(),
-                        index: TestTextureAtlas::get_index("test_square", &handle),
-                    },
-                    transform: Transform {
-                        translation: Vec3::new(256.0, 256.0, 0.2),
-                        ..default()
-                    },
-                    ..default()
-                }
-            ))
-            .insert(EnemySpawner {
-                is_active: false,
-                cooldown: 5.,
-                timer: 1.,
-            });
+        // // Точка спавна для спавна "болванчиков", которые двигаются к игроку
+        // commands
+        //     .spawn((
+        //         SpriteSheetBundle {
+        //             texture: handle.image.clone().unwrap(),
+        //             atlas: TextureAtlas {
+        //                 layout: handle.layout.clone().unwrap(),
+        //                 index: TestTextureAtlas::get_index("test_square", &handle),
+        //             },
+        //             transform: Transform {
+        //                 translation: Vec3::new(256.0, 256.0, 0.2),
+        //                 ..default()
+        //             },
+        //             ..default()
+        //         }
+        //     ))
+        //     .insert(EnemySpawner {
+        //         is_active: false,
+        //         cooldown: 5.,
+        //         timer: 1.,
+        //     });
 
     }
 
@@ -292,6 +292,9 @@ impl WorldSystem {
         mut chunk_load:     EventWriter<LoadChunkPos>,
         mut chunk_upload:   EventWriter<DischargeChunkPos>
     ) {
+        if player_query.is_empty() {
+            return;
+        }
         /*
             По сути потоковая функция, которая будет прогружать территорию
             Небольшой черновик работы функции.
@@ -383,10 +386,10 @@ impl WorldSystem {
 
             // test
             for chunk in chunks_to_upload_test {
-                Self::create_chunk(&mut commands, &asset_server, &mut worldres, &handle, chunk);
+            //    Self::create_chunk(&mut commands, &asset_server, &mut worldres, &handle, chunk);
             }
             for chunk in chunks_to_discharge_test {
-                Self::despawn_chunk(&mut commands, &mut worldres, chunk);
+            //    Self::despawn_chunk(&mut commands, &mut worldres, chunk);
             }
         }
     }
@@ -395,34 +398,36 @@ impl WorldSystem {
     // TEST
     // ==============================
     fn create_chunk(
+    //    gizmos:         &mut Gizmos,
         commands:       &mut Commands,
         asset_server:   &Res<AssetServer>,
         world_res:      &mut ResMut<WorldRes>,
         handle:         &Res<TestTextureAtlas>,
         pos:            IVec2
-    ) -> Entity {
-        let chunk = commands
-            .spawn(SpriteSheetBundle {
-                sprite: Sprite {
-                    anchor: bevy::sprite::Anchor::BottomLeft,
-                    ..default()
-                },
-                texture: handle.image.clone().unwrap(),
-                atlas: TextureAtlas {
-                    layout: handle.layout.clone().unwrap(),
-                    index: TestTextureAtlas::get_index("dirt", &handle),
-                },
-                transform: Transform {
-                    translation: Vec3::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0, -1.0),
-                    scale: Vec3::new(16.0, 16.0, 0.0),
-                    ..default()
-                },
-                ..default()
-            })
-            .insert(Name::new(format!("{pos}_chunk")))
-            .id();
-        world_res.chunks.insert(pos, chunk);
-        chunk
+    ) { // -> Entity {
+    //    gizmos.rect_2d(Vec2::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0), 0.0, Vec2::splat(16.0), Color::YELLOW_GREEN);
+        // let chunk = commands
+        //     .spawn(SpriteSheetBundle {
+        //         sprite: Sprite {
+        //             anchor: bevy::sprite::Anchor::BottomLeft,
+        //             ..default()
+        //         },
+        //         texture: handle.image.clone().unwrap(),
+        //         atlas: TextureAtlas {
+        //             layout: handle.layout.clone().unwrap(),
+        //             index: TestTextureAtlas::get_index("dirt", &handle),
+        //         },
+        //         transform: Transform {
+        //             translation: Vec3::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0, -1.0),
+        //             scale: Vec3::new(16.0, 16.0, 0.0),
+        //             ..default()
+        //         },
+        //         ..default()
+        //     })
+        //     .insert(Name::new(format!("{pos}_chunk")))
+        //     .id();
+        // world_res.chunks.insert(pos, chunk);
+        // chunk
     }
     fn despawn_chunk(
         commands: &mut Commands,

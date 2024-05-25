@@ -1,4 +1,3 @@
-#![allow(unused)]
 pub mod graphic;
 pub mod Registry;
 
@@ -21,7 +20,7 @@ use crate::core::{
     AppState,
 };
 
-
+#[allow(unused)]
 #[derive(Debug, Copy, Clone, Component, PartialEq, Eq, Hash)]
 pub enum SpriteLayer {
     Object,
@@ -78,9 +77,9 @@ impl Plugin for ResourcePlugin {
 }
 
 
-/// Ресурс хранящий в себе загружаемую папку ресурсов
-#[derive(Resource, Default)]
-pub struct ResourceFolder(Handle<LoadedFolder>, Handle<LoadedFolder>);
+// /// Ресурс хранящий в себе загружаемую папку ресурсов
+// #[derive(Resource, Default)]
+// pub struct ResourceFolder(Handle<LoadedFolder>, Handle<LoadedFolder>);
 
 #[derive(Resource, Default)]
 pub struct ResourceModule(Handle<LoadedFolder>);
@@ -102,10 +101,10 @@ impl ResourcePlugin {
     /// функция для загрузки ресурсов из определённой папки, по умолчанию эта папка - assets, и всё его содержимое
     pub fn start_loading(mut commands: Commands, asset_server: Res<AssetServer>) {
         info!("Insert resources");
-        commands.insert_resource(ResourceFolder(
-            asset_server.load_folder(""),
-            asset_server.load_folder("core/textures/entity/player"),
-        ));
+        // commands.insert_resource(ResourceFolder(
+        //     asset_server.load_folder(""),
+        //     asset_server.load_folder("core/textures/entity/player"),
+        // ));
         
         commands.insert_resource(ResourceModule(asset_server.load_folder("Data://Core/Textures")));
 

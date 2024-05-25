@@ -13,17 +13,19 @@ use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
     interface::{
-        Inventory::{
-            inventory_update, 
-            inventory_click_item,
-            toggle_inventory_open, 
-            toggle_inventory_open_event_send, 
-            InventoryDisplayToggleEvent
-        },
-        Info::{
-            cursor_grab,
-            hover_item
-        },
+        game_ui::{
+            Inventory::{
+                inventory_update, 
+                inventory_click_item,
+                toggle_inventory_open, 
+                toggle_inventory_open_event_send, 
+                InventoryDisplayToggleEvent
+            },
+            Info::{
+                cursor_grab,
+                hover_item
+            },
+        }
     },
     AppState, 
     ItemType::ItemType

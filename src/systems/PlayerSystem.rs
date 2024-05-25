@@ -4,62 +4,40 @@ use bevy::prelude::*;
 //use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 //use bevy_inspector_egui::InspectorOptions;
 
-#[allow(unused_imports)]
 use crate::core::{
-    entities::EntitySystem::{
-        update_enemies, 
-        update_spawning, 
-        DirectionChangeEvent, 
-        EnemySpawner,
-        MovementEntity
-    },
+    entities::EntitySystem::MovementEntity,
     Weapon::*,
-    resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
     AppState,
     Entity::{
         EntityBase,
-        EntityHead, 
-        Position,
+        EntityHead,
     },
-    Object::EntityObject,
     UserSystem::CursorPosition,
-    Missile::*,
-    Movement::DirectionState,
     world::World::WorldSystem,
     UserSystem::{
         UserControl,
         UserSubControl,
-        User,
     },
     Item::{
         ItemSpawn,
         EntityItem,
     },
-    ItemType::{
-        ItemEntity,
-        ItemType
-    },
+    ItemType::
+        ItemEntity
+    ,
     world::chunk::Chunk::Chunk,
     ContainerSystem::{
         CursorContainer,
-        ItemPickUpEvent,
-        ItemDropEvent,
-        Container,
-        Inventory,
-        ItemTypeEx
+        Inventory
     },
     interact::Damage::DamageObject
 };
-
-#[derive(Default, Reflect, GizmoConfigGroup)]
-struct MyRoundGizmos {}
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
-            .init_gizmo_group::<MyRoundGizmos>()
             // Передвижение игрока
             .add_systems(Update, Self::player_movement.run_if(in_state(AppState::Game)))
             // Подбирание игроком предметов поддающиеся к подниманию
@@ -136,13 +114,14 @@ impl PlayerPlugin {
         }
     }
 
-    #[allow(unused)]
     fn player_atack(
-        mut chunk_res:      ResMut<Chunk>,
+        mut commands:       Commands,
+            asset_server:   Res<AssetServer>,
+        // mut chunk_res:      ResMut<Chunk>,
             cursor:         Res<CursorPosition>,
             mouse_input:    Res<ButtonInput<MouseButton>>,
             user:           Query<(&EntityBase ,&Transform), With<UserControl>>,
-            object:         Query<(Entity, &Transform), With<EntityObject>>,
+        //    object:         Query<(Entity, &Transform), With<EntityObject>>,
         // entity: Query<(&mut EntityBase, &Transform), With<EntityBase>>,
         mut event:          EventWriter<DamageObject>
     ) {
@@ -154,6 +133,10 @@ impl PlayerPlugin {
             if let Ok(player_pos) = user.get_single() {
                 if player_pos.0.interaction_radius > Vec3::distance(cursor.0.extend(0.5), player_pos.1.translation) {
                     event.send(DamageObject(WorldSystem::get_currect_chunk_tile(cursor.0.as_ivec2()), 1.0));
+                    commands.spawn(AudioBundle {
+                        source: asset_server.load("core/sounds/beat.ogg"),
+                        ..default()
+                    });
                 }
             }
         }   

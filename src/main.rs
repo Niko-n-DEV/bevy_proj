@@ -1,4 +1,5 @@
 use bevy::{
+    audio::{AudioPlugin, SpatialScale},
     asset::io::{
         file::FileAssetReader, 
         AssetSource
@@ -42,6 +43,8 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use iyes_perf_ui::prelude::*;
 
+const AUDIO_SCALE: f32 = 1. / 32.0;
+
 fn main() {
     App::new()
         // Init State - Инициализация состояний приложения
@@ -58,14 +61,20 @@ fn main() {
             .with_reader(|| Box::new(FileAssetReader::new("Data")))
         )
         .add_plugins(DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: "SINT-et".to_string(),
-                        resolution: WindowResolution::new(1280.0, 720.0),
-                        resizable: false,
-                        present_mode: bevy::window::PresentMode::AutoVsync,
+                .set(
+                    WindowPlugin {
+                        primary_window: Some(Window {
+                            title: "SINT-et".to_string(),
+                            resolution: WindowResolution::new(1280.0, 720.0),
+                            resizable: false,
+                            present_mode: bevy::window::PresentMode::AutoVsync,
+                            ..default()
+                        }),
                         ..default()
-                    }),
+                    }
+                )
+                .set(AudioPlugin {
+                    default_spatial_scale: SpatialScale::new_2d(AUDIO_SCALE),
                     ..default()
                 })
                 .set(ImagePlugin::default_nearest())
@@ -73,7 +82,7 @@ fn main() {
         .insert_resource(Msaa::Off)
         // Плагин - Инспектор, для отладки и мониторинга элементов
         .add_plugins(
-            WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F3)),
+            WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F9)),
         )
         // Плагины для Debug info panel
         .add_plugins((
