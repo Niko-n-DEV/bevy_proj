@@ -7,7 +7,6 @@ pub mod Styles;
 use bevy::prelude::*;
 
 use crate::core::AppState;
-
 pub struct UIPlugin;
 
 impl Plugin for UIPlugin {

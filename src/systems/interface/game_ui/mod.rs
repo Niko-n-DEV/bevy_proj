@@ -20,10 +20,14 @@ use crate::core::{
     UserSystem::{
         User,
         UserControl,
+        CursorMode,
         CursorPlacer
     },
     ContainerSystem::Inventory as Container,
-    resource::Registry::Registry,
+    resource::{
+        graphic::Atlas::AtlasRes,
+        Registry::Registry,
+    },
     AppState
 };
 
@@ -181,8 +185,9 @@ impl DebugInfoPanel {
         mut parent_query:   Query<&mut GameUI, With<GameUI>>,
         mut contexts:       EguiContexts,
         mut spawners:       Query<&mut EnemySpawner, With<EnemySpawner>>,
-            registry:       Res<Registry>,
         mut placer:         ResMut<CursorPlacer>,
+        mut cursor_mode:    ResMut<CursorMode>,
+            registry:       Res<Registry>,
             player:         Query<&EntityBase, With<UserControl>>,
             keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
@@ -228,6 +233,7 @@ impl DebugInfoPanel {
                         ui.horizontal(|ui| {
                             for key in registry.item_registry.keys() {
                                 if ui.button(key).clicked() {
+                                    *cursor_mode = CursorMode::Placer;
                                     placer.placer = Some(("item".to_string(), key.clone()));
                                 }
                             }
@@ -237,6 +243,7 @@ impl DebugInfoPanel {
                         ui.horizontal(|ui| {
                             for key in registry.object_registry.keys() {
                                 if ui.button(key).clicked() {
+                                    *cursor_mode = CursorMode::Placer;
                                     placer.placer = Some(("object".to_string(), key.clone()));
                                 }
                             }
@@ -246,6 +253,7 @@ impl DebugInfoPanel {
                         ui.horizontal(|ui| {
                             for key in registry.entity_registry.keys() {
                                 if ui.button(key).clicked() {
+                                    *cursor_mode = CursorMode::Placer;
                                     placer.placer = Some(("entity".to_string(), key.clone()));
                                 }
                             }
@@ -289,6 +297,7 @@ impl BarGui {
         mut commands:   Commands,
         mut game_ui:    Query<(Entity, &mut GameUI), (With<GameUI>, Without<BarGui>)>,
             bar_gui:    Query<Entity, (With<BarGui>, Without<GameUI>)>,
+            atlas:      Res<AtlasRes>,
             user:       Res<User>
     ) {
         if game_ui.is_empty() && bar_gui.is_empty() {
@@ -439,7 +448,19 @@ impl BarGui {
                                     ..default()
                                 },
                                 ToggleInvVisibleButton
-                            ));
+                            )).with_children(|parent| {
+                                if let Some(img) = atlas.ui.extruct_texture("inv_ui_btn") {
+                                    parent.spawn((
+                                        ImageBundle {
+                                            image: UiImage::new(img.1),
+                                            ..default()
+                                        },
+                                        img.0
+                                    ));
+                                } else {
+                                    warn!("Текстура не применена - Необходимая текстура не найдена!")
+                                }
+                            });
                         });
                     });
                 });

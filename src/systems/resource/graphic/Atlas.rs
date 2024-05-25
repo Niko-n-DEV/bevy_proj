@@ -10,7 +10,8 @@ pub struct AtlasRes {
     pub objects:    ObjectAtlas,
     pub particle:   ParticleAtlas,
     pub entity:     DirectionAtlas,
-    pub test:       TestTextureAtlas
+    pub test:       TestTextureAtlas,
+    pub ui:         UiAtlas,
 }
 
 impl AtlasRes {
@@ -23,6 +24,7 @@ impl AtlasRes {
             particle:   ParticleAtlas::default(),
             entity:     DirectionAtlas::default(),
             test:       TestTextureAtlas::default(),
+            ui:         UiAtlas::default(),
         }
     }
 
@@ -113,7 +115,6 @@ impl ItemsAtlas {
                             layout: atlas_layout.clone(),
                             index: *index
                         };
-                        // let img = UiImage::new(atlas_texture.clone());
                         return Some((atlas, atlas_texture.clone()));
                     }
                 }
@@ -123,10 +124,30 @@ impl ItemsAtlas {
     }
 }
 
-#[derive(Bundle)]
-pub struct UiImageAtlas {
-    atlas:  TextureAtlas,
-    ui_img: UiImage
+#[derive(Resource, Default)]
+pub struct UiAtlas {
+    pub layout: Option<Handle<TextureAtlasLayout>>,
+    pub image:  Option<Handle<Image>>,
+    pub ids:    Option<HashMap<String, usize>>,
+}
+
+impl UiAtlas {
+    pub fn extruct_texture(&self, name: &str) -> Option<(TextureAtlas, Handle<Image>)> {
+        if let Some(index) = &self.ids {
+            if let Some(index) = index.get(name) {
+                if let Some(atlas_texture) = &self.image {
+                    if let Some(atlas_layout) = &self.layout {
+                        let atlas = TextureAtlas {
+                            layout: atlas_layout.clone(),
+                            index: *index
+                        };
+                        return Some((atlas, atlas_texture.clone()));
+                    }
+                }
+            }
+        }
+        None
+    }
 }
 
 /// Атлас текстурных палетт (Наслоение на текстуру, как маска)
@@ -185,7 +206,7 @@ pub struct ParticleAtlas {
     pub ids:    Option<HashMap<String, usize>>,
 }
 
-// [Test]
+/// `Test`
 /// Атлас для хранения тестовых и буферных текстур
 #[derive(Resource, Default)]
 pub struct TestTextureAtlas {

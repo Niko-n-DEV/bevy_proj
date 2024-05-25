@@ -1,6 +1,7 @@
 pub mod graphic;
 pub mod Registry;
 
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::fs;
 
@@ -12,10 +13,10 @@ use bevy::{
 use extol_sprite_layer::*;
 
 use crate::core::{
-    EntityType::{
-        EntityType,
-        HumonoidType
-    },
+    // EntityType::{
+    //     EntityType,
+    //     HumonoidType
+    // },
     Settings::Settings,
     AppState,
 };
@@ -61,10 +62,10 @@ impl Plugin for ResourcePlugin {
             // Init registry
             .insert_resource(Registry::Registry::new())
             // Проверка ресурсов на зависимости (Непонятно как оно точно работает)
-            .add_systems(Update,graphic::Graphic::check_textures.run_if(in_state(AppState::ResourceCheck)))
+            .add_systems(Update,graphic::check_textures.run_if(in_state(AppState::ResourceCheck)))
             .add_systems(OnEnter(AppState::ResourceLoading), (
-                Self::loading,
-                graphic::Graphic::setup_ex,
+                Self::loading_module,
+                graphic::setup_ex,
                 Self::register_types,
             ).chain())
             // - Загрузка DLC
@@ -91,9 +92,11 @@ pub struct LoadingBuffer {
     reg_item_tex_path:          Vec<String>,
     reg_entity_tex_path:        Vec<String>,
     reg_object_tex_path:        Vec<String>,
+    reg_ui_tex_path:            Vec<String>,
     verified_item_texture:      Vec<String>,
     verified_entity_texture:    Vec<String>,
     verified_object_texture:    Vec<String>,
+    verified_ui_texture:        Vec<String>,
 }
 
 impl ResourcePlugin {
@@ -119,24 +122,25 @@ impl ResourcePlugin {
         commands.insert_resource(Settings::load())
     }
 
+    #[allow(unused)]
     fn register_types(
         mut register:   ResMut<Registry::Registry>,
     ) {
-        register.register_entity(Registry::EntityRegistry {
-            id_name:        "human".to_string(),
-            id_source:      Some("core".to_string()),
-            id_texture_b:   "human".to_string(),
-            id_texture_h:   None,
-            entity_type:    EntityType::Humonoid(HumonoidType::Human),
-            health:         100.0
-        });
+        // register.register_entity(Registry::EntityRegistry {
+        //     id_name:        "human".to_string(),
+        //     id_source:      Some("core".to_string()),
+        //     id_texture_b:   "human".to_string(),
+        //     id_texture_h:   None,
+        //     entity_type:    EntityType::Humonoid(HumonoidType::Human),
+        //     health:         100.0
+        // });
 
-        register.register_test("gun".to_string(), Registry::TestRegistry("gun".to_string()));       // Предмет
-        register.register_test("bullet".to_string(), Registry::TestRegistry("bullet".to_string())); // Пре
-        register.register_test("bullet_p".to_string(), Registry::TestRegistry("bullet_p".to_string())); // Партикл
+        // register.register_test("gun".to_string(), Registry::TestRegistry("gun".to_string()));       // Предмет
+        // register.register_test("bullet".to_string(), Registry::TestRegistry("bullet".to_string())); // Пре
+        // register.register_test("bullet_p".to_string(), Registry::TestRegistry("bullet_p".to_string())); // Партикл
     }
 
-    fn loading(
+    fn loading_module(
         // mut commands:       Commands,
         mut register:       ResMut<Registry::Registry>,
         mut load_buff:      ResMut<LoadingBuffer>
@@ -200,17 +204,22 @@ impl ResourcePlugin {
                         "Textures" => {
                             let res_path = path.join("entities");
                             if res_path.exists() {
-                                Self::process_directory_assets(&mut register, &mut load_buff, &res_path)?;
+                                Self::process_directory_assets(&mut register, &mut load_buff.textures_path_buf, &res_path)?;
                             }
 
                             let assets_path = path.join("items");
                             if assets_path.exists() {
-                                Self::process_directory_assets(&mut register, &mut load_buff, &assets_path)?;
+                                Self::process_directory_assets(&mut register, &mut load_buff.textures_path_buf, &assets_path)?;
                             }
 
                             let assets_path = path.join("objects");
                             if assets_path.exists() {
-                                Self::process_directory_assets(&mut register, &mut load_buff, &assets_path)?;
+                                Self::process_directory_assets(&mut register, &mut load_buff.textures_path_buf, &assets_path)?;
+                            }
+
+                            let assets_path = path.join("gui");
+                            if assets_path.exists() {
+                                Self::process_directory_assets(&mut register, &mut load_buff.reg_ui_tex_path, &assets_path)?;
                             }
                         },
                         "Defs" => {
@@ -239,11 +248,12 @@ impl ResourcePlugin {
         load_buff.verified_entity_texture = Self::process_assets(&load_buff.reg_entity_tex_path, &load_buff.textures_path_buf);
         load_buff.verified_object_texture = Self::process_assets(&load_buff.reg_object_tex_path, &load_buff.textures_path_buf);
 
-
+        load_buff.verified_ui_texture     = Self::process_ui_assets(&load_buff.reg_ui_tex_path);
         
         Ok(())
     }
 
+    /// Проверка соответствия текстур с запрашиваемыми текстурами объектами регистра
     fn process_assets(
         find:  &Vec<String>,
         check: &Vec<String>
@@ -265,10 +275,35 @@ impl ResourcePlugin {
         }
         result
     }
+    
+    /// Проверка соответствия текстур с заявленными текстурами интерфейса проекта
+    fn process_ui_assets(check: &Vec<String>) -> Vec<String> {
+        // Фиксированный список необходимых текстур
+        let required_textures = vec![
+            "inv_ui_btn".to_string(),
+        ];
+    
+        // Преобразуем фиксированный список в HashSet для эффективного поиска
+        let required_set: HashSet<_> = required_textures.iter().collect();
+    
+        // Результирующий вектор для валидных текстур
+        let mut valid_textures = Vec::new();
+    
+        // Преобразуем список на проверку и проверяем наличие в фиксированном списке
+        for tex_path in check {
+            if let Some(file_stem) = PathBuf::from(tex_path).file_stem().and_then(|stem| stem.to_str()) {
+                if required_set.contains(&file_stem.to_string()) {
+                    valid_textures.push(tex_path.clone());
+                }
+            }
+        }
+    
+        valid_textures
+    }
 
     fn process_directory_assets(
         mut register:   &mut Registry::Registry,
-        mut load_buff:  &mut LoadingBuffer,
+        mut load_buff:  &mut Vec<String>,
             dir:        &Path
     ) -> Result<(), Box<dyn std::error::Error>> {
         for entry in fs::read_dir(dir)? {
@@ -279,8 +314,8 @@ impl ResourcePlugin {
             if path.is_file() && path.extension().map_or(false, |ext| ext == "png") {
                 let path_str = path.to_string_lossy().into_owned();
                 
-                if !load_buff.textures_path_buf.contains(&path_str) {
-                    load_buff.textures_path_buf.push(path_str);
+                if !load_buff.contains(&path_str) {
+                    load_buff.push(path_str);
                 }
             } else if path.is_dir() {
                 Self::process_directory_assets(&mut register, &mut load_buff, &path)?;

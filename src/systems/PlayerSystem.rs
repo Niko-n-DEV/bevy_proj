@@ -15,6 +15,7 @@ use crate::core::{
     UserSystem::CursorPosition,
     world::World::WorldSystem,
     UserSystem::{
+        CursorMode,
         UserControl,
         UserSubControl,
     },
@@ -48,7 +49,12 @@ impl Plugin for PlayerPlugin {
                 ).run_if(in_state(AppState::Game))
             )
             // Удар игроков по объекту
-            .add_systems(Update, Self::player_atack.run_if(in_state(AppState::Game)))
+            .add_systems(Update, 
+                (
+                    Self::combat_toggle,
+                    Self::player_atack
+                ).run_if(in_state(AppState::Game))
+            )
             // [Test] Обновление системы управления оружием
             .add_systems(Update, gun_controls.run_if(in_state(AppState::Game)))
             // [Test] Соединение оружия и игрока
@@ -114,9 +120,23 @@ impl PlayerPlugin {
         }
     }
 
+    fn combat_toggle(
+        mut cursor_mode:    ResMut<CursorMode>,
+            keyboard_input: Res<ButtonInput<KeyCode>>,
+    ) {
+        if keyboard_input.just_pressed(KeyCode::KeyR) {
+            if *cursor_mode != CursorMode::Atack {
+                info!("Combat mode - enabled");
+                *cursor_mode = CursorMode::Atack
+            } else {
+                info!("Combat mode - disable");
+                *cursor_mode = CursorMode::None
+            }
+        }
+    }
+
     fn player_atack(
-        mut commands:       Commands,
-            asset_server:   Res<AssetServer>,
+            cursor_mode:    Res<CursorMode>,
         // mut chunk_res:      ResMut<Chunk>,
             cursor:         Res<CursorPosition>,
             mouse_input:    Res<ButtonInput<MouseButton>>,
@@ -129,17 +149,15 @@ impl PlayerPlugin {
             return;
         }
 
-        if mouse_input.just_pressed(MouseButton::Left) {
-            if let Ok(player_pos) = user.get_single() {
-                if player_pos.0.interaction_radius > Vec3::distance(cursor.0.extend(0.5), player_pos.1.translation) {
-                    event.send(DamageObject(WorldSystem::get_currect_chunk_tile(cursor.0.as_ivec2()), 1.0));
-                    commands.spawn(AudioBundle {
-                        source: asset_server.load("core/sounds/beat.ogg"),
-                        ..default()
-                    });
+        if *cursor_mode == CursorMode::Atack {
+            if mouse_input.just_pressed(MouseButton::Left) {
+                if let Ok(player_pos) = user.get_single() {
+                    if player_pos.0.interaction_radius > Vec3::distance(cursor.0.extend(0.5), player_pos.1.translation) {
+                        event.send(DamageObject(WorldSystem::get_currect_chunk_tile(cursor.0.as_ivec2()), 1.0));
+                    }
                 }
             }
-        }   
+        }
     }
 
     fn player_pickup(

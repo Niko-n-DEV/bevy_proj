@@ -292,7 +292,7 @@ impl WorldSystem {
         mut chunk_load:     EventWriter<LoadChunkPos>,
         mut chunk_upload:   EventWriter<DischargeChunkPos>
     ) {
-        if player_query.is_empty() {
+        if player_query.is_empty() || true {
             return;
         }
         /*

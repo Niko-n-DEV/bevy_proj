@@ -19,10 +19,11 @@ use crate::core::{
         }
     },
     AppState,
-    world::World::WorldSystem,
-    world::chunk::Chunk::Chunk,
+    world::{
+        World::WorldSystem,
+        chunk::Chunk::Chunk
+    },
     Camera::UserCamera,
-    //Object::EntityObject,
     Entity::{
         EntityBase,
         EntityHead,
@@ -31,11 +32,6 @@ use crate::core::{
     Item::ItemSpawn,
     Object::ObjectSpawn,
     ContainerSystem::Inventory,
-    // ItemType::{
-    //     Pickupable,
-    //     ItemType,
-    //     Item
-    // }
 };
 
 #[derive(Component, InspectorOptions, Reflect, Resource)]
@@ -88,7 +84,6 @@ impl User {
         
         if let Ok(entity) = control.get_single() {
             user.control_entity = Some(entity);
-            println!("place control entity")
         }
     }
 
@@ -100,7 +95,7 @@ impl User {
             entity_h:       Query<(Entity, &EntityHead, &Transform), With<EntityHead>>,
             keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
-        if keyboard_input.just_pressed(KeyCode::F5) {
+        if keyboard_input.pressed(KeyCode::ControlLeft) && keyboard_input.just_pressed(KeyCode::F5) {
             if user.control_entity.is_none() {
                 for (entity_b, transform) in &entity_b {
                     if 8.0 > Vec3::distance(transform.translation, cursor.0.extend(0.5)) {
@@ -142,6 +137,7 @@ impl Plugin for UserPlugin {
             .init_resource::<CursorPosition>()
             .init_resource::<CursorProcentPos>()
             .init_resource::<CursorPlacer>()
+            .init_resource::<CursorMode>()
             .insert_resource(Selector { selector_entity: None, select_entity: None })
             // Обновление информации о позиции курсора
             .add_systems(PreUpdate, cursor_track.run_if(in_state(AppState::Game)))
@@ -211,8 +207,8 @@ pub fn cursor_track(
 // CursorMode
 // ==============================
 
-#[derive(Default, Resource)]
-enum ClickMode {
+#[derive(Default, Resource, PartialEq)]
+pub enum CursorMode {
     #[default]
     None,
     Placer,
@@ -232,35 +228,38 @@ pub struct CursorPlacer {
 }
 
 fn placer(
+    mut cursor_mode:    ResMut<CursorMode>,
+    mut placer:         ResMut<CursorPlacer>,
+    mut obj_event:      EventWriter<ObjectSpawn>,
+    mut item_event:     EventWriter<ItemSpawn>,
+    mut entity_event:   EventWriter<EntitySpawn>,
         cursor:         Res<CursorPosition>,
         mouse_input:    Res<ButtonInput<MouseButton>>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
         registry:       Res<Registry>,
-    mut placer:         ResMut<CursorPlacer>,
-    mut obj_event:      EventWriter<ObjectSpawn>,
-    mut item_event:     EventWriter<ItemSpawn>,
-    mut entity_event:   EventWriter<EntitySpawn>
 ) {
-    if mouse_input.just_pressed(MouseButton::Left) {
-        if let Some(match_type) = placer.placer.clone() {
-
-            match match_type.0.as_str() {
-                "item" => {
-                    item_event.send(ItemSpawn(match_type.1, WorldSystem::get_currect_chunk_subtile(cursor.0.as_ivec2()), 1));
-                },
-                "object" => {
-                    obj_event.send(ObjectSpawn(match_type.1, WorldSystem::get_currect_chunk_tile(cursor.0.as_ivec2())));
-                },
-                "entity" => {
-                    entity_event.send(EntitySpawn(match_type.1, cursor.0));
-                },
-                _ => warn!("Неверный указанный тип!")
+    if *cursor_mode == CursorMode::Placer {
+        if mouse_input.just_pressed(MouseButton::Left) {
+            if let Some(match_type) = placer.placer.clone() {
+                match match_type.0.as_str() {
+                    "item" => {
+                        item_event.send(ItemSpawn(match_type.1, WorldSystem::get_currect_chunk_subtile(cursor.0.as_ivec2()), 1));
+                    },
+                    "object" => {
+                        obj_event.send(ObjectSpawn(match_type.1, WorldSystem::get_currect_chunk_tile(cursor.0.as_ivec2())));
+                    },
+                    "entity" => {
+                        entity_event.send(EntitySpawn(match_type.1, cursor.0));
+                    },
+                    _ => warn!("Неверный указанный тип!")
+                }
             }
         }
-    }
 
-    if keyboard_input.just_pressed(KeyCode::Escape) {
-        placer.placer = None;
+        if keyboard_input.just_pressed(KeyCode::Escape) {
+            placer.placer = None;
+            *cursor_mode = CursorMode::None;
+        }
     }
 }
 
