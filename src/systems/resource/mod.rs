@@ -281,6 +281,7 @@ impl ResourcePlugin {
         // Фиксированный список необходимых текстур
         let required_textures = vec![
             "inv_ui_btn".to_string(),
+            "select".to_string(),
         ];
     
         // Преобразуем фиксированный список в HashSet для эффективного поиска

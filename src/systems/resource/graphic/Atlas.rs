@@ -4,37 +4,67 @@ use std::collections::HashMap;
 
 #[derive(Resource)]
 pub struct AtlasRes {
-    pub items:      ItemsAtlas,
-    pub material:   MaterialAtlas,
-    pub terrain:    TerrainAtlas,
-    pub objects:    ObjectAtlas,
-    pub particle:   ParticleAtlas,
-    pub entity:     DirectionAtlas,
-    pub test:       TestTextureAtlas,
-    pub ui:         UiAtlas,
+    pub items:      AtlasData,
+    pub material:   AtlasData,
+    pub terrain:    AtlasData,
+    pub objects:    AtlasData,
+    pub particle:   AtlasData,
+    pub entity:     AtlasData,
+    pub test:       AtlasData,
+    pub ui:         AtlasData,
+}
+
+#[derive(Resource, Clone, Default)]
+pub struct AtlasData {
+    pub layout: Option<Handle<TextureAtlasLayout>>,
+    pub image:  Option<Handle<Image>>,
+    pub ids:    Option<HashMap<String, usize>>,
+}
+
+#[derive(Debug, Clone)]
+pub enum AtlasType {
+    Items,
+    Material,
+    Terrain,
+    Objects,
+    Particle,
+    Entity,
+    Test,
+    Ui,
 }
 
 impl AtlasRes {
     pub fn init() -> Self {
         Self {
-            items:      ItemsAtlas::default(),
-            material:   MaterialAtlas::default(),
-            terrain:    TerrainAtlas::default(),
-            objects:    ObjectAtlas::default(),
-            particle:   ParticleAtlas::default(),
-            entity:     DirectionAtlas::default(),
-            test:       TestTextureAtlas::default(),
-            ui:         UiAtlas::default(),
+            items:      AtlasData::default(),
+            material:   AtlasData::default(),
+            terrain:    AtlasData::default(),
+            objects:    AtlasData::default(),
+            particle:   AtlasData::default(),
+            entity:     AtlasData::default(),
+            test:       AtlasData::default(),
+            ui:         AtlasData::default(),
         }
     }
 
-    pub fn get_entity_spritesheet(&self, name: &str) -> Option<SpriteSheetBundle> {
-        if let Some(index) = &self.entity.ids {
+    pub fn get_spritesheet(&self, atlas_type: AtlasType, name: &str) -> Option<SpriteSheetBundle> {
+        let atlas_data = match atlas_type {
+            AtlasType::Items    => &self.items,
+            AtlasType::Material => &self.material,
+            AtlasType::Terrain  => &self.terrain,
+            AtlasType::Objects  => &self.objects,
+            AtlasType::Particle => &self.particle,
+            AtlasType::Entity   => &self.entity,
+            AtlasType::Test     => &self.test,
+            AtlasType::Ui       => &self.ui,
+        };
+
+        if let Some(index) = &atlas_data.ids {
             if let Some(index) = index.get(name) {
                 let sprite = SpriteSheetBundle {
-                    texture: self.entity.image.clone().unwrap(),
+                    texture: atlas_data.image.clone().unwrap(),
                     atlas: TextureAtlas {
-                        layout: self.entity.layout.clone().unwrap(),
+                        layout: atlas_data.layout.clone().unwrap(),
                         index: *index
                     },
                     ..default()
@@ -45,52 +75,29 @@ impl AtlasRes {
         None
     }
 
-    pub fn get_object_spritesheet(&self, name: &str) -> Option<SpriteSheetBundle> {
-        if let Some(index) = &self.objects.ids {
-            if let Some(index) = index.get(name) {
-                let sprite = SpriteSheetBundle {
-                    texture: self.objects.image.clone().unwrap(),
-                    atlas: TextureAtlas {
-                        layout: self.objects.layout.clone().unwrap(),
-                        index: *index
-                    },
-                    ..default()
-                };
-                return Some(sprite);
-            }
-        }
-        None
-    }
+    pub fn get_texture(&self, atlas_type: AtlasType, name: &str) -> Option<(TextureAtlas, Handle<Image>)> {
+        let atlas_data = match atlas_type {
+            AtlasType::Items    => &self.items,
+            AtlasType::Material => &self.material,
+            AtlasType::Terrain  => &self.terrain,
+            AtlasType::Objects  => &self.objects,
+            AtlasType::Particle => &self.particle,
+            AtlasType::Entity   => &self.entity,
+            AtlasType::Test     => &self.test,
+            AtlasType::Ui       => &self.ui,
+        };
 
-    pub fn get_item_spritesheet(&self, name: &str) -> Option<SpriteSheetBundle> {
-        if let Some(index) = &self.items.ids {
+        if let Some(index) = &atlas_data.ids {
             if let Some(index) = index.get(name) {
-                let sprite = SpriteSheetBundle {
-                    texture: self.items.image.clone().unwrap(),
-                    atlas: TextureAtlas {
-                        layout: self.items.layout.clone().unwrap(),
-                        index: *index
-                    },
-                    ..default()
-                };
-                return Some(sprite);
-            }
-        }
-        None
-    }
-
-    pub fn get_test_spritesheet(&self, name: &str) -> Option<SpriteSheetBundle> {
-        if let Some(index) = &self.test.ids {
-            if let Some(index) = index.get(name) {
-                let sprite = SpriteSheetBundle {
-                    texture: self.test.image.clone().unwrap(),
-                    atlas: TextureAtlas {
-                        layout: self.test.layout.clone().unwrap(),
-                        index: *index
-                    },
-                    ..default()
-                };
-                return Some(sprite);
+                if let Some(atlas_texture) = &atlas_data.image {
+                    if let Some(atlas_layout) = &atlas_data.layout {
+                        let atlas = TextureAtlas {
+                            layout: atlas_layout.clone(),
+                            index: *index
+                        };
+                        return Some((atlas, atlas_texture.clone()));
+                    }
+                }
             }
         }
         None

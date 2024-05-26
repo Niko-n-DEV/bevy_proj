@@ -15,7 +15,10 @@ use crate::core::{
     ItemType::ItemEntity,
     // Object::EntityObject,
     resource::{
-        graphic::Atlas::AtlasRes,
+        graphic::Atlas::{
+            AtlasType,
+            AtlasRes,
+        },
         Registry::Registry
     },
     ContainerSystem::CursorContainer
@@ -81,7 +84,7 @@ pub fn cursor_grab(
         if !cursor_inv.slot.is_none() && preview.is_empty() {
             if let Some(slot) = &cursor_inv.slot {
                 if let Some(info) = register.get_item_info(&slot.name) {
-                    if let Some(img) = atlas.items.extruct_texture(&info.id_texture) {
+                    if let Some(img) = atlas.get_texture(AtlasType::Items, &info.id_texture) {
                         commands.spawn((
                             ImageBundle {
                                 style: Style {

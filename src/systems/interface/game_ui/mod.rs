@@ -25,7 +25,10 @@ use crate::core::{
     },
     ContainerSystem::Inventory as Container,
     resource::{
-        graphic::Atlas::AtlasRes,
+        graphic::Atlas::{
+            AtlasRes,
+            AtlasType,
+        },
         Registry::Registry,
     },
     AppState
@@ -449,7 +452,7 @@ impl BarGui {
                                 },
                                 ToggleInvVisibleButton
                             )).with_children(|parent| {
-                                if let Some(img) = atlas.ui.extruct_texture("inv_ui_btn") {
+                                if let Some(img) = atlas.get_texture(AtlasType::Ui, "inv_ui_btn") {
                                     parent.spawn((
                                         ImageBundle {
                                             image: UiImage::new(img.1),

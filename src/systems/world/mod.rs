@@ -1,5 +1,4 @@
 #![allow(non_snake_case)]
-#![allow(unused)]
 pub mod chunk;
 pub mod Grid;
 pub mod TileMap;
@@ -36,6 +35,7 @@ pub struct WorldTaskManager;
     2.1 Сохранение мира в файл путём парсинга (сериализации данных в тот или иной вид)
 */
 
+#[allow(unused)]
 impl WorldTaskManager {
     /// Функция для загрузки данных мира
     pub fn load_data(mut next_state: ResMut<NextState<AppState>>) {

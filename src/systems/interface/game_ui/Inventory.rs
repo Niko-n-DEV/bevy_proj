@@ -17,7 +17,10 @@ use crate::core::{
         },
     UserSystem::UserControl,
     resource::{
-        graphic::Atlas::AtlasRes,
+        graphic::Atlas::{
+            AtlasType,
+            AtlasRes,
+        },
         Registry::Registry
     },
 };
@@ -245,7 +248,7 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
 
                 if render {
                     if let Some(info) = register.get_item_info(&item_entity.id_name) {
-                        if let Some(img) = atlas.items.extruct_texture(&info.id_texture) {
+                        if let Some(img) = atlas.get_texture(AtlasType::Items, &info.id_texture) {
                             slot_cmd.with_children(|cb| {
                                 cb.spawn((
                                     Interaction::default(),

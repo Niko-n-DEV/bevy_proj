@@ -1,3 +1,4 @@
+#![allow(unused)]
 use bevy::{
     app::{PluginGroup, Update},
     ecs::{query::With, system::Query},

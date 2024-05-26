@@ -4,18 +4,18 @@ use bevy::{
     window::PrimaryWindow
 };
 
-use bevy_rapier2d::prelude::*;
+// use bevy_rapier2d::prelude::*;
 
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
     resource::{
-        SpriteLayer,
+        // SpriteLayer,
         Registry::Registry,
         graphic::Atlas::{
-            TestTextureAtlas,
-            AtlasRes
+            AtlasType,
+            AtlasRes,
         }
     },
     AppState,
@@ -390,7 +390,7 @@ fn select_object(
 fn selector_update(
     mut commands:   Commands,
         selected:   Query<(Entity, &Transform), Added<Selected>>,
-        handle:     Res<TestTextureAtlas>,
+        atlas:      Res<AtlasRes>,
     mut select:     ResMut<Selector>
 
 ) {
@@ -402,25 +402,26 @@ fn selector_update(
 
     if select.selector_entity.is_none() {
         if let Ok((_, transform)) = selected.get_single() {
-            let entity = commands.spawn((
-                SpriteSheetBundle {
-                    texture: handle.image.clone().unwrap(),
-                    atlas: TextureAtlas {
-                        layout: handle.layout.clone().unwrap(),
-                        index: TestTextureAtlas::get_index("select", &handle),
-                    },
-                    transform: Transform {
-                        translation: transform.translation,
-                        scale: transform.scale,
+            if let Some(img) = atlas.get_texture(AtlasType::Ui, "select") {
+                let entity = commands.spawn((
+                    SpriteBundle {
+                        texture: img.1.clone(),
+                        transform: Transform {
+                            translation: transform.translation,
+                            scale: transform.scale,
+                            ..default()
+                        },
                         ..default()
                     },
-                    ..default()
-                },
-                Select,
-                Name::new("Selector")
-            )).id();
-            // println!("selector created");
-            select.selector_entity = Some(entity);
+                    img.0,
+                    Select,
+                    Name::new("Selector")
+                )).id();
+                // println!("selector created");
+                select.selector_entity = Some(entity);
+            } else {
+                warn!("The selection could not be set!")
+            }
         }
     }
 }
@@ -534,7 +535,6 @@ fn delete_object(
     mut commands:       Commands,
         cursor:         Res<CursorPosition>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
-        handle:         Res<TestTextureAtlas>,
     mut chunk_res:      ResMut<Chunk>
 ) {
     if keyboard_input.just_pressed(KeyCode::KeyT) {

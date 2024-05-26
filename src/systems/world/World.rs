@@ -1,31 +1,13 @@
 use bevy::prelude::*;
-use bevy_rapier2d::{
-    prelude::{
-        Collider, 
-        Velocity, 
-        *
-    }, 
-    rapier::dynamics::RigidBodyDamping
-};
+use bevy_rapier2d::prelude::*;
 
 use std::{collections::HashMap, marker::PhantomData};
 
 use bevy_entitiles::EntiTilesPlugin;
 
 use crate::core::{
-    entities::EntitySystem::{
-        EntitySystem,
-        EnemySpawner,
-    },
-    resource::{
-        graphic::Atlas::{
-            AtlasRes,
-            DirectionAtlas, 
-            TestTextureAtlas
-        },
-        Registry::Registry,
-        SpriteLayer
-    },
+    entities::EntitySystem::EntitySystem,
+    resource::graphic::Atlas::TestTextureAtlas,
     world::{
         chunk::Chunk::Chunk, 
         TileMap::{
@@ -35,52 +17,23 @@ use crate::core::{
         }, WorldTaskManager
     }, 
     AppState, 
-    ContainerSystem::{
-        ContainerPlugin,
-        ItemTypeEx,
-        Container,
-        Inventory,
-    }, 
+    ContainerSystem::ContainerPlugin, 
     Entity::{
-        EntityBase,
-        Health,
-        Speed,
-        Position,
         EntitySpawn,
         spawn_entity
-    },
-    EntityType::{
-        EntityType,
-        HumonoidType,
-        EntityNeutrality
     },
     Item::{
         ItemSpawn,
         spawn_item
     },
-    ItemType::{
-        Ammo, 
-        Item, 
-        ItemType, 
-        ItemEntity,
-        Material
-    }, 
+    ItemType::ItemType, 
     Object::{
-        EntityObject,
         ObjectSpawn,
         spawn_object
     },
-    Movement::DirectionState,
     Settings::Settings, 
-    UserSystem::{
-        UserControl,
-        User,
-    },
-    PlayerSystem::{
-        PlayerPlugin,
-        PlayerAttach,
-    }, 
-    Weapon::GunController,
+    UserSystem::UserControl,
+    PlayerSystem::PlayerPlugin,
     interact::Damage::DamageSystem
 };
 
@@ -159,8 +112,8 @@ impl Plugin for WorldSystem {
 impl WorldSystem {
 
     fn setup(
-        mut commands:       Commands, 
-            asset_server:   Res<AssetServer>,
+        // mut commands:       Commands, 
+        //     asset_server:   Res<AssetServer>,
             settings:       Res<Settings>,
         mut world:          ResMut<WorldRes>,
         mut physics:        ResMut<RapierConfiguration>
@@ -174,16 +127,21 @@ impl WorldSystem {
     /// 
     /// Установка как задачи процессы загрузки ресурсов и прогрузки отдельных комплексных компонентов.
     fn init_world(
-        mut commands:       Commands,
-            atlas:          Res<AtlasRes>,
-            handle:         Res<TestTextureAtlas>,
-            handle_dir:     Res<DirectionAtlas>,
-        mut register:       ResMut<Registry>
+        // mut commands:       Commands,
+        //     atlas:          Res<AtlasRes>,
+        //     handle:         Res<TestTextureAtlas>,
+        //     handle_dir:     Res<DirectionAtlas>,
+        // mut register:       ResMut<Registry>,
+        // mut obj_event:      EventWriter<ObjectSpawn>,
+        // mut item_event:     EventWriter<ItemSpawn>,
+        mut entity_event:   EventWriter<EntitySpawn>,
     ) {
         /*
             Тут будет непосредственно инициализация мира, где будет размещение игровой сетки, основных его компонентов и сущностей.
             Установка синхронно с процессом загрузки ресурсов из файла.
         */
+
+        entity_event.send(EntitySpawn("human_ex".to_string(), Vec2::splat(16.0)));
 
         // Test ==============================
 
@@ -279,15 +237,14 @@ impl WorldSystem {
         //         cooldown: 5.,
         //         timer: 1.,
         //     });
-
     }
 
     /// Функция для инициализации загрузки чанков вокруг игрока в пределах установленной прогрузки.
     fn load_chunk_around(
-        mut commands:       Commands,
-            asset_server:   Res<AssetServer>,
+        // mut commands:       Commands,
+        //    asset_server:   Res<AssetServer>,
         mut worldres:       ResMut<WorldRes>,
-            handle:         Res<TestTextureAtlas>,
+        //    handle:         Res<TestTextureAtlas>,
             player_query:   Query<(&mut Transform, &mut UserControl)>,
         mut chunk_load:     EventWriter<LoadChunkPos>,
         mut chunk_upload:   EventWriter<DischargeChunkPos>
@@ -342,7 +299,7 @@ impl WorldSystem {
             let mut chunks_to_discharge: Vec<IVec2> = Vec::new();
             let mut chunks_to_discharge_test: Vec<IVec2> = Vec::new();
             // Проверяет в chunk, есть ли чанки, которые не входят в радиус прогрузки, чтобы их выгрузить
-            for (pos) in &worldres.chunk {
+            for pos in &worldres.chunk {
                 if !loaded_chunks_new.contains(pos) {
                     chunks_to_discharge.push(*pos);
                 }
@@ -384,19 +341,20 @@ impl WorldSystem {
                 worldres.chunk.push(chunk);
             }
 
-            // test
-            for chunk in chunks_to_upload_test {
-            //    Self::create_chunk(&mut commands, &asset_server, &mut worldres, &handle, chunk);
-            }
-            for chunk in chunks_to_discharge_test {
-            //    Self::despawn_chunk(&mut commands, &mut worldres, chunk);
-            }
+            // // test
+            // for chunk in chunks_to_upload_test {
+            // //    Self::create_chunk(&mut commands, &asset_server, &mut worldres, &handle, chunk);
+            // }
+            // for chunk in chunks_to_discharge_test {
+            // //    Self::despawn_chunk(&mut commands, &mut worldres, chunk);
+            // }
         }
     }
 
     // ==============================
     // TEST
     // ==============================
+    #[allow(unused)]
     fn create_chunk(
     //    gizmos:         &mut Gizmos,
         commands:       &mut Commands,
@@ -429,6 +387,8 @@ impl WorldSystem {
         // world_res.chunks.insert(pos, chunk);
         // chunk
     }
+
+    #[allow(unused)]
     fn despawn_chunk(
         commands: &mut Commands,
         world: &mut ResMut<WorldRes>,
@@ -504,6 +464,7 @@ impl WorldSystem {
     /// Функция для определения координат тайла в пределах чанка
     ///
     /// Определяется по данной позиции и определением координат в пределах одного чанка, где отсчёт координат начинается с верхнего левого угла чанка.
+    #[allow(unused)]
     pub fn get_local_tile_chunk(input_var: IVec2) {}
 }
 
@@ -513,7 +474,7 @@ pub struct WorldRes {
     player_chunk_position: IVec2,
     player_chunk_last_position: IVec2,
     first_launch: bool,
-    chunk_size_t: i32,
+    // chunk_size_t: i32,
 
     chunks: HashMap<IVec2, Entity>,
     chunk: Vec<IVec2>
@@ -526,16 +487,10 @@ impl Default for WorldRes {
             player_chunk_position: IVec2 { x: 0, y: 0 },
             player_chunk_last_position: IVec2 { x: 0, y: 0 },
             first_launch: true,
-            chunk_size_t: 256,
+            // chunk_size_t: 256,
 
             chunks: HashMap::new(),
             chunk: Vec::new()
         }
-    }
-}
-
-impl WorldRes {
-    pub fn new() -> Self {
-        WorldRes { ..default() }
     }
 }

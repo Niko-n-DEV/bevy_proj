@@ -16,7 +16,10 @@ use crate::core::{
     },
     EntityType::EntityType,
     ObjType::ObjectSizeType,
-    resource::graphic::Atlas::AtlasRes,
+    resource::graphic::Atlas::{
+        AtlasType,
+        AtlasRes,
+    },
     Craft::CraftResult,
     Util::{
         IVec2C,
@@ -138,7 +141,7 @@ impl Registry {
     }
 
     pub fn get_entity_texture(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
-        atlas.get_entity_spritesheet(name) // -> graphic/Atlas
+        atlas.get_spritesheet(AtlasType::Entity, name) // -> graphic/Atlas
     }
 
     pub fn get_entity_info(&self, name: &str) -> Option<&EntityRegistry> {
@@ -156,7 +159,7 @@ impl Registry {
     }
 
     pub fn get_object_texture(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
-        atlas.get_object_spritesheet(name) // -> graphic/Atlas
+        atlas.get_spritesheet(AtlasType::Objects, name) // -> graphic/Atlas
     }
 
     pub fn get_object_info(&self, name: &str) -> Option<&ObjectRegistry> {
@@ -174,7 +177,7 @@ impl Registry {
     }
 
     pub fn get_item_texture(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
-        atlas.get_item_spritesheet(name) // -> graphic/Atlas
+        atlas.get_spritesheet(AtlasType::Items, name) // -> graphic/Atlas
     }
 
     pub fn get_item_info(&self, name: &str) -> Option<&ItemRegistry> {
@@ -192,7 +195,7 @@ impl Registry {
 
     pub fn get_test(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
         if let Some(var) = self.test.get(name) {
-            atlas.get_test_spritesheet(&var.0)
+            atlas.get_spritesheet(AtlasType::Test, &var.0)
         } else {
             None
         }

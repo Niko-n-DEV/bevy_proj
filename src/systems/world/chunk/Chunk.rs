@@ -1,6 +1,7 @@
-use std::collections::HashMap;
-
+#![allow(unused)]
 use bevy::prelude::*;
+
+use std::collections::HashMap;
 
 #[derive(Component, Resource)]
 pub struct Chunk {
