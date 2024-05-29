@@ -7,7 +7,6 @@ use bevy_egui::{
 
 use crate::core::{
     UserSystem::{
-        Selected,
         // CursorPosition,
         CursorProcentPos
     },
@@ -21,7 +20,8 @@ use crate::core::{
         },
         Registry::Registry
     },
-    ContainerSystem::CursorContainer
+    ContainerSystem::CursorContainer,
+    interface::game_ui::Select::Selected
 };
 
 pub fn info_item_panel(
@@ -65,7 +65,6 @@ pub fn cursor_grab(
         preview:    Query<Entity, With<CursorPreview>>,
         cursor_p:   Res<CursorProcentPos>,
         cursor_inv: Res<CursorContainer>,
-    //    cursor:     Res<CursorPosition>,
         register:   Res<Registry>,
         atlas:      Res<AtlasRes>,
 ) {
@@ -98,15 +97,6 @@ pub fn cursor_grab(
                                 image: UiImage::new(img.1.clone()),
                                 ..default()
                             },
-                            // SpriteBundle {
-                            //     texture: img.1,
-                            //     transform: Transform {
-                            //         translation: Vec3::new(cursor.0.x + 2.0, cursor.0.y - 2.0, 100.),
-                            //         scale: Vec3::splat(0.25),
-                            //         ..default()
-                            //     },
-                            //     ..default()
-                            // },
                             img.0,
                             CursorPreview
                         )).with_children(|parent| {
@@ -122,7 +112,7 @@ pub fn cursor_grab(
                                         sections: vec![TextSection::new(
                                             format!("{}", slot.count),
                                             TextStyle {
-                                                font_size: 8.0,
+                                                font_size: 11.0,
                                                 ..default()
                                             },
                                         )],
@@ -130,24 +120,6 @@ pub fn cursor_grab(
                                     },
                                     ..default()
                                 }
-                                // Text2dBundle {
-                                //     text: Text {
-                                //         sections: vec![TextSection::new(
-                                //             format!("{}", slot.count),
-                                //             TextStyle {
-                                //                 font_size: 12.0,
-                                //                 ..default()
-                                //             },
-                                //         )],
-                                //         ..default()
-                                //     },
-                                //     transform: Transform {
-                                //         translation: Vec3::new(4.0, -4.0, 1.5),
-                                //         scale: Vec3::splat(0.75),
-                                //         ..default()
-                                //     },
-                                //     ..default()
-                                // }
                             );
                         });
                     }
@@ -169,7 +141,6 @@ pub fn hover_item(
     }
 
     if let Ok(mut hover_style) = hover.get_single_mut() {
-        //hover_transform.translation = Vec3::new(cursor.0.x + 2.0, cursor.0.y - 2.0, 1.5)
         hover_style.left    = Val::Percent(cursor_p.0.x + 1.0);
         hover_style.top     = Val::Percent(cursor_p.0.y - 1.0);
     }

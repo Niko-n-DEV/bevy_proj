@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 use crate::core::{
     entities::EntitySystem::MovementEntity,
-    Weapon::*,
+    // Weapon::*,
     AppState,
     Entity::{
         EntityBase,
@@ -56,7 +56,7 @@ impl Plugin for PlayerPlugin {
                 ).run_if(in_state(AppState::Game))
             )
             // [Test] Обновление системы управления оружием
-            .add_systems(Update, gun_controls.run_if(in_state(AppState::Game)))
+            // .add_systems(Update, gun_controls.run_if(in_state(AppState::Game)))
             // [Test] Соединение оружия и игрока
             .add_systems(PostUpdate, attach_objects.run_if(in_state(AppState::Game)))
             .add_systems(Update, Self::head_movement.run_if(in_state(AppState::Game)))

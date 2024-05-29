@@ -25,6 +25,12 @@ use crate::core::{
     },
 };
 
+#[allow(unused)]
+// Нужно решить, как правльно использовать это в проекте
+pub fn inventory_plugin(app: &mut App) {
+
+}
+
 /// Компонент отвечающий ща GUI инвентаря игрока
 #[derive(Component, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
@@ -251,7 +257,6 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
                         if let Some(img) = atlas.get_texture(AtlasType::Items, &info.id_texture) {
                             slot_cmd.with_children(|cb| {
                                 cb.spawn((
-                                    Interaction::default(),
                                     ImageBundle {
                                         image: UiImage::new(img.1),
                                         ..default()

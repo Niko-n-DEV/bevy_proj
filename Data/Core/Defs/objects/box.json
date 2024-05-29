@@ -1,6 +1,6 @@
 {
     "id_name": "box",
 	"id_texture": "box",
-    "size": { "x": 16, "y": 16 },
-	"collision": { "x": 6, "y": 4 }
+    "size": { "x": 32, "y": 32 },
+	"collision": { "x": 8, "y": 6 }
 }

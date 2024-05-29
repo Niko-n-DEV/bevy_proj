@@ -138,17 +138,12 @@ impl Plugin for UserPlugin {
             .init_resource::<CursorProcentPos>()
             .init_resource::<CursorPlacer>()
             .init_resource::<CursorMode>()
-            .insert_resource(Selector { selector_entity: None, select_entity: None })
             // Обновление информации о позиции курсора
             .add_systems(PreUpdate, cursor_track.run_if(in_state(AppState::Game)))
             .add_systems(Update, 
                 (
                     placer,
                     delete_object,
-                    select_object,
-                    selector_update,
-                    selector_remove,
-                    attach_to_select,
                     attach_to_cursor,
                     create_text_placer,
                     attach_to_cursor
@@ -192,7 +187,7 @@ pub fn cursor_track(
     {
         cursor_pos.0 = world_position;
     }
-
+    
     if let Some(position) = window.cursor_position() {
         cursor_procent.0 = Vec2::new(
             (position.x / window.resolution.physical_width() as f32) * 100.0, 
@@ -265,7 +260,8 @@ fn placer(
 
 fn create_text_placer(
     mut commands:   Commands,
-    mut placer:     ResMut<CursorPlacer>
+    mut placer:     ResMut<CursorPlacer>,
+        cursor_p:   Res<CursorProcentPos>,
 ) {
     if placer.is_changed() {
         if let Some(entity) = placer.entity {
@@ -276,19 +272,23 @@ fn create_text_placer(
         if !placer.placer.is_none() {
             if let Some(text) = placer.placer.clone() {
                 placer.entity = Some(commands.spawn((
-                    Text2dBundle {
+                    TextBundle {
+                        style: Style {
+                            position_type:  PositionType::Absolute,
+                            left:           Val::Percent(cursor_p.0.x + 1.0),
+                            top:            Val::Percent(cursor_p.0.y - 1.0),
+                            height:         Val::Percent(5.0),
+                            width:          Val::Percent(3.0),
+                            ..default()
+                        },
                         text: Text {
                             sections: vec![TextSection::new(
                                 format!("{}", text.1),
                                 TextStyle {
-                                    font_size: 12.0,
+                                    font_size: 11.0,
                                     ..default()
                                 },
                             )],
-                            ..default()
-                        },
-                        transform: Transform {
-                            scale: Vec3::splat(0.5),
                             ..default()
                         },
                         ..default()
@@ -304,9 +304,9 @@ fn create_text_placer(
 pub struct InfoTextPlace;
 
 fn attach_to_cursor(
-        cursor: Res<CursorPosition>,
+        cursor: Res<CursorProcentPos>,
         placer: ResMut<CursorPlacer>,
-    mut text:   Query<&mut Transform, With<InfoTextPlace>>
+    mut text:   Query<&mut Style, With<InfoTextPlace>>
 ) {
     if text.is_empty() {
         return;
@@ -314,7 +314,9 @@ fn attach_to_cursor(
 
     if !placer.placer.is_none() {
         if let Ok(mut text) = text.get_single_mut() {
-            text.translation = Vec3::new(cursor.0.x + 16.0, cursor.0.y + 16.0, 0.0);
+            // text.translation = Vec3::new(cursor.0.x + 8.0, cursor.0.y + 8.0, 0.0);
+            text.left    = Val::Percent(cursor.0.x + 1.0);
+            text.top     = Val::Percent(cursor.0.y - 1.0);
         }
     }
 }
@@ -323,152 +325,10 @@ fn attach_to_cursor(
 // ?
 // ==============================
 
+// Скорее всего определение может ли объект быть выделенным
 #[derive(Component)]
 pub struct Selectable {
     pub is_selected: bool
-}
-
-// ==============================
-// Selector
-// ==============================
-
-/// Ресурс, отвечающий за хранение данных о выделении
-#[derive(Resource)]
-pub struct Selector {
-    pub selector_entity: Option<Entity>,
-    pub select_entity: Option<Entity>
-}
-
-// Компонент, отвечающийза определения самого выделения
-#[derive(Component)]
-pub struct Select;
-
-/// Компонент-якорь, отвечающий за определение выделенного объекта
-#[derive(Component)]
-pub struct Selected;
-
-fn select_object(
-    mut commands:           Commands,
-        cursor:             Res<CursorPosition>,
-        keyboard_input:     Res<ButtonInput<KeyCode>>,
-        mouse_buttons:      Res<ButtonInput<MouseButton>>,
-    mut select:             ResMut<Selector>,
-    mut chunk_res:          ResMut<Chunk>
-) {
-    if keyboard_input.pressed(KeyCode::ControlLeft) {
-        if mouse_buttons.just_pressed(MouseButton::Left) {
-
-            if let Some(selected_entity) = chunk_res.objects_ex.get(&&WorldSystem::get_currect_chunk_subtile(cursor.0.as_ivec2())) {
-                if select.select_entity != Some(*selected_entity) {
-                    // Удаление старого выделения
-                    if let Some(entity) = select.select_entity {
-                        commands.entity(entity).remove::<Selected>();
-                    }
-                    // Новое выделение
-                    select.select_entity = Some(*selected_entity);
-                    commands.entity(*selected_entity).insert(Selected);
-                } else {
-                    // Снятие выделение у выделенной сущности
-                    if let Some(entity) = select.select_entity {
-                        commands.entity(entity).remove::<Selected>();
-                        select.select_entity = None;
-                    }
-                    return;
-                }
-            } else {
-                // Если нажатие было за пределами объектов, снимаем выделение
-                if let Some(entity) = select.select_entity {
-                    commands.entity(entity).remove::<Selected>();
-                    select.select_entity = None;
-                    return;
-                }
-            }
-        }
-    }
-}
-
-fn selector_update(
-    mut commands:   Commands,
-        selected:   Query<(Entity, &Transform), Added<Selected>>,
-        atlas:      Res<AtlasRes>,
-    mut select:     ResMut<Selector>
-
-) {
-    if selected.is_empty() {
-        return;
-    }
-
-    // println!("selector");
-
-    if select.selector_entity.is_none() {
-        if let Ok((_, transform)) = selected.get_single() {
-            if let Some(img) = atlas.get_texture(AtlasType::Ui, "select") {
-                let entity = commands.spawn((
-                    SpriteBundle {
-                        texture: img.1.clone(),
-                        transform: Transform {
-                            translation: transform.translation,
-                            scale: transform.scale,
-                            ..default()
-                        },
-                        ..default()
-                    },
-                    img.0,
-                    Select,
-                    Name::new("Selector")
-                )).id();
-                // println!("selector created");
-                select.selector_entity = Some(entity);
-            } else {
-                warn!("The selection could not be set!")
-            }
-        }
-    }
-}
-
-fn selector_remove(
-    mut commands:   Commands,
-    mut removed:    RemovedComponents<Selected>,
-    mut select:     ResMut<Selector>
-) {
-    if removed.is_empty() {
-        return;
-    }
-
-    // println!("selected remove");
-
-    for entity in removed.read() {
-        if let Some(selected_entity) = select.selector_entity {
-            if entity == selected_entity {  // Возможная проблема мульти компонента
-                commands.entity(selected_entity).despawn_recursive();
-                select.selector_entity = None;
-                select.select_entity = None;
-
-                // println!("selected removed");
-            } else if select.select_entity.is_none() {
-                commands.entity(selected_entity).despawn_recursive();
-                select.selector_entity = None;
-                // println!("selector removed");
-            }
-        }
-    }
-}
-
-fn attach_to_select(
-    mut commands:   Commands,
-    mut selector:   Query<&mut Transform, (With<Select>, Without<Selected>)>,
-        selected:   Query<&Transform, (With<Selected>, Without<Select>)>
-) {
-    if selector.is_empty() && selected.is_empty() {
-        return;
-    }
-
-    if let Ok(selected) = selected.get_single() {
-        if let Ok(mut selector) = selector.get_single_mut() {
-            selector.translation = selected.translation;
-            selector.scale = selected.scale;
-        }
-    }
 }
 
 // ==============================

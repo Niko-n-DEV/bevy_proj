@@ -1,5 +1,8 @@
 #![allow(unused)]
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    tasks::{AsyncComputeTaskPool, Task},
+};
 
 use std::{
     collections::HashSet, 
@@ -7,13 +10,33 @@ use std::{
     ops::Index
 };
 
+use futures_lite::future;
+
 pub const GRID_SIZE: usize = 200;
+
+//
+//
+//
+
+pub struct GridSize {
+    pub grid_size: i32
+}
+
+impl GridSize {
+    pub fn get_grid_size(&self) -> i32 {
+        self.grid_size
+    }
+}
 
 #[derive(Resource)]
 pub struct Grid<T> {
-    pub entities: [[Option<Entity>; GRID_SIZE]; GRID_SIZE],
+    pub entities: [[Option<Entity>; 16]; 16],
     _marker: PhantomData<T>,
 }
+
+//
+//
+//
 
 #[derive(Resource)]
 pub struct ConnectedComponents<T> {
@@ -24,7 +47,7 @@ pub struct ConnectedComponents<T> {
 impl<T> Default for Grid<T> {
     fn default() -> Self {
         Self {
-            entities: [[None; GRID_SIZE]; GRID_SIZE],
+            entities: [[None; 16]; 16],
             _marker: Default::default(),
         }
     }
@@ -34,13 +57,14 @@ impl<T> Default for Grid<T> {
 pub struct GridLocation(pub IVec2);
 
 impl GridLocation {
-    pub fn new(x: u32, y: u32) -> Self {
+    pub fn new(x: i32, y: i32) -> Self {
         GridLocation(IVec2::new(x as i32, y as i32))
     }
 
     pub fn from_world(position: Vec2) -> Option<Self> {
         let position = position + Vec2::splat(0.5);
         let location = GridLocation(IVec2::new(position.x as i32, position.y as i32));
+
         if Grid::<()>::valid_index(&location) {
             Some(location)
         } else {
@@ -87,59 +111,59 @@ pub struct GridPlugin<T> {
     _marker: PhantomData<T>,
 }
 
-// #[derive(Component)]
-// struct ConnectedTask<T> {
-//     task: Task<ConnectedComponents<T>>,
-// }
+#[derive(Component)]
+struct ConnectedTask<T> {
+    task: Task<ConnectedComponents<T>>,
+}
 
-// fn resolve_connected_components<T: Component>(
-//     mut commands: Commands,
-//     mut connected: ResMut<ConnectedComponents<T>>,
-//     // Should maybe be a resource?
-//     mut tasks: Query<(Entity, &mut ConnectedTask<T>)>,
-// ) {
-//     for (task_entity, mut task) in &mut tasks {
-//         if let Some(result) = future::block_on(future::poll_once(&mut task.task)) {
-//             //TODO is there a way to make bevy auto remove these or not panic or something
-//             commands.entity(task_entity).despawn_recursive();
-//             *connected = result;
-//         }
-//     }
-// }
+fn resolve_connected_components<T: Component>(
+    mut commands: Commands,
+    mut connected: ResMut<ConnectedComponents<T>>,
+    // Should maybe be a resource?
+    mut tasks: Query<(Entity, &mut ConnectedTask<T>)>,
+) {
+    for (task_entity, mut task) in &mut tasks {
+        if let Some(result) = future::block_on(future::poll_once(&mut task.task)) {
+            //TODO is there a way to make bevy auto remove these or not panic or something
+            commands.entity(task_entity).despawn_recursive();
+            *connected = result;
+        }
+    }
+}
 
-// fn update_connected_components<T: Component>(
-//     mut commands: Commands,
-//     grid: Res<Grid<T>>,
-//     mut events: EventReader<DirtyGridEvent<T>>,
-//     // Should maybe be a resource?
-//     current_tasks: Query<Entity, With<ConnectedTask<T>>>,
-// ) {
-//     if !events.is_empty() {
-//         events.clear();
-//         for task in &current_tasks {
-//             commands.entity(task).despawn_recursive();
-//         }
+fn update_connected_components<T: Component>(
+    mut commands: Commands,
+    grid: Res<Grid<T>>,
+    mut events: EventReader<DirtyGridEvent<T>>,
+    // Should maybe be a resource?
+    current_tasks: Query<Entity, With<ConnectedTask<T>>>,
+) {
+    if !events.is_empty() {
+        events.clear();
+        for task in &current_tasks {
+            commands.entity(task).despawn_recursive();
+        }
 
-//         let thread_pool = AsyncComputeTaskPool::get();
-//         let grid = Box::new(grid.clone());
+        let thread_pool = AsyncComputeTaskPool::get();
+        let grid = Box::new(grid.clone());
 
-//         let task = thread_pool.spawn(async move {
-//             let starts = all_points()
-//                 .into_iter()
-//                 .filter(|point| !grid.occupied(point))
-//                 .collect::<Vec<_>>();
+        let task = thread_pool.spawn(async move {
+            let starts = all_points(100) // test
+                .into_iter()
+                .filter(|point| !grid.occupied(point))
+                .collect::<Vec<_>>();
 
-//             ConnectedComponents::<T> {
-//                 components: connected_components::connected_components(&starts, |p| {
-//                     neumann_neighbors(&grid, p)
-//                 }),
-//                 ..default()
-//             }
-//         });
+            // ConnectedComponents::<T> {
+            //     components: connected_components::connected_components(&starts, |p| {
+            //         neumann_neighbors(&grid, p)
+            //     }),
+            //     ..default()
+            // }
+        });
 
-//         commands.spawn(ConnectedTask { task });
-//     }
-// }
+        // commands.spawn(ConnectedTask { task });
+    }
+}
 
 // fn remove_from_grid<T: Component>(
 //     mut grid: ResMut<Grid<T>>,
@@ -184,9 +208,9 @@ pub struct GridPlugin<T> {
 //     }
 // }
 
-fn all_points() -> Vec<GridLocation> {
-    (0..GRID_SIZE)
-        .flat_map(|x| (0..GRID_SIZE).map(move |y| GridLocation::new(x as u32, y as u32)))
+fn all_points(size: i32) -> Vec<GridLocation> {
+    (0..size)
+        .flat_map(|x| (0..size).map(move |y| GridLocation::new(x as i32, y as i32)))
         .collect()
 }
 

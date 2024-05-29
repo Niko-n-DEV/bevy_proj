@@ -8,6 +8,7 @@ pub struct AtlasRes {
     pub material:   AtlasData,
     pub terrain:    AtlasData,
     pub objects:    AtlasData,
+    pub con_obj:    AtlasData,
     pub particle:   AtlasData,
     pub entity:     AtlasData,
     pub test:       AtlasData,
@@ -27,6 +28,7 @@ pub enum AtlasType {
     Material,
     Terrain,
     Objects,
+    ConnectObj,
     Particle,
     Entity,
     Test,
@@ -40,6 +42,7 @@ impl AtlasRes {
             material:   AtlasData::default(),
             terrain:    AtlasData::default(),
             objects:    AtlasData::default(),
+            con_obj:    AtlasData::default(),
             particle:   AtlasData::default(),
             entity:     AtlasData::default(),
             test:       AtlasData::default(),
@@ -49,14 +52,15 @@ impl AtlasRes {
 
     pub fn get_spritesheet(&self, atlas_type: AtlasType, name: &str) -> Option<SpriteSheetBundle> {
         let atlas_data = match atlas_type {
-            AtlasType::Items    => &self.items,
-            AtlasType::Material => &self.material,
-            AtlasType::Terrain  => &self.terrain,
-            AtlasType::Objects  => &self.objects,
-            AtlasType::Particle => &self.particle,
-            AtlasType::Entity   => &self.entity,
-            AtlasType::Test     => &self.test,
-            AtlasType::Ui       => &self.ui,
+            AtlasType::Items        => &self.items,
+            AtlasType::Material     => &self.material,
+            AtlasType::Terrain      => &self.terrain,
+            AtlasType::Objects      => &self.objects,
+            AtlasType::ConnectObj   => &self.con_obj,
+            AtlasType::Particle     => &self.particle,
+            AtlasType::Entity       => &self.entity,
+            AtlasType::Test         => &self.test,
+            AtlasType::Ui           => &self.ui,
         };
 
         if let Some(index) = &atlas_data.ids {
@@ -77,14 +81,15 @@ impl AtlasRes {
 
     pub fn get_texture(&self, atlas_type: AtlasType, name: &str) -> Option<(TextureAtlas, Handle<Image>)> {
         let atlas_data = match atlas_type {
-            AtlasType::Items    => &self.items,
-            AtlasType::Material => &self.material,
-            AtlasType::Terrain  => &self.terrain,
-            AtlasType::Objects  => &self.objects,
-            AtlasType::Particle => &self.particle,
-            AtlasType::Entity   => &self.entity,
-            AtlasType::Test     => &self.test,
-            AtlasType::Ui       => &self.ui,
+            AtlasType::Items        => &self.items,
+            AtlasType::Material     => &self.material,
+            AtlasType::Terrain      => &self.terrain,
+            AtlasType::Objects      => &self.objects,
+            AtlasType::ConnectObj   => &self.con_obj,
+            AtlasType::Particle     => &self.particle,
+            AtlasType::Entity       => &self.entity,
+            AtlasType::Test         => &self.test,
+            AtlasType::Ui           => &self.ui,
         };
 
         if let Some(index) = &atlas_data.ids {

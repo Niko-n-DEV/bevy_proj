@@ -3448,6 +3448,7 @@ dependencies = [
  "bevy_pixel_camera",
  "bevy_rapier2d",
  "extol_sprite_layer",
+ "futures-lite",
  "iyes_perf_ui",
  "rand",
  "serde",

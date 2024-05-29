@@ -92,10 +92,12 @@ pub struct LoadingBuffer {
     reg_item_tex_path:          Vec<String>,
     reg_entity_tex_path:        Vec<String>,
     reg_object_tex_path:        Vec<String>,
+    reg_object_ct_tex_path:     Vec<String>,
     reg_ui_tex_path:            Vec<String>,
     verified_item_texture:      Vec<String>,
     verified_entity_texture:    Vec<String>,
     verified_object_texture:    Vec<String>,
+    verified_object_ct_texture: Vec<String>,
     verified_ui_texture:        Vec<String>,
 }
 
@@ -217,6 +219,11 @@ impl ResourcePlugin {
                                 Self::process_directory_assets(&mut register, &mut load_buff.textures_path_buf, &assets_path)?;
                             }
 
+                            let assets_path = path.join("objects_ct");
+                            if assets_path.exists() {
+                                Self::process_directory_assets(&mut register, &mut load_buff.textures_path_buf, &assets_path)?;
+                            }
+
                             let assets_path = path.join("gui");
                             if assets_path.exists() {
                                 Self::process_directory_assets(&mut register, &mut load_buff.reg_ui_tex_path, &assets_path)?;
@@ -237,6 +244,11 @@ impl ResourcePlugin {
                             if res_path.exists() {
                                 Self::process_directory_res(&mut register, &mut load_buff, &res_path)?;
                             }
+
+                            let res_path = path.join("objects_ct");
+                            if res_path.exists() {
+                                Self::process_directory_res(&mut register, &mut load_buff, &res_path)?;
+                            }
                         }
                         _ => continue,
                     }
@@ -244,11 +256,12 @@ impl ResourcePlugin {
             }
         }
 
-        load_buff.verified_item_texture   = Self::process_assets(&load_buff.reg_item_tex_path, &load_buff.textures_path_buf);
-        load_buff.verified_entity_texture = Self::process_assets(&load_buff.reg_entity_tex_path, &load_buff.textures_path_buf);
-        load_buff.verified_object_texture = Self::process_assets(&load_buff.reg_object_tex_path, &load_buff.textures_path_buf);
+        load_buff.verified_item_texture         = Self::process_assets(&load_buff.reg_item_tex_path, &load_buff.textures_path_buf);
+        load_buff.verified_entity_texture       = Self::process_assets(&load_buff.reg_entity_tex_path, &load_buff.textures_path_buf);
+        load_buff.verified_object_texture       = Self::process_assets(&load_buff.reg_object_tex_path, &load_buff.textures_path_buf);
+        load_buff.verified_object_ct_texture    = Self::process_assets(&load_buff.reg_object_ct_tex_path, &load_buff.textures_path_buf);
 
-        load_buff.verified_ui_texture     = Self::process_ui_assets(&load_buff.reg_ui_tex_path);
+        load_buff.verified_ui_texture           = Self::process_ui_assets(&load_buff.reg_ui_tex_path);
         
         Ok(())
     }
@@ -390,6 +403,26 @@ impl ResourcePlugin {
                             load_buff.reg_object_tex_path.push(module.id_texture.clone());
 
                             register.register_object(Registry::ObjectRegistry {
+                                id_name:        module.id_name,
+                                id_source:      Some(load_buff.source_id.clone()),
+                                id_texture:     module.id_texture,
+                                size:           module.size,
+                                collision:      module.collision,
+                                durability:     module.durability
+                            });
+                        }
+                    }
+                    
+                }
+
+                // Обработка json файлов определяющие объекты с соединяющимися текстурами
+                if dir.file_name().map_or(false, |name| name == "objects_ct") {
+                    if let Ok(contents) = fs::read_to_string(&path) {
+                        if let Ok(module) = serde_json::from_str::<Registry::PersistentObjectRegistry>(&contents) {
+
+                            load_buff.reg_object_ct_tex_path.push(module.id_texture.clone());
+
+                            register.register_object_ct(Registry::PersistentObjectRegistry {
                                 id_name:        module.id_name,
                                 id_source:      Some(load_buff.source_id.clone()),
                                 id_texture:     module.id_texture,

@@ -1,0 +1,9 @@
+{
+    "id_name": "sint",
+    "id_texture_b": "sint_body_sheet",
+	"id_texture_h": "sint_head_sheet",
+    "entity_type": {
+		"Humonoid": "Human"
+	},
+	"health": 100.0
+}

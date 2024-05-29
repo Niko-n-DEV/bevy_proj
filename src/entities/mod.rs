@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-pub mod Animation;
+pub mod EntityAnimation;
 pub mod Entity;
 pub mod EntityType;
 

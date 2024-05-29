@@ -52,14 +52,16 @@ impl Plugin for WorldSystem {
                     ..default()
                 }
             ))
-            .add_plugins((
-                EntitySystem,   // Инициализация плагина, отвечающего за работу всех entity
-                PlayerPlugin,   // Инициализация плагина, отвечающего за работу управления entity-player
-                DamageSystem,
-                ContainerPlugin::<ItemType> {
-                    phantom: PhantomData {}
-                },
-            ))
+            .add_plugins(
+                (
+                    EntitySystem,   // Инициализация плагина, отвечающего за работу всех entity
+                    PlayerPlugin,   // Инициализация плагина, отвечающего за работу управления entity-player
+                    DamageSystem,
+                    ContainerPlugin::<ItemType> {
+                        phantom: PhantomData {}
+                    },
+                )
+            )
             // Init Event
             .add_event::<LoadChunkPos>()
             .add_event::<DischargeChunkPos>()
@@ -141,7 +143,7 @@ impl WorldSystem {
             Установка синхронно с процессом загрузки ресурсов из файла.
         */
 
-        entity_event.send(EntitySpawn("human_ex".to_string(), Vec2::splat(16.0)));
+        entity_event.send(EntitySpawn("human".to_string(), Vec2::splat(16.0)));
 
         // Test ==============================
 
@@ -427,17 +429,17 @@ impl WorldSystem {
     ///
     /// Определяется по данной позиции и позиции чанка, делением на общий размер одного тайла
     pub fn get_currect_chunk_tile(input_var: IVec2) -> IVec2 {
-        let cell_size = 16;
+        let tile_size = 16;
         let result: IVec2 = IVec2::new(
             if input_var.x >= 0 {
-                input_var.x / cell_size
+                input_var.x / tile_size
             } else {
-                (input_var.x - cell_size + 1) / cell_size
+                (input_var.x - tile_size + 1) / tile_size
             },
             if input_var.y >= 0 {
-                input_var.y / cell_size
+                input_var.y / tile_size
             } else {
-                (input_var.y - cell_size + 1) / cell_size
+                (input_var.y - tile_size + 1) / tile_size
             }
         );
         result

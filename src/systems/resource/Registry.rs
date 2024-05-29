@@ -36,12 +36,13 @@ pub struct ModuleRegistry {
 
 #[derive(Resource)]
 pub struct Registry {
-    pub module_registry: HashMap<String, ModuleRegistry>,
-    pub entity_registry: HashMap<String, EntityRegistry>,    // Хэш-таблица с регистрируемыми сущностями
-    pub object_registry: HashMap<String, ObjectRegistry>,    // Хэш-таблица с регистрируемыми объектами
-    pub item_registry:   HashMap<String, ItemRegistry>,      // Хэш-таблица с регистрируемыми предметами
+    pub module_registry:    HashMap<String, ModuleRegistry>,
+    pub entity_registry:    HashMap<String, EntityRegistry>,    // Хэш-таблица с регистрируемыми сущностями
+    pub object_registry:    HashMap<String, ObjectRegistry>,    // Хэш-таблица с регистрируемыми объектами
+    pub object_ct_registry: HashMap<String, PersistentObjectRegistry>,
+    pub item_registry:      HashMap<String, ItemRegistry>,      // Хэш-таблица с регистрируемыми предметами
 
-    pub test:            HashMap<String, TestRegistry>,    // Хэш-таблица с тест
+    pub test:               HashMap<String, TestRegistry>,    // Хэш-таблица с тест
 }
 
 #[derive(Serialize, Deserialize)]
@@ -74,6 +75,16 @@ impl ObjectRegistry {
     pub fn get_base_durability(&self) -> Option<usize> {
         self.durability
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct PersistentObjectRegistry {
+    pub id_name:        String,
+    pub id_source:      Option<String>,
+    pub id_texture:     String,
+    pub size:           IVec2C,
+    pub collision:      Vec2C,
+    pub durability:     Option<usize>
 }
 
 #[derive(Serialize, Deserialize)]
@@ -111,13 +122,14 @@ pub struct TestRegistry(pub String);
 impl Registry {
     pub fn new() -> Self {
         Self {
-            module_registry: HashMap::new(),
+            module_registry:    HashMap::new(),
 
-            entity_registry: HashMap::new(),
-            object_registry: HashMap::new(),
-            item_registry:   HashMap::new(),
+            entity_registry:    HashMap::new(),
+            object_registry:    HashMap::new(),
+            object_ct_registry: HashMap::new(),
+            item_registry:      HashMap::new(),
 
-            test:            HashMap::new()
+            test:               HashMap::new()
         }
     }
 
@@ -164,6 +176,24 @@ impl Registry {
 
     pub fn get_object_info(&self, name: &str) -> Option<&ObjectRegistry> {
         self.object_registry.get(name)
+    }
+
+    //
+    // ==========
+    //
+    pub fn register_object_ct(&mut self, object_ct_type: PersistentObjectRegistry) {
+        if !self.object_ct_registry.contains_key(&object_ct_type.id_name) {
+            println!("Register Object_ct: {}", &object_ct_type.id_name);
+            self.object_ct_registry.insert(object_ct_type.id_name.clone(), object_ct_type);
+        }
+    }
+
+    pub fn get_object_ct_texture(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
+        atlas.get_spritesheet(AtlasType::ConnectObj, name) // -> graphic/Atlas
+    }
+
+    pub fn get_object_ct_info(&self, name: &str) -> Option<&PersistentObjectRegistry> {
+        self.object_ct_registry.get(name)
     }
 
     // ==============================

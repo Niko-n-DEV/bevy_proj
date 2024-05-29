@@ -1,10 +1,10 @@
-#![allow(unused)]
+// #![allow(unused)]
 use bevy::prelude::*;
-use bevy::utils::HashMap;
+
 use std::{
     fmt::Debug,
     hash::Hash,
-    ops::{Index, IndexMut},
+    ops::Index,
     marker::PhantomData
 };
 
@@ -12,8 +12,7 @@ use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
-    interface::{
-        game_ui::{
+    interface::game_ui::{
             Inventory::{
                 inventory_update, 
                 inventory_click_item,
@@ -25,8 +24,7 @@ use crate::core::{
                 cursor_grab,
                 hover_item
             },
-        }
-    },
+        },
     AppState, 
     ItemType::ItemType
 };
@@ -44,8 +42,8 @@ impl<I: ItemTypeEx> Plugin for ContainerPlugin<I> {
             .init_resource::<CursorContainer>()
             // Reg Events
             .add_event::<InventoryDisplayToggleEvent>()
-            .add_event::<ItemPickUpEvent>()
-            .add_event::<ItemDropEvent>()
+            // .add_event::<ItemPickUpEvent>()
+            // .add_event::<ItemDropEvent>()
             // Systems
             .add_systems(Update, 
                 (
@@ -72,121 +70,121 @@ impl<I: ItemTypeEx> Plugin for ContainerPlugin<I> {
 // ==============================
 
 
-#[derive(Event, Debug, Copy, Clone)]
-pub struct ItemPickUpEvent {
-    pub picker: Entity,
-}
+// #[derive(Event, Debug, Copy, Clone)]
+// pub struct ItemPickUpEvent {
+//     pub picker: Entity,
+// }
 
-#[derive(Event, Debug, Copy, Clone)]
-pub struct ItemDropEvent {
-    pub droper: Entity,
-    pub item: Entity,
-}
+// #[derive(Event, Debug, Copy, Clone)]
+// pub struct ItemDropEvent {
+//     pub droper: Entity,
+//     pub item: Entity,
+// }
 
 // ==============================
 // Container
 // ==============================
 
-pub const INVENTORY_SIZE: usize = 3 * 3;
-pub const INVENTORY_ITEM_SIZE: usize = 16;
+// pub const INVENTORY_SIZE: usize = 3 * 3;
+// pub const INVENTORY_ITEM_SIZE: usize = 16;
 
-#[derive(Component, Default, InspectorOptions, Reflect)]
-#[reflect(Component, InspectorOptions)]
-pub struct Container {
-    pub slots: [InventoryItemSlot; 6]
-}
+// #[derive(Component, Default, InspectorOptions, Reflect)]
+// #[reflect(Component, InspectorOptions)]
+// pub struct Container {
+//     pub slots: [InventoryItemSlot; 6]
+// }
 
-impl Container {
-    pub fn find_in_container(
-        &self, 
-        item_type: ItemType
-    ) -> Option<&InventoryItemSlot> {
-        for slot in &self.slots {
-            if slot.item_stack.item_type == item_type {
-                return Some(slot);
-            }
-        }
-        None
-    }
+// impl Container {
+//     pub fn find_in_container(
+//         &self, 
+//         item_type: ItemType
+//     ) -> Option<&InventoryItemSlot> {
+//         for slot in &self.slots {
+//             if slot.item_stack.item_type == item_type {
+//                 return Some(slot);
+//             }
+//         }
+//         None
+//     }
 
-    /// Взять весь слот
-    pub fn take_from_container(
-        &mut self, 
-        item_type: ItemType
-    ) -> Option<&mut InventoryItemSlot> {
-        for slot in &mut self.slots {
-            if slot.item_stack.item_type == item_type {
-                return Some(slot);
-            }
-        }
-        None
-    }
+//     /// Взять весь слот
+//     pub fn take_from_container(
+//         &mut self, 
+//         item_type: ItemType
+//     ) -> Option<&mut InventoryItemSlot> {
+//         for slot in &mut self.slots {
+//             if slot.item_stack.item_type == item_type {
+//                 return Some(slot);
+//             }
+//         }
+//         None
+//     }
 
-    /// Добавляет в инвентарь предмет в первый же свободный слот.
-    pub fn add_in_container(
-        &mut self,
-            item: ItemType,
-            count: usize
-    ) -> bool {
+//     /// Добавляет в инвентарь предмет в первый же свободный слот.
+//     pub fn add_in_container(
+//         &mut self,
+//             item: ItemType,
+//             count: usize
+//     ) -> bool {
 
-        for slot in &mut self.slots {
-            // Добавление в имеющийся стак, если подбираемый предмет уже есть
-            if slot.item_stack.item_type == item {
-                slot.item_stack.count += count;
+//         for slot in &mut self.slots {
+//             // Добавление в имеющийся стак, если подбираемый предмет уже есть
+//             if slot.item_stack.item_type == item {
+//                 slot.item_stack.count += count;
 
-                return true;
-            }
-            // Добавление в пустой слот
-            if slot.item_stack.item_type == ItemType::None {
-                slot.item_stack.item_type = item;
-                slot.item_stack.count = count;
+//                 return true;
+//             }
+//             // Добавление в пустой слот
+//             if slot.item_stack.item_type == ItemType::None {
+//                 slot.item_stack.item_type = item;
+//                 slot.item_stack.count = count;
                 
-                return true;
-            }
-        }
+//                 return true;
+//             }
+//         }
         
-        false
-    }
+//         false
+//     }
 
-    /// Добавляет в инвентарь предмет в определённый слот
-    pub fn place_in_container(
-        &mut self,
-            item: ItemType,
-            count: usize,
-            slot: usize
-    ) {
-        if self.slots[slot].item_stack.item_type == ItemType::None {
-            self.slots[slot].item_stack.item_type = item;
-            self.slots[slot].item_stack.count = count;
-        } else {
-            println!("В слоте уже что-то есть")
-        }
-    }
+//     /// Добавляет в инвентарь предмет в определённый слот
+//     pub fn place_in_container(
+//         &mut self,
+//             item: ItemType,
+//             count: usize,
+//             slot: usize
+//     ) {
+//         if self.slots[slot].item_stack.item_type == ItemType::None {
+//             self.slots[slot].item_stack.item_type = item;
+//             self.slots[slot].item_stack.count = count;
+//         } else {
+//             println!("В слоте уже что-то есть")
+//         }
+//     }
 
-    /// Взять определённое кол-во из слота
-    pub fn take_def_from_container(
-        &mut self,
-        item_type: ItemType,
-        count: usize
-    ) -> Option<ItemStack> {
-        if let Some(slot) = self.take_from_container(item_type) {
-            if slot.item_stack.count >= count {
-                slot.item_stack.count -= count;
-                return Some(ItemStack {
-                    item_type: slot.item_stack.item_type,
-                    count,
-                });
-            }
-            let taken_count = slot.item_stack.count;
-            slot.item_stack.count = 0;
-            return Some(ItemStack {
-                    item_type: slot.item_stack.item_type,
-                    count: taken_count,
-                });
-        }
-        None
-    }
-}
+//     /// Взять определённое кол-во из слота
+//     pub fn take_def_from_container(
+//         &mut self,
+//         item_type: ItemType,
+//         count: usize
+//     ) -> Option<ItemStack> {
+//         if let Some(slot) = self.take_from_container(item_type) {
+//             if slot.item_stack.count >= count {
+//                 slot.item_stack.count -= count;
+//                 return Some(ItemStack {
+//                     item_type: slot.item_stack.item_type,
+//                     count,
+//                 });
+//             }
+//             let taken_count = slot.item_stack.count;
+//             slot.item_stack.count = 0;
+//             return Some(ItemStack {
+//                     item_type: slot.item_stack.item_type,
+//                     count: taken_count,
+//                 });
+//         }
+//         None
+//     }
+// }
 
 #[derive(Component, Default, InspectorOptions, Clone, Copy, Reflect)]
 #[reflect(Component, InspectorOptions)]
@@ -207,92 +205,90 @@ pub struct ItemStack {
 // Equipment
 // ==============================
 
-pub trait ItemTypeEx: Component + Copy + Clone + Eq + Hash + Debug + Default {}
+// #[derive(Debug, Default, Clone, Component)]
+// pub struct Equipment<I: ItemTypeEx> {
+//     pub items: HashMap<(I, u8), Option<Entity>>,
+// }
 
-#[derive(Debug, Default, Clone, Component)]
-pub struct Equipment<I: ItemTypeEx> {
-    pub items: HashMap<(I, u8), Option<Entity>>,
-}
+// // (З/А) - Заметка автора кода (не я автор)
+// impl<I: ItemTypeEx> Equipment<I> {
 
-// (З/А) - Заметка автора кода (не я автор)
-impl<I: ItemTypeEx> Equipment<I> {
+//     /// Получение списка элементов
+//     pub fn list<T, V>(&self, t_items: &Query<&T, (With<I>, Without<V>)>) -> Vec<T>
+//     where
+//         T: Component + Clone,
+//         V: Component,
+//     {
+//         self.iter_some()
+//             .filter_map(|(_, e)| {
+//                 if let Ok(t) = t_items.get(e) {
+//                     Some(t.clone())
+//                 } else {
+//                     None
+//                 }
+//             })
+//             .collect()
+//     }
 
-    /// Получение списка элементов
-    pub fn list<T, V>(&self, t_items: &Query<&T, (With<I>, Without<V>)>) -> Vec<T>
-    where
-        T: Component + Clone,
-        V: Component,
-    {
-        self.iter_some()
-            .filter_map(|(_, e)| {
-                if let Ok(t) = t_items.get(e) {
-                    Some(t.clone())
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
+//     /// Добавление в свободный слот
+//     pub fn add(&mut self, item: Entity, item_type: &I) -> bool {
+//         if let Some((_, item_slot)) = self
+//             .items
+//             .iter_mut()
+//             .find(|((t, _), b)| t == item_type && b.is_none())
+//         {
+//             *item_slot = Some(item);
+//             true
+//         } else {
+//             false
+//         }
+//     }
+//     // TODO: Реализация замены добавляемого предмета и возврат существующего (З/А)
 
-    /// Добавление в свободный слот
-    pub fn add(&mut self, item: Entity, item_type: &I) -> bool {
-        if let Some((_, item_slot)) = self
-            .items
-            .iter_mut()
-            .find(|((t, _), b)| t == item_type && b.is_none())
-        {
-            *item_slot = Some(item);
-            true
-        } else {
-            false
-        }
-    }
-    // TODO: Реализация замены добавляемого предмета и возврат существующего (З/А)
+//     /// Изъятие из слота определённого придмета
+//     pub fn take(&mut self, item: Entity) -> bool {
+//         if let Some((_, e)) = self
+//             .items
+//             .iter_mut()
+//             .find(|(_, b)| b.is_some() && b.unwrap() == item)
+//         {
+//             *e = None;
+//             true
+//         } else {
+//             false
+//         }
+//     }
 
-    /// Изъятие из слота определённого придмета
-    pub fn take(&mut self, item: Entity) -> bool {
-        if let Some((_, e)) = self
-            .items
-            .iter_mut()
-            .find(|(_, b)| b.is_some() && b.unwrap() == item)
-        {
-            *e = None;
-            true
-        } else {
-            false
-        }
-    }
+//     /// Что-то
+//     pub fn iter_some(&'_ self) -> impl Iterator<Item = ((I, u8), Entity)> + '_ {
+//         // TODO: вместо этого используйте filter_map (З/А)
+//         self.items
+//             .iter()
+//             .filter(|(_, i)| i.is_some())
+//             .map(move |(a, i)| (*a, i.unwrap()))
+//     }
+// }
 
-    /// Что-то
-    pub fn iter_some(&'_ self) -> impl Iterator<Item = ((I, u8), Entity)> + '_ {
-        // TODO: вместо этого используйте filter_map (З/А)
-        self.items
-            .iter()
-            .filter(|(_, i)| i.is_some())
-            .map(move |(a, i)| (*a, i.unwrap()))
-    }
-}
-
-impl<I: ItemTypeEx> Index<(I, u8)> for Equipment<I> {
-    type Output = Option<Entity>;
+// impl<I: ItemTypeEx> Index<(I, u8)> for Equipment<I> {
+//     type Output = Option<Entity>;
     
-    /// Получения предмета по индексу
-    fn index(&self, index: (I, u8)) -> &Self::Output {
-        if let Some(item) = self.items.get(&index) {
-            return item;
-        }
-        &None
-    }
-}
+//     /// Получения предмета по индексу
+//     fn index(&self, index: (I, u8)) -> &Self::Output {
+//         if let Some(item) = self.items.get(&index) {
+//             return item;
+//         }
+//         &None
+//     }
+// }
 
-impl<I: ItemTypeEx> IndexMut<(I, u8)> for Equipment<I> {
-    fn index_mut(&mut self, index: (I, u8)) -> &mut Self::Output {
-        if let Some(ee) = self.items.get_mut(&index) {
-            return ee;
-        }
-        panic!("No item with index {:?}", index);
-    }
-}
+// impl<I: ItemTypeEx> IndexMut<(I, u8)> for Equipment<I> {
+//     fn index_mut(&mut self, index: (I, u8)) -> &mut Self::Output {
+//         if let Some(ee) = self.items.get_mut(&index) {
+//             return ee;
+//         }
+//         panic!("No item with index {:?}", index);
+//     }
+// }
 
 // ==============================
 // Cursor Contain
@@ -306,6 +302,8 @@ pub struct CursorContainer {
 // ==============================
 // Inventory
 // ==============================
+
+pub trait ItemTypeEx: Component + Copy + Clone + Eq + Hash + Debug + Default {}
 
 #[derive(Debug, Clone, Component, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
@@ -370,23 +368,24 @@ impl Inventory {
 
     /// Взятие из инвентаря (без выхода)
     pub fn take(&mut self, item: (String, usize)) -> bool {
-        if let Some(slot) = self.items.iter_mut().find(|slot| {
+        if let Some(slot_op) = self.items.iter_mut().find(|slot| {
             if let Some(slot) = slot {
                 slot.id_name == item.0 && slot.count >= item.1
             } else {
                 false
             }
         }) {
-            if let Some(slot) = slot {
+            if let Some(slot) = slot_op {
                 if slot.count > item.1 {
                     slot.count -= item.1;
                 } else {
-                    *slot = Slot {
-                        id_name: "".to_string(),
-                        name: "".to_string(),
-                        item_type: ItemType::None,
-                        count: 0,
-                    };
+                    // *slot = Slot {
+                    //     id_name: "".to_string(),
+                    //     name: "".to_string(),
+                    //     item_type: ItemType::None,
+                    //     count: 0,
+                    // };
+                    *slot_op = None
                 }
                 return true;
             }
@@ -412,7 +411,7 @@ impl Inventory {
 
     /// Поиск в инвентаре
     pub fn find(&mut self, name: &str) -> bool {
-        if let Some(slot) = self.items.iter_mut().find(|slot_find| {
+        if let Some(_slot) = self.items.iter_mut().find(|slot_find| {
             if let Some(slot_find) = slot_find {
                 slot_find.id_name == name || slot_find.name == name
             } else {

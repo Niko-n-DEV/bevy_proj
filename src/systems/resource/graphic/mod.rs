@@ -113,6 +113,29 @@ pub fn setup_ex(
     atlas.objects.ids =     Some(objects_hash);
 
     // ==============================
+    // Connected Texture
+    // ==============================
+    let loaded_folder = loaded_folders.get(&resource_module.0).unwrap();
+
+    if let Some((texture_atlas_nearest, con_objects_texture, con_objects_hash)) = create_connected_atlas(
+        &load_buff.verified_object_ct_texture,
+        &loaded_folder,
+        16.0,
+        4,
+        None,
+        Some(ImageSampler::nearest()),
+        &mut textures,
+    ) {
+        let con_object_layout = texture_atlases.add(texture_atlas_nearest);
+
+        atlas.con_obj.layout =  Some(con_object_layout);
+        atlas.con_obj.image =   Some(con_objects_texture);
+        atlas.con_obj.ids =     Some(con_objects_hash);
+    } else {
+        warn!("Connecteed textures is not loading!");
+    }
+
+    // ==============================
     // gui
     // ==============================
     let loaded_folder = loaded_folders.get(&resource_module.0).unwrap();
@@ -142,6 +165,11 @@ pub fn setup_ex(
 
     next_state.set(AppState::MainMenu);
     info!("State: MainMenu")
+}
+
+/// Получить квадратный минимум для создания полностью заполняемого атласа.
+fn calculate_min_square_size(num_textures: usize) -> usize {
+    return (num_textures as f64).sqrt().ceil() as usize;
 }
 
 // ==============================
@@ -297,6 +325,118 @@ fn load_and_index_atlas_ex(
     );
 
     (layout, texture, textures_ids)
+}
+
+fn create_connected_atlas(
+    load_buff:  &Vec<String>,
+    folder:     &LoadedFolder,
+    tile_size:  f32,
+    pack_size:  usize,
+    padding:    Option<UVec2>,
+    sampling:   Option<ImageSampler>,
+    textures:   &mut ResMut<Assets<Image>>,
+) -> Option<(TextureAtlasLayout, Handle<Image>, HashMap<String, usize>)> {
+    let atlas_size = calculate_min_square_size(load_buff.len());
+    let max_size = atlas_size as f32 * (tile_size * pack_size as f32);
+
+    let mut texture_atlas_builder = 
+        TextureAtlasBuilder::default()
+            .initial_size(Vec2::splat(tile_size * pack_size as f32))
+            .max_size(Vec2::splat(max_size))
+            .padding(padding.unwrap_or_default());
+
+    let mut textures_ids: HashMap<String, usize> = HashMap::new();
+    // Нумерация загруженных единиц
+    let mut num: usize = 0;
+
+    // Прогон по имеющимся текстурам в loadedfolder
+    for handle in folder.handles.iter() {
+
+        if let Some(path) = handle.path() {
+
+            if let Some(file_name) = path.to_string().as_str().split('/').last() {
+
+                if let Some(first) = file_name.rsplit(|c| c == '\\' || c == '/').next() {
+
+                    for sec in load_buff.clone() {
+
+                        if let Some(second) = sec.rsplit(|c| c == '\\' || c == '/').next() {
+
+                            if first == second {
+                                // Получение id у прогоняемой текстуры
+                                let id = handle.id().typed_unchecked::<Image>();
+                                // Проверка, преобразоваемый файл ли в текстуру
+                                let Some(texture) = textures.get(id) else {
+                                    warn!(
+                                        "{:?} did not resolve to an `Image` asset.",
+                                        handle.path().unwrap()
+                                    );
+
+                                    continue;
+                                };
+
+                                // Получение имени загружаемого файла, чтобы использовать это как ключь-имя в hash-таблице
+                                if let Some(path) = handle.path() {
+                                    if let Some(file_name) = path.to_string().as_str().split('/').last() {
+                                        let file_fmt = Path::new(file_name).file_stem().unwrap().to_string_lossy();
+
+                                        println!("Loaded module resource | {}", file_fmt);
+                                        textures_ids.insert(file_fmt.to_string(), num);
+                                    } else {
+                                        warn!("[Error] - An error occurred while reading the file name!")
+                                    }
+                                } else {
+                                    warn!("[Error] - An error occurred while reading the file path!")
+                                }
+
+                                num += 1;
+                                // Добавление на полотно добавляемую текстуру
+                                texture_atlas_builder.add_texture(Some(id), texture);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // if let Ok((_, texture)) = texture_atlas_builder.finish() {
+    //     let texture = textures.add(texture);
+
+    //     // Обновление настройки выборки в атласе текстур
+    //     let image = textures.get_mut(&texture).unwrap();
+    //         image.sampler = sampling.unwrap_or_default();
+
+    //     let layout = TextureAtlasLayout::from_grid(
+    //         Vec2::splat(atlas_size as f32 * pack_size as f32),
+    //         tile_size as usize,
+    //         tile_size as usize,
+    //         None,
+    //         None,
+    //     );
+
+    //     return Some((layout, texture, textures_ids));
+    // }
+
+    // None
+
+    let (_, texture) = texture_atlas_builder.finish().unwrap();
+
+        let texture = textures.add(texture);
+
+        // Обновление настройки выборки в атласе текстур
+        let image = textures.get_mut(&texture).unwrap();
+            image.sampler = sampling.unwrap_or_default();
+
+        let layout = TextureAtlasLayout::from_grid(
+            Vec2::splat(atlas_size as f32 * pack_size as f32),
+            tile_size as usize,
+            tile_size as usize,
+            None,
+            None,
+        );
+
+    return Some((layout, texture, textures_ids));
 }
 // ==============================
 // 

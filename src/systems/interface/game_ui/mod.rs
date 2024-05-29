@@ -1,6 +1,8 @@
 pub mod Console;
+pub mod Context;
 pub mod Info;
 pub mod Inventory;
+pub mod Select;
 
 use bevy::prelude::*;
 
@@ -33,6 +35,37 @@ use crate::core::{
     },
     AppState
 };
+
+// ==============================
+//             Module
+// ==========  GameUI  ==========
+
+pub fn game_ui_plugin(app: &mut App) {
+    // GameUI
+    app.add_systems(OnEnter(AppState::Game), GameUI::spawn_game_ui);
+    app.add_systems(Update, (
+            BarGui::build_gui,
+            BarGui::update_player_info,
+            BarGui::interact_with_to_inv_visible_button,
+            GameUI::interact_with_to_menu_button
+        ).run_if(in_state(AppState::Game))
+    );
+    // GameUI === Info
+    app.add_systems(Update, 
+        (
+        Info::info_item_panel,
+        ).run_if(in_state(AppState::Game))
+    );
+    // GameUI === Selector
+    app.add_plugins(Select::select_plugin);
+    // GameUI === DEBUG
+    app.add_systems(Update, DebugInfoPanel::toggle_debug_window.run_if(in_state(AppState::Game)));
+    // GameUI === Console
+    app.add_plugins(Console::console_plugin);
+    // GameUI === ContextMenu
+    app.add_plugins(Context::context_menu_plugin);
+    app.add_systems(OnExit(AppState::Game), GameUI::despawn_game_ui);
+}
 
 // ==============================
 // 
@@ -245,6 +278,14 @@ impl DebugInfoPanel {
                         ui.label("Objects");
                         ui.horizontal(|ui| {
                             for key in registry.object_registry.keys() {
+                                if ui.button(key).clicked() {
+                                    *cursor_mode = CursorMode::Placer;
+                                    placer.placer = Some(("object".to_string(), key.clone()));
+                                }
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            for key in registry.object_ct_registry.keys() {
                                 if ui.button(key).clicked() {
                                     *cursor_mode = CursorMode::Placer;
                                     placer.placer = Some(("object".to_string(), key.clone()));

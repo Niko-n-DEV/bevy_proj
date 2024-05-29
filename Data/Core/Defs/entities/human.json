@@ -1,7 +1,7 @@
 {
-    "id_name": "human_ex",
-    "id_texture_b": "body_sheet",
-	"id_texture_h": "head_sheet",
+    "id_name": "human",
+    "id_texture_b": "human_body_sheet",
+	"id_texture_h": "human_head_sheet",
     "entity_type": {
 		"Humonoid": "Human"
 	},

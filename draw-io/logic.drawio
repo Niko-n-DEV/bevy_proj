@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="v9HclS9J_wwdK3H5lna0" name="Страница 1">
-        <mxGraphModel dx="2434" dy="2320" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2000" math="0" shadow="0">
+        <mxGraphModel dx="6476" dy="3328" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2000" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -1499,42 +1499,6 @@
                             <mxPoint x="-1130" y="700"/>
                         </Array>
                     </mxGeometry>
-                </mxCell>
-                <mxCell id="508" value="InventotyGUI" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="-1960" y="-840" width="80" height="20" as="geometry"/>
-                </mxCell>
-                <mxCell id="510" value="InventorySlot" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="-1960" y="-800" width="80" height="20" as="geometry"/>
-                </mxCell>
-                <mxCell id="511" value="" style="endArrow=classic;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="510" target="508" edge="1">
-                    <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="-1860" y="-820" as="sourcePoint"/>
-                        <mxPoint x="-1910" y="-810" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="512" value="Inv GUI" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="-1840" y="-840" width="40" height="40" as="geometry"/>
-                </mxCell>
-                <mxCell id="513" value="" style="endArrow=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" parent="1" source="508" target="512" edge="1">
-                    <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="-1860" y="-850" as="sourcePoint"/>
-                        <mxPoint x="-1810" y="-900" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="514" value="Click" style="ellipse;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="-1960" y="-670" width="40" height="20" as="geometry"/>
-                </mxCell>
-                <mxCell id="515" value="Check pos" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="-1900" y="-680" width="40" height="40" as="geometry"/>
-                </mxCell>
-                <mxCell id="516" value="Check objects" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="-1840" y="-680" width="40" height="40" as="geometry"/>
-                </mxCell>
-                <mxCell id="517" value="Place Comp" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="-1780" y="-680" width="40" height="40" as="geometry"/>
-                </mxCell>
-                <mxCell id="518" value="Spawn&lt;br&gt;Select" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="-1720" y="-680" width="40" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="519" value="Exit" style="ellipse;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="-1980" y="1241.5" width="60" height="20" as="geometry"/>

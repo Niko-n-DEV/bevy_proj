@@ -22,9 +22,9 @@ mod core {
     pub use crate::AppState;
 
     pub use crate::components::*;
-    pub use crate::objects::*;
-    pub use crate::items::*;
     pub use crate::entities::*;
+    pub use crate::items::*;
+    pub use crate::objects::*;
     pub use crate::systems::*;
 
     pub use crate::util::*;
@@ -67,7 +67,7 @@ fn main() {
                             title: "SINT-et".to_string(),
                             resolution: WindowResolution::new(1280.0, 720.0),
                             resizable: false,
-                            present_mode: bevy::window::PresentMode::AutoVsync,
+                            present_mode: bevy::window::PresentMode::AutoNoVsync,
                             ..default()
                         }),
                         ..default()

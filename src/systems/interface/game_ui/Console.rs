@@ -1,4 +1,4 @@
-#![allow(unused)]
+// #![allow(unused)]
 use bevy::prelude::*;
 use bevy_egui::{
     egui,
@@ -7,13 +7,23 @@ use bevy_egui::{
 
 use crate::core::{
     interface::game_ui::GameUI, 
-    ItemType::*, 
-    ContainerSystem::Container, 
-    UserSystem::{
-        UserControl,
-        User
-    }
+    ItemType::*,
+    ContainerSystem::Inventory,
+    UserSystem::UserControl,
+    AppState
 };
+
+pub fn console_plugin(app: &mut App) {
+    // Init resources
+    app.init_resource::<Console>();
+    // Init systems
+    app.add_systems(Update, 
+        (
+            toggle_console,
+            cmd_execute
+        ).run_if(in_state(AppState::Game))
+    );
+}
 
 #[derive(Default, Resource)]
 pub struct Console {
@@ -33,17 +43,18 @@ pub fn toggle_console(
         return;
     }
 
-    if let Ok(mut game_ui) = parent_query.get_single_mut() {
-        if keyboard_input.just_pressed(KeyCode::Enter) {
+    if keyboard_input.just_pressed(KeyCode::Enter) {
+        if let Ok(mut game_ui) = parent_query.get_single_mut() {
             game_ui.console_toggle = !game_ui.console_toggle;
         }
+    }
 
+    if let Ok(game_ui) = parent_query.get_single() {
         if game_ui.console_toggle {
             egui::Window::new("Console")
                     .show(contexts.ctx_mut(), |ui| {
                         ui.horizontal(|ui| {
                             ui.text_edit_singleline(&mut console.line_input);
-
                             if ui.button(">").clicked() || 
                             (keyboard_input.just_pressed(KeyCode::NumpadEnter)) {
                                 if !console.line_input.is_empty() {
@@ -53,14 +64,12 @@ pub fn toggle_console(
                                     console.line_input.clear()
                                 }
                             }
-
                             if keyboard_input.just_pressed(KeyCode::ArrowUp) {
                                 if console.select_index < console.input_buffer.len() - 1 {
                                     console.select_index += 1;
                                 }
                                 console.line_input = console.input_buffer[console.select_index].clone()
                             }
-
                             if keyboard_input.just_pressed(KeyCode::ArrowDown) {
                                 if console.select_index > 0 {
                                     console.select_index -= 1;
@@ -83,7 +92,7 @@ pub struct ConsoleInput(pub String);
 
 pub fn cmd_execute(
     mut _commands:  Commands,
-    mut player:     Query<(&mut Transform, &mut Container), With<UserControl>>,
+    mut player:     Query<(&mut Transform, &mut Inventory), With<UserControl>>,
     mut event:      EventReader<ConsoleInput>
 ) {
     if event.is_empty() {
@@ -131,7 +140,11 @@ pub fn cmd_execute(
                                     "ammo" => {
                                         if let Ok(mut player) = player.get_single_mut() {
                                             if let Ok(y) = y_str.parse::<usize>() {
-                                                player.1.add_in_container(ItemType::Item(Item::Ammo), y);
+                                                if player.1.add(("bullet".to_string(), ItemType::Item(Item::Ammo), y)) {
+                                                    println!("Пользователю - [] выдано [] в размере {}", y)
+                                                } else {
+                                                    println!("Не удалось добавить предмет в инвентарь")
+                                                }
                                             }
                                         } 
                                     },

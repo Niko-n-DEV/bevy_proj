@@ -16,7 +16,7 @@ use crate::core::{
         SpriteLayer
     },
     //UserSystem::User,
-    Movement::DirectionState,
+    EntityAnimation::EntityDirectionState,
     EntityType::*
 };
 
@@ -52,7 +52,7 @@ pub struct EntityBase {
     pub speed:              Speed,
     pub health:             Health,
     pub position:           Position,
-    pub direction:          DirectionState,
+    pub direction:          EntityDirectionState,
     pub movable:            bool,
     pub interaction_radius: f32,
     pub entity_type:        EntityType
@@ -65,7 +65,7 @@ impl Default for EntityBase {
             speed:              Speed(50., 75., 25.),
             health:             Health(1.),
             position:           Position(Vec2::ZERO),
-            direction:          DirectionState::South,
+            direction:          EntityDirectionState::South,
             movable:            true,
             interaction_radius: 10.0,
             entity_type:        EntityType::None
@@ -80,13 +80,8 @@ pub struct EntityHead {
     pub parent:     Entity,
     pub health:     Health,
     pub look_at:    Vec2,
-    pub direction:  DirectionState,
+    pub direction:  EntityDirectionState,
     pub movable:    bool,
-}
-
-#[derive(Component)]
-pub struct EntityOne {
-    pub body: Entity
 }
 
 /// Событие спавна сущности
@@ -118,7 +113,7 @@ pub fn spawn_entity(
                         speed:      Speed(50., 75., 25.),
                         health:     Health(info.health),
                         position:   Position(Vec2::new(64., 64.)),
-                        direction:  DirectionState::South,
+                        direction:  EntityDirectionState::South,
                         movable:    true,
                         ..default()
                     },
@@ -148,7 +143,7 @@ pub fn spawn_entity(
                                         parent:     entity,
                                         health:     Health(info.health),
                                         look_at:    Vec2::ZERO,
-                                        direction:  DirectionState::South,
+                                        direction:  EntityDirectionState::South,
                                         movable:    true,
                                     },
                                     SpriteSheetBundle {
@@ -189,7 +184,7 @@ pub struct EntityFounder {
     pub health: Health,
     pub speed: Speed,
     pub position: Position,
-    pub direction: DirectionState,
+    pub direction: EntityDirectionState,
     pub entity_type: EntityType
 }
 
