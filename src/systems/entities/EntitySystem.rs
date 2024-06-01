@@ -208,6 +208,7 @@ fn delete_enemy_spawner(
 // Movement
 // ==============================
 
+/// Ивент для управления движением сущности
 #[derive(Event)]
 pub struct MovementEntity(pub Entity, pub Vec3, pub f32); // 0 - Entity, 1 - Diraction, 2 - Speed
 
@@ -218,8 +219,6 @@ fn handle_move(
         &mut Velocity
     )>,
     mut event:      EventReader<MovementEntity>,
-    // mut dir_event:  EventWriter<DirectionChangeEvent>,
-    // time: Res<Time>
 ) {
     if event.is_empty() {
         return;
@@ -228,9 +227,6 @@ fn handle_move(
     for event in event.read() {
         if let Ok((mut entity_base, mut transform, mut velocity)) = query.get_mut(event.0) {
             if event.1 != Vec3::ZERO {
-                //dir_event.send(DirectionChangeEvent(event.0, determine_direction_vec3(event.1)));
-                //transform.translation = transform.translation + time.delta_seconds() * event.2 * event.1;
-                
                 let move_var = event.1 / event.1.length();
                 velocity.linvel = move_var.truncate() * event.2;
 
@@ -244,7 +240,7 @@ fn handle_move(
 
 // Гаситель инерции всех движиющийся Entity
 fn inertia_attenuation(
-    mut query: Query<&mut Velocity, With<EntityBase>>,
+    mut query: Query<(&mut Velocity, &mut EntityBase, &Transform), With<EntityBase>>,
 ) {
     if query.is_empty() {
         return;
@@ -254,11 +250,12 @@ fn inertia_attenuation(
     let min_threshold = 0.01;
 
     for mut vel in query.iter_mut() {
-        if vel.linvel != Vec2::ZERO {
-            vel.linvel *= damping_coefficient;
+        if vel.0.linvel != Vec2::ZERO {
+            vel.0.linvel *= damping_coefficient;
             
-            if vel.linvel.abs().max_element() < min_threshold {
-                vel.linvel = Vec2::ZERO;
+            if vel.0.linvel.abs().max_element() < min_threshold {
+                vel.0.linvel = Vec2::ZERO;
+                vel.1.position.0 = vel.2.translation.truncate()
             }
         }
     }

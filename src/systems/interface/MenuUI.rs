@@ -94,8 +94,11 @@ impl MainMenu {
                     Name::new("Main Menu Panel"),
                 ))
                 .with_children(|parent| {
+
                     // === Title ===
+
                     // === Play Button ===
+                    
                     parent
                         .spawn((
                             ButtonBundle {
@@ -121,7 +124,9 @@ impl MainMenu {
                                 ..default()
                             });
                         });
+
                     // === Settings Button ===
+
                     parent
                     .spawn((
                         ButtonBundle {
@@ -147,7 +152,9 @@ impl MainMenu {
                             ..default()
                         });
                     });
+
                     // === Quit Button ===
+
                     parent
                         .spawn((
                             ButtonBundle {

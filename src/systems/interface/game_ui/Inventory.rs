@@ -11,10 +11,6 @@ use crate::core::{
         CursorContainer,
         InventoryItemSlot,
     },
-    interface::game_ui::{
-            BarGui,
-            GameUI,
-        },
     UserSystem::UserControl,
     resource::{
         graphic::Atlas::{
@@ -24,6 +20,8 @@ use crate::core::{
         Registry::Registry
     },
 };
+
+use super::{BarGui::BarGui, GameUI};
 
 #[allow(unused)]
 // Нужно решить, как правльно использовать это в проекте
@@ -146,15 +144,11 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
                                 NodeBundle {
                                     style: Style {
                                         display:    Display::Grid,
-                                        left:       Val::Px(-176.0),
+                                        left:       Val::Px(-179.0),
+                                        bottom:     Val::Px(3.0),
                                         width:      Val::Px(136.0),
                                         height:     Val::Px(104.0),
-                                        border: UiRect { 
-                                            left:   Val::Px(4.), 
-                                            right:  Val::Px(4.), 
-                                            top:    Val::Px(4.), 
-                                            bottom: Val::Px(4.) 
-                                        },
+                                        border:     UiRect::all(Val::Px(4.0)),
                                         grid_template_columns: vec![GridTrack::px(32.), GridTrack::px(32.), GridTrack::px(32.), GridTrack::px(32.)],
                                         grid_template_rows: vec![
                                             GridTrack::px(32.),
@@ -302,7 +296,6 @@ pub fn inventory_click_item(
     mut cursor_inv:     ResMut<CursorContainer>,
     mut player_inv:     Query<&mut Inventory, With<UserControl>>,
     mut interact_slots: Query<(&Interaction, &mut BackgroundColor, &InventoryDisplaySlot), Changed<Interaction>>,
-    //     items:                  Query<&I>,
 ) {
     for (interaction, mut color, slot) in &mut interact_slots {
         match *interaction {

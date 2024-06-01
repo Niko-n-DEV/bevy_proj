@@ -4,34 +4,152 @@ use bevy::{
 };
 
 use crate::core::{
-    AppState,
+    interface::game_ui::Select::Selected, 
     Camera::UserCamera,
-    interface::game_ui::Select::Selected
+    ContainerSystem::Slot,
+    AppState,
 };
 
 pub fn context_menu_plugin(app: &mut App) {
-    // Init Res
-    app.init_resource::<ContextMenuRes>(); 
+    // Init res
+    app.init_resource::<ContextUIPos>();
+    app.init_resource::<ContextMenuRes>();
+    // Init systems
     app.add_systems(PreUpdate, track_pos_context.run_if(in_state(AppState::Game)));
     app.add_systems(Update, 
         (
-                interact_with_context_buttons,
+                interact_with_about_context_button,
+                interact_with_take_context_button,
                 track_context.after(track_pos_context)
             ).run_if(in_state(AppState::Game))
         );
     app.add_systems(PostUpdate, def_context_menu.run_if(in_state(AppState::Game)));
 }
 
-#[derive(Component)]
-struct ContextMenu;
-
 #[derive(Resource, Default)]
-struct ContextMenuRes {
+struct ContextUIPos {
     pub procent_pos: Vec2
 }
 
+// ==============================
+//  Context Menu
+//  Builder
+// ==============================
+
+fn build_context_menu(
+    commands:   &mut Commands,
+) -> Entity {
+    commands.spawn((
+        NodeBundle {
+            style: Style {
+                display:    Display::Grid,
+                height:     Val::Percent(25.0),
+                width:      Val::Percent(15.0),
+                border: UiRect {
+                    left:   Val::Percent(0.5),
+                    right:  Val::Percent(0.5),
+                    top:    Val::Percent(0.5),
+                    bottom: Val::Percent(0.5),
+                },
+                ..default()
+            },
+            background_color:   Color::rgb(0.19, 0.19, 0.19).into(),
+            border_color:       Color::rgb(0.25, 0.25, 0.25).into(),
+            ..default()
+        },
+        ContextMenu,
+        Name::new("ContextMenu")
+    )).with_children(|parent| {
+
+        // === AboutButton
+
+        parent.spawn((
+            ButtonBundle {
+                style: Style {
+                    display:    Display::Grid,
+                    // height: Val::Percent(25.),
+                    // width:  Val::Percent(100.),
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                background_color:   Color::rgb(0.22, 0.22, 0.22).into(),
+                ..default()
+            },
+            AboutButton,
+            Name::new("AboutBtn")
+        )).with_children(|parent| {
+            parent.spawn(TextBundle {
+                text: Text {
+                    sections: vec![TextSection::new(
+                        "About",
+                        TextStyle {
+                            font_size: 11.0,
+                            ..default()
+                        },
+                    )],
+                    ..default()
+                },
+                ..default()
+            });
+        });
+
+        // === Take
+
+        parent.spawn((
+            ButtonBundle {
+                style: Style {
+                    display:    Display::Grid,
+                    // height: Val::Percent(25.),
+                    // width:  Val::Percent(100.),
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                background_color:   Color::rgb(0.21, 0.21, 0.21).into(),
+                ..default()
+            },
+            TakeButton,
+            Name::new("TaketBtn")
+        )).with_children(|parent| {
+            parent.spawn(TextBundle {
+                text: Text {
+                    sections: vec![TextSection::new(
+                        "Take",
+                        TextStyle {
+                            font_size: 11.0,
+                            ..default()
+                        },
+                    )],
+                    ..default()
+                },
+                ..default()
+            });
+        });
+
+        // === Atack
+
+
+    }).id()
+}
+
+
+// ==============================
+//  Context Menu
+//  Context Objects
+// ==============================
+
+#[derive(Component)]
+struct ContextMenu;
+
+#[allow(unused)]
+#[derive(Resource, Default)]
+struct ContextMenuRes {
+    pub is_enable:  bool,
+    pub slot:       Option<Slot>,
+    pub object:     Option<Entity>
+}
+
 fn track_pos_context(
-    mut context_res:    ResMut<ContextMenuRes>,
+    mut context_res:    ResMut<ContextUIPos>,
         window:         Query<&Window, With<PrimaryWindow>>,
         camera:         Query<(&Camera, &GlobalTransform), With<UserCamera>>,
         selected:       Query<&Transform, With<Selected>>,
@@ -56,9 +174,13 @@ fn track_pos_context(
 
 fn def_context_menu(
     mut commands:   Commands,
-        query:      Query<&Transform, With<Selected>>,
+        query:      Query<Entity, With<Selected>>,
         context:    Query<Entity, With<ContextMenu>>,
 ) {
+    if query.is_empty() && context.is_empty() {
+        return;
+    }
+
     if query.is_empty() && !context.is_empty() {
         if let Ok(entity) = context.get_single() {
             commands.entity(entity).despawn_recursive();
@@ -66,44 +188,13 @@ fn def_context_menu(
     }
     
     if !query.is_empty() && context.is_empty() {
-        commands.spawn((
-            NodeBundle {
-                style: Style {
-                    height: Val::Percent(25.0),
-                    width:  Val::Percent(15.0),
-                    border: UiRect {
-                        left:   Val::Percent(0.5),
-                        right:  Val::Percent(0.5),
-                        top:    Val::Percent(0.5),
-                        bottom: Val::Percent(0.5),
-                    },
-                    ..default()
-                },
-                background_color:   Color::rgb(0.19, 0.19, 0.19).into(),
-                border_color:       Color::rgb(0.25, 0.25, 0.25).into(),
-                ..default()
-            },
-            ContextMenu
-        )).with_children(|parent| {
-            parent.spawn((
-                ButtonBundle {
-                    style: Style {
-                        height: Val::Percent(25.),
-                        width:  Val::Percent(100.),
-                        ..default()
-                    },
-                    background_color:   Color::rgb(0.47, 0.47, 0.47).into(),
-                    ..default()
-                },
-                AboutButton
-            ));
-        });
+        build_context_menu(&mut commands);
     }
 }
 
 fn track_context(
     mut context:        Query<&mut Style, With<ContextMenu>>,
-        context_res:    ResMut<ContextMenuRes>,
+        context_res:    ResMut<ContextUIPos>,
 ) {
     if context.is_empty() {
         return;
@@ -115,10 +206,15 @@ fn track_context(
     }
 }
 
+// ==============================
+//  Context Menu
+//  Buttons
+// ==============================
+
 #[derive(Component)]
 struct AboutButton;
 
-fn interact_with_context_buttons(
+fn interact_with_about_context_button(
     mut button_query: Query<
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<AboutButton>),
@@ -131,13 +227,41 @@ fn interact_with_context_buttons(
     if let Ok((interaction, mut background_color)) = button_query.get_single_mut() {
         match *interaction {
             Interaction::Pressed => {
-                *background_color = Color::rgb(0.40, 0.40, 0.40).into();
+                *background_color = Color::rgb(0.20, 0.20, 0.20).into();
             }
             Interaction::Hovered => {
-                *background_color = Color::rgb(0.50, 0.50, 0.50).into();
+                *background_color = Color::rgb(0.25, 0.25, 0.25).into();
             }
             Interaction::None => {
-                *background_color = Color::rgb(0.47, 0.47, 0.47).into();
+                *background_color = Color::rgb(0.22, 0.22, 0.22).into();
+            }
+        }
+    }
+}
+
+#[derive(Component)]
+struct TakeButton;
+
+fn interact_with_take_context_button(
+    mut button_query: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<TakeButton>),
+    >,
+) {
+    if button_query.is_empty() {
+        return;
+    }
+
+    if let Ok((interaction, mut background_color)) = button_query.get_single_mut() {
+        match *interaction {
+            Interaction::Pressed => {
+                *background_color = Color::rgb(0.19, 0.19, 0.19).into();
+            }
+            Interaction::Hovered => {
+                *background_color = Color::rgb(0.24, 0.24, 0.24).into();
+            }
+            Interaction::None => {
+                *background_color = Color::rgb(0.21, 0.21, 0.21).into();
             }
         }
     }

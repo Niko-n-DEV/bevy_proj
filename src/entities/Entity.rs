@@ -34,9 +34,11 @@ pub struct Speed(pub f32, pub f32, pub f32);
 #[derive(Component, Reflect, Default, Debug)]
 pub struct Position(pub Vec2);
 
-/// Компонент отвечающий за [Направление движения]
-// #[derive(Component, Reflect)]
-// pub struct Velocity(pub Vec3);
+/// Компонент отвечающий за [Взаимодействие]
+/// 
+/// 1 - Радиус взаимодействия / 2 - Радиус атаки
+#[derive(Component, Reflect, Default, Debug)]
+pub struct InteractionType(pub f32, pub f32);
 
 /// Компонент отвечающий за возможность атаки на сущность.
 /// 
@@ -106,7 +108,7 @@ pub fn spawn_entity(
                 let entity = commands.spawn((
                     RigidBody::Dynamic,
                     Velocity::zero(),
-                    Collider::round_cuboid(2., 2., 0.25),
+                    Collider::round_cuboid(3., 3., 0.25),
                     LockedAxes::ROTATION_LOCKED,
                     EntityBase {
                         id_name:    info.id_name.clone(),

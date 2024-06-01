@@ -293,7 +293,9 @@ impl ResourcePlugin {
     fn process_ui_assets(check: &Vec<String>) -> Vec<String> {
         // Фиксированный список необходимых текстур
         let required_textures = vec![
+            "about_avatar_ui_btn".to_string(),
             "inv_ui_btn".to_string(),
+            "crafting_ui_btn".to_string(),
             "select".to_string(),
         ];
     

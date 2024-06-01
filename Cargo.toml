@@ -41,7 +41,7 @@ iyes_perf_ui = "0.2.3"
 bevy_pancam = "0.11.1"
 extol_sprite_layer = "0.5.0"
 bevy_pixel_camera = "0.13.0"
-bevy_entitiles = { version = "0.8.0" }
+bevy_entitiles = { version = "0.9.0" }
 rand = { version = "0.8.5" }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.115"

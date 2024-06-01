@@ -125,7 +125,7 @@ impl CameraController {
                     cam.grab_buttons = vec![MouseButton::Middle];
                     cam.zoom_to_cursor = true;
                     cam.min_scale = 0.1;
-                    cam.max_scale = Some(0.75);
+                    cam.max_scale = Some(0.5);
                 } else {
                     cam.grab_buttons = vec![];
                     cam.zoom_to_cursor = false;

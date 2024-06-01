@@ -241,7 +241,7 @@ fn placer(
                         item_event.send(ItemSpawn(match_type.1, WorldSystem::get_currect_chunk_subtile(cursor.0.as_ivec2()), 1));
                     },
                     "object" => {
-                        obj_event.send(ObjectSpawn(match_type.1, WorldSystem::get_currect_chunk_tile(cursor.0.as_ivec2())));
+                        obj_event.send(ObjectSpawn(match_type.1, cursor.0.as_ivec2()));
                     },
                     "entity" => {
                         entity_event.send(EntitySpawn(match_type.1, cursor.0));

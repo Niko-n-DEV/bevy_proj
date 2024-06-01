@@ -1,15 +1,29 @@
 #![allow(unused)]
 use bevy::prelude::*;
 
-pub const NORMAL_BUTTON_COLOR: Color = Color::rgb(0.23, 0.23, 0.23);
-pub const HOVERED_BUTTON_COLOR: Color = Color::rgb(0.26, 0.26, 0.26);
-pub const PRESSED_BUTTON_COLOR: Color = Color::rgb(0.29, 0.29, 0.29);
+pub const NORMAL_BUTTON_COLOR: Color    = Color::rgb(0.23, 0.23, 0.23);
+pub const HOVERED_BUTTON_COLOR: Color   = Color::rgb(0.26, 0.26, 0.26);
+pub const PRESSED_BUTTON_COLOR: Color   = Color::rgb(0.29, 0.29, 0.29);
 
-pub const DARK_GRAY_COLOR: Color = Color::rgb(0.12, 0.12, 0.12);
-pub const DARK_LGRAY_COLOR: Color = Color::rgb(0.15, 0.15, 0.15);
-pub const DARK_LLGRAY_COLOR: Color = Color::rgb(0.20, 0.20, 0.20);
+pub const DARK_GRAY_COLOR: Color        = Color::rgb(0.12, 0.12, 0.12);
+pub const DARK_LGRAY_COLOR: Color       = Color::rgb(0.15, 0.15, 0.15);
+pub const DARK_LLGRAY_COLOR: Color      = Color::rgb(0.20, 0.20, 0.20);
 
-pub const GREEN_BUTTON_COLOR: Color = Color::rgb(0.31, 0.79, 0.47);
+pub const GREEN_BUTTON_COLOR: Color     = Color::rgb(0.31, 0.79, 0.47);
+
+pub const BASE_UI_COLOR: Color          = Color::rgb(0.16, 0.16, 0.16);
+pub const BASE_BORDER_UI_COLOR: Color   = Color::rgb(0.19, 0.19, 0.19);
+pub const BASE_EX_UI_COLOR: Color       = Color::rgb(0.23, 0.23, 0.23);
+pub const WIDGET_UI_COLOR: Color        = Color::rgb(0.20, 0.20, 0.20);
+
+pub const BTN_COLOR: Color              = Color::rgb(0.56, 0.56, 0.56);
+pub const BTN_BORDER_COLOR: Color       = Color::rgb(0.63, 0.63, 0.63);
+pub const BTN_HOVER_COLOR: Color        = Color::rgb(0.69, 0.69, 0.69);
+pub const BTN_PRESS_COLOR: Color        = Color::rgb(0.52, 0.52, 0.52);
+
+pub const HEALTH_COLOR: Color           = Color::rgb(0.79, 0.15, 0.15);
+
+pub const BASE_LINE_UI_COLOR: Color     = Color::rgb(0.23, 0.23, 0.23);
 
 pub fn button_container_style(height: f32, width: f32) -> Style {
     Style {

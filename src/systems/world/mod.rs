@@ -66,7 +66,7 @@ impl WorldTaskManager {
         }
     
         for obj in objects.iter_mut() {
-            commands.entity(obj).despawn();
+            commands.entity(obj).despawn_recursive();
         }
     }
 
@@ -80,7 +80,7 @@ impl WorldTaskManager {
         }
     
         for item in items.iter_mut() {
-            commands.entity(item).despawn();
+            commands.entity(item).despawn_recursive();
         }
     }
 
@@ -94,7 +94,7 @@ impl WorldTaskManager {
         }
     
         for entity in entities.iter_mut() {
-            commands.entity(entity).despawn();
+            commands.entity(entity).despawn_recursive();
         }
     }
 
@@ -107,7 +107,7 @@ impl WorldTaskManager {
         }
 
         for entities in entities.iter_mut() {
-            commands.entity(entities).despawn();
+            commands.entity(entities).despawn_recursive();
         }
     }
 
