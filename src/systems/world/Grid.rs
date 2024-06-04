@@ -93,24 +93,17 @@ impl Grid {
         atlas:     &AtlasRes,
         chunk_pos: &IVec2
     ) {
-
         if let Some(chunk) = self.chunks.get_mut(&chunk_pos) {
             chunk.chunk_remove(cmd);
             
             self.chunks.remove(&chunk_pos);
         }
 
-        // if self.chunks.remove(chunk_pos).is_some() {
-        //     println!("Chunk at position {:?} unloaded.", chunk_pos);
-        // }
-
         if self.debug_mode {
             if let Some(entity) = self.debug_chunks.remove(&chunk_pos) {
                 cmd.entity(entity).despawn();
             }
         }
-
-        // Сделать выгрузку всех дебаг чанков, если дебаг мод выключен и в хэш-таблице есть чанки
     }
 
     pub fn update_chunks(
@@ -165,11 +158,27 @@ impl Grid {
         }
     }
 
+    /// По идеи проверка есть на том положении объект
     pub fn is_object_present(&self, coord: IVec2) -> bool {
         if let Some(chunk) = self.chunks.get(&coord) {
             chunk.is_object_present(coord)
         } else {
             false
+        }
+    }
+
+    /// Проверка наличия объекта по данным глобальным координатам
+    pub fn check_exist_object(&self, coord: &IVec2) -> bool {
+        if let Some(chunk) = self.chunks.get(&get_format_current_chunk(*coord)) {
+            chunk.check_object(*coord)
+        } else {
+            false
+        }
+    } 
+
+    pub fn check_exist_object_ex(&self, chunk: IVec2, local: IVec2) {
+        if let Some(chunk) = self.chunks.get(&chunk) {
+
         }
     }
 
@@ -211,6 +220,13 @@ pub fn get_format_current_chunk(input_var: IVec2) -> IVec2 {
     IVec2::new(chunk_x, chunk_y)
 }
 
+pub fn global_to_local(coord: IVec2) -> UVec2 {
+    UVec2::new(
+        (coord.x.abs() as u32 % 256) / 16,
+        (coord.y.abs() as u32 % 256) / 16
+    )
+}
+
 //
 //
 //
@@ -231,11 +247,22 @@ pub struct ConnectedComponents<T> {
 // }
 
 #[derive(Component, Eq, PartialEq, Hash, Clone, Debug)]
-pub struct GridLocation(pub IVec2, pub IVec2);
+pub struct GridLocation(pub IVec2);
 
 impl GridLocation {
-    pub fn new(chunk: IVec2, local: IVec2) -> Self {
-        GridLocation(chunk, local)
+    pub fn new(x: i32, y: i32) -> Self {
+        GridLocation(IVec2::new(x, y))
+    }
+
+    pub fn get_chunk_and_local(&self) -> (IVec2, UVec2) {
+        (
+            get_format_current_chunk(self.0),
+            global_to_local(self.0)
+        )
+    }
+
+    pub fn distance(&self, other: &GridLocation) -> usize {
+        (self.0.x.abs_diff(other.0.x) + self.0.y.abs_diff(other.0.y)) as usize
     }
 
     // pub fn from_world(position: Vec2) -> Option<Self> {

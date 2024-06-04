@@ -5,7 +5,10 @@ pub mod Path;
 use bevy::prelude::*;
 
 use crate::core::{
-    entities::ai::Path::AiPath,
+    entities::ai::Path::{
+        AiPath,
+        calculate_pos_V2
+    },
     Needs::{
         Hunger,
         Recreation
@@ -222,25 +225,24 @@ fn update_brains(mut brains: Query<(&mut Brain, &Hunger, &Recreation)>) {
 //     }
 // }
 
-// // Does this need to read global transform
-// fn follow_path(
-//     mut paths: Query<(&mut Transform, &mut AiPath, &mut LastDirection)>,
-//     time: Res<Time>,
-// ) {
-//     for (mut transform, mut path, mut last_direction) in &mut paths {
-//         if let Some(next_target) = path.locations.front() {
-//             let delta = *next_target - transform.translation.truncate();
-//             let travel_amount = time.delta_seconds();
+fn follow_path(
+    mut paths:  Query<(&mut Transform, &mut AiPath, &mut LastDirection)>,
+        time:   Res<Time>,
+) {
+    for (mut transform, mut path, mut last_direction) in &mut paths {
+        if let Some(next_target) = path.locations.front() {
+            let delta = calculate_pos_V2(*next_target) - transform.translation.truncate();
+            let travel_amount = time.delta_seconds();
 
-//             if delta.length() > travel_amount * 1.1 {
-//                 let direction = delta.normalize().extend(0.0) * travel_amount;
-//                 last_direction.0 = direction.truncate();
-//                 transform.translation += direction;
-//             } else {
-//                 path.locations.pop_front();
-//             }
-//         } else {
-//             last_direction.0 = Vec2::ZERO;
-//         }
-//     }
-// }
+            if delta.length() > travel_amount * 1.1 {
+                let direction = delta.normalize().extend(0.0) * travel_amount;
+                last_direction.0 = direction.truncate();
+                transform.translation += direction;
+            } else {
+                path.locations.pop_front();
+            }
+        } else {
+            last_direction.0 = Vec2::ZERO;
+        }
+    }
+}

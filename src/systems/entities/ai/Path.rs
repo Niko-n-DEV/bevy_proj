@@ -1,11 +1,14 @@
 #![allow(unused)]
 use bevy::prelude::*;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
+
+use pathfinding::prelude::astar;
 use futures_lite::future;
 
 use std::collections::VecDeque;
+use std::sync::Arc;
 
-use crate::core::world::Grid::GridLocation;
+use crate::core::world::Grid::{Grid, GridLocation};
 
 //
 //
@@ -21,58 +24,135 @@ pub fn path_finding_plugin(app: &mut App) {
 
 #[derive(Component, Default)]
 pub struct AiPath {
-    pub locations: VecDeque<(Vec2, Vec2)>,
+    pub locations: VecDeque<(IVec2, UVec2)>,
 }
 
 pub struct Path {
     pub steps: Vec<GridLocation>,
 }
 
-// impl Path {
-//     pub fn optimize_corners(&mut self) {
-//         // i must be tracked here because vec len changes
-//         let mut i = 0;
-//         while i + 2 < self.steps.len() {
-//             let first_step = &self.steps[i];
-//             let third_step = &self.steps[i + 2];
-//             //If both x and y change then this is a corner
-//             if first_step.x != third_step.x && first_step.y != third_step.y {
-//                 self.steps.remove(i + 1);
-//             }
-//             i += 1;
-//         }
-//     }
-// }
+impl Path {
+    pub fn optimize_corners(&mut self) {
+        // i должно отслеживаться здесь, т.к. вектор меняется
+        let mut i = 0;
+        while i + 2 < self.steps.len() {
+            let first_step = &self.steps[i];
+            let third_step = &self.steps[i + 2];
+            // Если и x, и y изменяются, то это угол
+            if first_step.0.x != third_step.0.x && first_step.0.y != third_step.0.y {
+                self.steps.remove(i + 1);
+            }
+            i += 1;
+        }
+    }
+}
+
+pub fn neumann_neighbors(grid: &Grid, location: &GridLocation) -> Vec<GridLocation> {
+    let (x, y) = (location.0.x as i32, location.0.y as i32);
+
+    // Вектор с подтверждённым путём без препятствий
+    let mut sucessors = Vec::new();
+
+    // Проверка пути слева от точки вычисления
+    if let Some(left) = x.checked_sub(1) {
+        let location = GridLocation::new(left, y);
+        if !grid.check_exist_object(&location.0) {
+            sucessors.push(location);
+        }
+    }
+    // Проверка пути снизу от точки вычисления
+    if let Some(down) = y.checked_sub(1) {
+        let location = GridLocation::new(x, down);
+        if !grid.check_exist_object(&location.0) {
+            sucessors.push(location);
+        }
+    }
+    // Проверка пути справа от точки вычисления
+    if let Some(right) = x.checked_add(1) {
+        let location = GridLocation::new(right, y);
+        if !grid.check_exist_object(&location.0) {
+            sucessors.push(location);
+        }
+    }
+    // Проверка пути сверху от точки вычисления
+    if let Some(up) = y.checked_add(1) {
+        let location = GridLocation::new(x, up);
+        if !grid.check_exist_object(&location.0) {
+            sucessors.push(location);
+        }
+    }
+    sucessors
+}
+
+impl Grid {
+    pub fn path_to(
+        &self,
+        start:  &GridLocation,
+        goal:   &GridLocation,
+    ) -> Result<Path, PathfindingError> {
+        let result = astar(
+            start,
+            |p| {
+                neumann_neighbors(self, p)
+                    .iter()
+                    .map(|neighbor| (neighbor.clone(), 1))
+                    .collect::<Vec<_>>()
+            },
+            |p| p.distance(goal) / 3,
+            |p| p == goal,
+        );
+
+        if let Some((steps, _length)) = result {
+            Ok(Path { steps })
+        } else {
+            Err(PathfindingError)
+        }
+    }
+}
+
+pub fn calculate_pos_V2(target: (IVec2, UVec2)) -> Vec2 {
+    Vec2::new(
+        ((target.0.x as f32 * 256.0) + (target.1.x as f32 * 16.0) + 8.0), 
+        ((target.0.y as f32 * 256.0) + (target.1.y as f32 * 16.0) + 8.0)
+    )
+}
+
+pub fn calculate_pos_IV2(target: (IVec2, IVec2)) -> IVec2 {
+    IVec2::new(
+        ((target.0.x * 256) + (target.1.x * 16) + 8), 
+        ((target.0.y * 256) + (target.1.y * 16) + 8)
+    )
+}
 
 #[derive(Component)]
 pub struct PathfindingTask(Task<Result<Path, PathfindingError>>);
 
-// pub fn spawn_optimized_pathfinding_task<T: Component>(
-//     commands: &mut Commands,
-//     target: Entity,
-//     grid: &Grid<T>,
-//     start: GridLocation,
-//     end: GridLocation,
-// ) {
-//     // Fail early if end is not valid
-//     if grid.occupied(&end) {
-//         return;
-//     }
+pub fn spawn_optimized_pathfinding_task<T: Component>(
+    commands:   &mut Commands,
+    target:     Entity,
+    grid:       Grid,
+    start:      GridLocation,
+    end:        GridLocation,
+) {
+    // Выход, если в конец нельзя прийти
+    if grid.check_exist_object(&end.0) {
+        return;
+    }
 
-//     let thread_pool = AsyncComputeTaskPool::get();
+    let thread_pool = AsyncComputeTaskPool::get();
 
-//     // Must clone because the grid can change between frames
-//     // Must box to prevent stack overflows on very large grids
-//     let grid = Box::new(grid.clone());
+    // Must clone because the grid can change between frames
+    // Must box to prevent stack overflows on very large grids
+    let grid_arc = Arc::new(grid);
 
-//     let task = thread_pool.spawn(async move {
-//         let mut path = grid.path_to(&start, &end);
-//         let _ = path.as_mut().map(|p| p.optimize_corners());
-//         path
-//     });
+    let task = thread_pool.spawn(async move {
+        let mut path = grid_arc.path_to(&start, &end);
+        let _ = path.as_mut().map(|p| p.optimize_corners());
+        path
+    });
 
-//     commands.entity(target).insert(PathfindingTask(task));
-// }
+    commands.entity(target).insert(PathfindingTask(task));
+}
 
 pub fn apply_pathfinding_to_ai(
     mut commands:   Commands,
@@ -89,7 +169,7 @@ pub fn apply_pathfinding_to_ai(
                     for location in path.steps.iter() {
                         ai_path
                             .locations
-                            .push_back((location.0.as_vec2(), location.1.as_vec2()));
+                            .push_back(location.get_chunk_and_local());
                     }
                 }
             }

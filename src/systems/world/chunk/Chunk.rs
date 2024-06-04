@@ -138,22 +138,15 @@ impl ChunkX {
         }
     }
 
+    // ==========
+    // Object
+    // ==========
+
     pub fn add_object(&mut self, entity: Entity, coord: IVec2) -> bool {
         if let Some((x, y)) = self.global_to_local(coord) {
             println!("{} | {}", x, y);
             if self.objects[x][y].is_none() {
                 self.objects[x][y] = Some(entity);
-                return true;
-            }
-        }
-        false
-    }
-
-    pub fn add_subject(&mut self, entity: Entity, coord: IVec2) -> bool {
-        let local_coord = self.global_to_local(coord);
-        if let Some((x, y)) = local_coord {
-            if self.objects[x / 2][y / 2].is_none() && self.subjects[x][y].is_none() {
-                self.subjects[x][y] = Some(entity);
                 return true;
             }
         }
@@ -167,10 +160,45 @@ impl ChunkX {
         None
     }
 
+    /// Удаляет указанный `Entity`
+    /// 
+    /// В процессе происходит провекра всех ячеек в поисках нужного `Entity`
     pub fn remove_object(&mut self, object: Entity) -> bool {
         for row in self.objects.iter_mut() {
             if let Some(obj) = row.iter_mut().find(|&&mut find_obj| find_obj == Some(object)) {
                 *obj = None;
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Проверка существует ли объект по данным глобальным координатам
+    /// 
+    /// В процессе проводится конвертация в локальные координаты чанка
+    pub fn check_object(&self, coord: IVec2) -> bool {
+        if let Some((x, y)) = self.global_to_local(coord) {
+            return self.objects[x][y].is_some();
+        }
+        false
+    }
+
+    /// Проверка существует ли объект по локальным координатам чанка
+    /// 
+    /// Важно, чтобы перед вызовом этой функции была произведена проверка нужного чанка.
+    pub fn check_object_ex(&self, local: IVec2) -> bool {
+        self.objects[local.x as usize][local.y as usize].is_some()
+    }
+
+    // ==========
+    // Subject
+    // ==========
+
+    pub fn add_subject(&mut self, entity: Entity, coord: IVec2) -> bool {
+        let local_coord = self.global_to_local(coord);
+        if let Some((x, y)) = local_coord {
+            if self.objects[x / 2][y / 2].is_none() && self.subjects[x][y].is_none() {
+                self.subjects[x][y] = Some(entity);
                 return true;
             }
         }
@@ -185,6 +213,14 @@ impl ChunkX {
         }
     }
 
+    /// Перевод глобальных координат в локальные
+    /// 
+    /// Путём деления по модулю и деления на размер чанка по клеткам
+    /// 
+    /// ```
+    /// (var.x.abs() % 256) / 16;
+    /// (var.y.abs() % 256) / 16;
+    /// ```
     fn global_to_local(&self, coord: IVec2) -> Option<(usize, usize)> {
         let local_x = (coord.x.abs() % 256) / 16;
         let local_y = (coord.y.abs() % 256) / 16;

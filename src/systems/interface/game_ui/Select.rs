@@ -35,8 +35,8 @@ pub fn select_plugin(app: &mut App) {
 /// Ресурс, отвечающий за хранение данных о выделении
 #[derive(Resource, Default)]
 pub struct SelectorRes {
-    pub selector_entity: Option<Entity>,
-    pub select_entity: Option<Entity>
+    pub selector_entity:    Option<Entity>,
+    pub select_entity:      Option<Entity>
 }
 
 /// Компонент, отвечающийза определения самого выделения
