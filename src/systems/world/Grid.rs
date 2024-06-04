@@ -13,7 +13,13 @@ use std::{
     ops::Index
 };
 
-use crate::core::world::chunk::Chunk::ChunkX as Chunk;
+use crate::core::{
+    world::chunk::Chunk::ChunkX as Chunk,
+    resource::graphic::Atlas::{
+        AtlasRes,
+        AtlasType,
+    }
+};
 
 use futures_lite::future;
 
@@ -25,33 +31,95 @@ pub const CHUNK_SIZE: i32 = 256;
 
 #[derive(Resource)]
 pub struct Grid {
-    pub chunks: HashMap<IVec2, Chunk>,
-    pub render_distance: i32,
+    pub chunks:             HashMap<IVec2, Chunk>,
+    pub render_distance:    i32,
+    pub debug_mode:         bool,
+    pub debug_chunks:       HashMap<IVec2, Entity>,
 }
 
 impl Grid {
     pub fn new(render_distance: i32) -> Self {
         Self {
-            chunks: HashMap::new(),
+            chunks:         HashMap::new(),
             render_distance,
+            debug_mode:     !false,
+            debug_chunks:   HashMap::new()
         }
     }
 
-    pub fn load_chunk(&mut self, chunk_pos: IVec2) {
+    pub fn load_chunk(
+        &mut self,
+        cmd:       &mut Commands,
+        atlas:     &AtlasRes,
+        chunk_pos: IVec2
+    ) {
+
         if !self.chunks.contains_key(&chunk_pos) {
             self.chunks.insert(chunk_pos, Chunk::new(chunk_pos));
-            println!("Chunk at position {:?} loaded.", chunk_pos);
+            // println!("Chunk at position {:?} loaded.", chunk_pos);
+        }
+
+        if self.debug_mode {
+            if !self.debug_chunks.contains_key(&chunk_pos) {
+                if let Some(img) = atlas.get_texture(AtlasType::Ui, "debug_chunk") {
+                    let chunk = cmd
+                        .spawn(SpriteSheetBundle {
+                            sprite: Sprite {
+                                anchor: bevy::sprite::Anchor::BottomLeft,
+                                ..default()
+                            },
+                            texture: img.1,
+                            atlas: img.0,
+                            transform: Transform {
+                                translation: Vec3::new(chunk_pos.x as f32 * 256.0, chunk_pos.y as f32 * 256.0, -1.0),
+                                scale: Vec3::new(16.0, 16.0, 0.0),
+                                ..default()
+                            },
+                            ..default()
+                        })
+                    .insert(Name::new(format!("{chunk_pos}_debug_chunk")))
+                    .id();
+                    self.debug_chunks.insert(chunk_pos, chunk);
+                } else {
+                    warn!("Texture \"debug_chunk\" is not found!");
+                }
+            }
         }
     }
 
-    pub fn unload_chunk(&mut self, chunk_pos: &IVec2) {
-        if self.chunks.remove(chunk_pos).is_some() {
-            println!("Chunk at position {:?} unloaded.", chunk_pos);
+    pub fn unload_chunk(
+        &mut self, 
+        cmd:       &mut Commands,
+        atlas:     &AtlasRes,
+        chunk_pos: &IVec2
+    ) {
+
+        if let Some(chunk) = self.chunks.get_mut(&chunk_pos) {
+            chunk.chunk_remove(cmd);
+            
+            self.chunks.remove(&chunk_pos);
         }
+
+        // if self.chunks.remove(chunk_pos).is_some() {
+        //     println!("Chunk at position {:?} unloaded.", chunk_pos);
+        // }
+
+        if self.debug_mode {
+            if let Some(entity) = self.debug_chunks.remove(&chunk_pos) {
+                cmd.entity(entity).despawn();
+            }
+        }
+
+        // Сделать выгрузку всех дебаг чанков, если дебаг мод выключен и в хэш-таблице есть чанки
     }
 
-    pub fn update_chunks(&mut self, player_pos: IVec2) {
-        let current_chunk = Self::get_format_current_chunk(player_pos);
+    pub fn update_chunks(
+        &mut self,
+        cmd:        &mut Commands,
+        atlas:      &AtlasRes,
+        player_pos: IVec2
+    ) {
+        let current_chunk = get_format_current_chunk(player_pos);
         let half_render_distance = self.render_distance / 2;
 
         let mut chunks_to_load = Vec::new();
@@ -73,28 +141,16 @@ impl Grid {
         }
 
         for chunk_pos in chunks_to_load {
-            self.load_chunk(chunk_pos);
+            self.load_chunk(cmd, atlas, chunk_pos);
         }
 
         for chunk_pos in chunks_to_unload {
-            self.unload_chunk(&chunk_pos);
+            self.unload_chunk(cmd, atlas, &chunk_pos);
         }
-    }
-
-    pub fn get_format_current_chunk(input_var: IVec2) -> IVec2 {
-        let mut chunk_x = input_var.x / CHUNK_SIZE;
-        let mut chunk_y = input_var.y / CHUNK_SIZE;
-        if input_var.x < 0 {
-            chunk_x -= 1;
-        }
-        if input_var.y < 0 {
-            chunk_y -= 1;
-        }
-        IVec2::new(chunk_x, chunk_y)
     }
 
     pub fn add_object_to_chunk(&mut self, entity: Entity, coord: IVec2) -> bool {
-        if let Some(chunk) = self.chunks.get_mut(&Self::get_format_current_chunk(coord)) {
+        if let Some(chunk) = self.chunks.get_mut(&get_format_current_chunk(coord)) {
             chunk.add_object(entity, coord)
         } else {
             false
@@ -116,6 +172,43 @@ impl Grid {
             false
         }
     }
+
+    pub fn upload_all(&mut self, commands: &mut Commands) {
+        let keys: Vec<IVec2> = self.chunks.keys().cloned().collect();
+
+        for coord in keys {
+            if let Some(chunk) = self.chunks.get_mut(&coord) {
+                chunk.chunk_remove(commands);
+            }
+        }
+        
+        self.chunks.clear();
+
+        if !self.debug_chunks.is_empty() {
+            let keys: Vec<IVec2> = self.debug_chunks.keys().cloned().collect();
+
+            for coord in keys {
+                if let Some(chunk) = self.debug_chunks.get_mut(&coord) {
+                    commands.entity(*chunk).despawn_recursive();
+                }
+            }
+            
+            self.debug_chunks.clear();
+        }
+    }
+}
+
+/// Получение координат чанка по вводным данным
+pub fn get_format_current_chunk(input_var: IVec2) -> IVec2 {
+    let mut chunk_x = input_var.x / CHUNK_SIZE;
+    let mut chunk_y = input_var.y / CHUNK_SIZE;
+    if input_var.x < 0 {
+        chunk_x -= 1;
+    }
+    if input_var.y < 0 {
+        chunk_y -= 1;
+    }
+    IVec2::new(chunk_x, chunk_y)
 }
 
 //
@@ -137,12 +230,12 @@ pub struct ConnectedComponents<T> {
 //     }
 // }
 
-#[derive(Component, Eq, PartialEq, Hash, Clone, Debug, Deref, DerefMut)]
-pub struct GridLocation(pub IVec2);
+#[derive(Component, Eq, PartialEq, Hash, Clone, Debug)]
+pub struct GridLocation(pub IVec2, pub IVec2);
 
 impl GridLocation {
-    pub fn new(x: i32, y: i32) -> Self {
-        GridLocation(IVec2::new(x as i32, y as i32))
+    pub fn new(chunk: IVec2, local: IVec2) -> Self {
+        GridLocation(chunk, local)
     }
 
     // pub fn from_world(position: Vec2) -> Option<Self> {
@@ -157,11 +250,11 @@ impl GridLocation {
     // }
 }
 
-impl From<IVec2> for GridLocation {
-    fn from(value: IVec2) -> Self {
-        GridLocation(value)
-    }
-}
+// impl From<(IVec2, IVec2)> for GridLocation {
+//     fn from(chunk: IVec2, local: IVec2) -> Self {
+//         GridLocation(chunk, local)
+//     }
+// }
 
 // impl Index<&GridLocation> for Grid {
 //     type Output = Option<Entity>;
@@ -279,11 +372,11 @@ fn resolve_connected_components<T: Component>(
 //     }
 // }
 
-fn all_points(size: i32) -> Vec<GridLocation> {
-    (0..size)
-        .flat_map(|x| (0..size).map(move |y| GridLocation::new(x as i32, y as i32)))
-        .collect()
-}
+// fn all_points(size: i32) -> Vec<GridLocation> {
+//     (0..size)
+//         .flat_map(|x| (0..size).map(move |y| GridLocation::new(x as i32, y as i32)))
+//         .collect()
+// }
 
 impl<T> Default for ConnectedComponents<T> {
     fn default() -> Self {

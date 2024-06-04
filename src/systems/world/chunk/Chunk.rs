@@ -115,22 +115,32 @@ impl ChunkEx {
 #[derive(Debug, Clone, Component)]
 pub struct ChunkX {
     pub chunk_position: IVec2,
-    pub objects: [[Option<Entity>; 16]; 16],
-    pub subjects: [[Option<Entity>; 32]; 32],
+    pub objects:    [[Option<Entity>; 16]; 16],
+    pub subjects:   [[Option<Entity>; 32]; 32],
 }
 
 impl ChunkX {
     pub fn new(chunk_position: IVec2) -> Self {
         Self {
             chunk_position,
-            objects: [[None; 16]; 16],
-            subjects: [[None; 32]; 32],
+            objects:    [[None; 16]; 16],
+            subjects:   [[None; 32]; 32],
+        }
+    }
+
+    pub fn chunk_remove(&mut self, cmd: &mut Commands) {
+        for row in &self.objects {
+            for entity_option in row {
+                if let Some(entity) = entity_option {
+                    cmd.entity(*entity).despawn();
+                }
+            }
         }
     }
 
     pub fn add_object(&mut self, entity: Entity, coord: IVec2) -> bool {
-        let local_coord = self.global_to_local(coord);
-        if let Some((x, y)) = local_coord {
+        if let Some((x, y)) = self.global_to_local(coord) {
+            println!("{} | {}", x, y);
             if self.objects[x][y].is_none() {
                 self.objects[x][y] = Some(entity);
                 return true;
@@ -150,6 +160,23 @@ impl ChunkX {
         false
     }
 
+    pub fn get_object(&mut self, coord: IVec2) -> Option<Entity> {
+        if let Some((x, y)) = self.global_to_local(coord) {
+            return self.objects[x][y];
+        }
+        None
+    }
+
+    pub fn remove_object(&mut self, object: Entity) -> bool {
+        for row in self.objects.iter_mut() {
+            if let Some(obj) = row.iter_mut().find(|&&mut find_obj| find_obj == Some(object)) {
+                *obj = None;
+                return true;
+            }
+        }
+        false
+    }
+
     pub fn is_object_present(&self, coord: IVec2) -> bool {
         if let Some((x, y)) = self.global_to_local(coord) {
             self.objects[x][y].is_some()
@@ -159,9 +186,8 @@ impl ChunkX {
     }
 
     fn global_to_local(&self, coord: IVec2) -> Option<(usize, usize)> {
-        println!("{}", coord);
-        let local_x = coord.x.abs() % 16;
-        let local_y = coord.y.abs() % 16;
+        let local_x = (coord.x.abs() % 256) / 16;
+        let local_y = (coord.y.abs() % 256) / 16;
         if local_x >= 0 && local_y >= 0 {
             Some((local_x as usize, local_y as usize))
         } else {

@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::core::{
+    Entity::EntityBase,
     resource::graphic::Atlas::{
         AtlasRes, 
         AtlasType
@@ -52,6 +53,7 @@ pub struct Selected;
 // Удаление выделения при тыке на место без объектов
 fn select_object(
     mut commands:           Commands,
+        entities:           Query<(Entity ,&Transform), With<EntityBase>>,
         cursor:             Res<CursorPosition>,
         keyboard_input:     Res<ButtonInput<KeyCode>>,
         mouse_buttons:      Res<ButtonInput<MouseButton>>,
@@ -83,6 +85,27 @@ fn select_object(
                 if let Some(entity) = select.select_entity {
                     commands.entity(entity).remove::<Selected>();
                     select.select_entity = None;
+                    return;
+                }
+            }
+
+            for entity in &entities {
+                if 8.0 > Vec3::distance(entity.1.translation, cursor.0.extend(0.5)) {
+                    if select.select_entity != Some(entity.0) {
+                        // Удаление старого выделения
+                        if let Some(selected_entity) = select.select_entity {
+                            commands.entity(selected_entity).remove::<Selected>();
+                        }
+                        // Новое выделение
+                        select.select_entity = Some(entity.0);
+                        commands.entity(entity.0).insert(Selected);
+                    } else {
+                        // Снятие выделения у выделенной сущности
+                        if let Some(selected_entity) = select.select_entity {
+                            commands.entity(selected_entity).remove::<Selected>();
+                            select.select_entity = None;
+                        }
+                    }
                     return;
                 }
             }

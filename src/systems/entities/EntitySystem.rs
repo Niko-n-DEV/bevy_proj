@@ -29,6 +29,7 @@ use crate::
             EntityNeutrality
         },
         EntityAnimation::EntityDirectionState,
+        stats::Stats,
         Missile::{update_bullet_hits, update_bullets},
         AppState
     };
@@ -113,6 +114,7 @@ pub fn update_spawning(
 // Обновление врагов
 // В данном случае движение их в сторону позиции игрока
 // ==================================================
+
 pub fn update_enemies(
     mut commands:       Commands,
     mut enemy_query:    Query<(&mut Transform, &EntityBase, Entity), With<Enemy>>,
@@ -150,6 +152,7 @@ impl Plugin for EntitySystem {
             // Init Register
             .register_type::<EntityBase>()
             .register_type::<EntityHead>()
+            .register_type::<Stats>()
             // Init Events
             .add_event::<DirectionChangeEvent>()
             .add_event::<MovementEntity>()
@@ -159,13 +162,13 @@ impl Plugin for EntitySystem {
             .add_systems(
                 Update,
                 (
-                    handle_move, // .before(PhysicsSet::SyncBackend),
+                    handle_move.before(PhysicsSet::SyncBackend),
                     // handle_direction_changed_events.after(handle_move),
                     change_dir_velocity,
                     change_dir_head
                 ).run_if(in_state(AppState::Game))
             )
-            .add_systems(PostUpdate, inertia_attenuation.run_if(in_state(AppState::Game)))
+            // .add_systems(PostUpdate, inertia_attenuation.run_if(in_state(AppState::Game)))
             // [Test] Обновление системы просчёта пуль и попадений
             .add_systems(
                 Update,
@@ -192,8 +195,8 @@ impl Plugin for EntitySystem {
 // Перенести в world, т.к. эdSAтот компонет спавнера
 /// Удаление спавнера врагов при выходе из сцены игры
 fn delete_enemy_spawner(
-    mut commands: Commands,
-    spawner: Query<Entity, With<EnemySpawner>>,
+    mut commands:   Commands,
+        spawner:    Query<Entity, With<EnemySpawner>>,
 ) {
     if spawner.is_empty() { // && enemy.is_empty() {
         return;
@@ -231,9 +234,10 @@ fn handle_move(
                 velocity.linvel = move_var.truncate() * event.2;
 
                 entity_base.position = Position(transform.translation.truncate());
-            } else {
-                transform.translation = entity_base.position.0.extend(0.5)
             }
+            // else {
+            //     transform.translation = entity_base.position.0.extend(0.5)
+            // }
         }
     }
 }

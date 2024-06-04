@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+
 use bevy_rapier2d::prelude::*;
 
 use std::{collections::HashMap, marker::PhantomData};
@@ -7,7 +8,7 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use crate::core::{
     entities::EntitySystem::EntitySystem,
-    resource::graphic::Atlas::TestTextureAtlas,
+    resource::graphic::Atlas::AtlasRes,
     world::{
         chunk::Chunk::Chunk, 
         // TileMap::{
@@ -51,7 +52,7 @@ impl Plugin for WorldSystem {
                 // Физика
                 RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(32.0),
                 RapierDebugRenderPlugin {
-                    enabled: true,
+                    enabled: !true,
                     ..default()
                 }
             ))
@@ -106,7 +107,8 @@ impl Plugin for WorldSystem {
             )
             .add_systems(OnExit(AppState::Game), (
                 WorldTaskManager::despawn_entities,
-                WorldTaskManager::despawn_object,
+                // WorldTaskManager::despawn_object,
+                Self::upload_data,
                 WorldTaskManager::despawn_items,
                 WorldTaskManager::despawn_terrain
             ))
@@ -122,12 +124,11 @@ impl WorldSystem {
         //     asset_server:   Res<AssetServer>,
             settings:       Res<Settings>,
         mut world:          ResMut<WorldRes>,
-        mut physics:        ResMut<RapierConfiguration>
+        mut physics:        ResMut<RapierConfiguration>,
     ) {
         world.player_render_distance = settings.rendering_distance;
 
-        let grid = Grid::new(settings.rendering_distance);
-        commands.insert_resource(grid);
+        commands.insert_resource(Grid::new(settings.rendering_distance));
 
         physics.gravity = Vec2::ZERO;
     }
@@ -154,7 +155,9 @@ impl WorldSystem {
     }
 
     fn update_grid(
+        mut commands:       Commands,
         mut grid:           ResMut<Grid>,
+            atlas:          Res<AtlasRes>,
             player_query:   Query<&Transform, With<UserControl>>,
     ) {
         if player_query.is_empty() {
@@ -162,12 +165,16 @@ impl WorldSystem {
         }
         
         if let Ok(player_transform) = player_query.get_single() {
-            let player_pos = IVec2::new(
-                player_transform.translation.x as i32,
-                player_transform.translation.y as i32,
-            );
-            grid.update_chunks(player_pos);
+            let player_pos = player_transform.translation.truncate().as_ivec2();
+            grid.update_chunks(&mut commands, &atlas, player_pos);
         }
+    }
+
+    fn upload_data(
+        mut commands:   Commands,
+        mut grid:       ResMut<Grid>
+    ) {
+        grid.upload_all(&mut commands);
     }
 
     /// Функция для инициализации загрузки чанков вокруг игрока в пределах установленной прогрузки.
@@ -285,53 +292,53 @@ impl WorldSystem {
     // ==============================
     // TEST
     // ==============================
-    #[allow(unused)]
-    fn create_chunk(
-    //    gizmos:         &mut Gizmos,
-        commands:       &mut Commands,
-        asset_server:   &Res<AssetServer>,
-        world_res:      &mut ResMut<WorldRes>,
-        handle:         &Res<TestTextureAtlas>,
-        pos:            IVec2
-    ) { // -> Entity {
-    //    gizmos.rect_2d(Vec2::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0), 0.0, Vec2::splat(16.0), Color::YELLOW_GREEN);
-        // let chunk = commands
-        //     .spawn(SpriteSheetBundle {
-        //         sprite: Sprite {
-        //             anchor: bevy::sprite::Anchor::BottomLeft,
-        //             ..default()
-        //         },
-        //         texture: handle.image.clone().unwrap(),
-        //         atlas: TextureAtlas {
-        //             layout: handle.layout.clone().unwrap(),
-        //             index: TestTextureAtlas::get_index("dirt", &handle),
-        //         },
-        //         transform: Transform {
-        //             translation: Vec3::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0, -1.0),
-        //             scale: Vec3::new(16.0, 16.0, 0.0),
-        //             ..default()
-        //         },
-        //         ..default()
-        //     })
-        //     .insert(Name::new(format!("{pos}_chunk")))
-        //     .id();
-        // world_res.chunks.insert(pos, chunk);
-        // chunk
-    }
+    // #[allow(unused)]
+    // fn create_chunk(
+    // //    gizmos:         &mut Gizmos,
+    //     commands:       &mut Commands,
+    //     asset_server:   &Res<AssetServer>,
+    //     world_res:      &mut ResMut<WorldRes>,
+    //     handle:         &Res<TestTextureAtlas>,
+    //     pos:            IVec2
+    // ) { // -> Entity {
+    // //    gizmos.rect_2d(Vec2::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0), 0.0, Vec2::splat(16.0), Color::YELLOW_GREEN);
+    //     // let chunk = commands
+    //     //     .spawn(SpriteSheetBundle {
+    //     //         sprite: Sprite {
+    //     //             anchor: bevy::sprite::Anchor::BottomLeft,
+    //     //             ..default()
+    //     //         },
+    //     //         texture: handle.image.clone().unwrap(),
+    //     //         atlas: TextureAtlas {
+    //     //             layout: handle.layout.clone().unwrap(),
+    //     //             index: TestTextureAtlas::get_index("dirt", &handle),
+    //     //         },
+    //     //         transform: Transform {
+    //     //             translation: Vec3::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0, -1.0),
+    //     //             scale: Vec3::new(16.0, 16.0, 0.0),
+    //     //             ..default()
+    //     //         },
+    //     //         ..default()
+    //     //     })
+    //     //     .insert(Name::new(format!("{pos}_chunk")))
+    //     //     .id();
+    //     // world_res.chunks.insert(pos, chunk);
+    //     // chunk
+    // }
 
-    #[allow(unused)]
-    fn despawn_chunk(
-        commands: &mut Commands,
-        world: &mut ResMut<WorldRes>,
-        //chunk: &Chunk,
-        pos: IVec2,
-    ) {
-        if let Some(entity) = world.chunks.remove(&pos) {
-            commands.entity(entity).despawn();
-        } else {
-            println!("despawn failed")
-        }
-    }
+    // #[allow(unused)]
+    // fn despawn_chunk(
+    //     commands: &mut Commands,
+    //     world: &mut ResMut<WorldRes>,
+    //     //chunk: &Chunk,
+    //     pos: IVec2,
+    // ) {
+    //     if let Some(entity) = world.chunks.remove(&pos) {
+    //         commands.entity(entity).despawn();
+    //     } else {
+    //         println!("despawn failed")
+    //     }
+    // }
 
     /// Функция для определения точных координат чанка
     ///
@@ -422,6 +429,56 @@ impl Default for WorldRes {
 
             chunks: HashMap::new(),
             chunk: Vec::new()
+        }
+    }
+}
+
+//
+//
+//
+
+#[allow(unused)]
+#[derive(Resource)]
+pub struct WorldInfo {
+    pub seed:           u64,
+
+    pub name:           String,
+
+    pub daytime:        f32,
+
+    // seconds a day time long
+    pub daytime_length: f32,
+
+    // seconds
+    pub time_inhabited: f32,
+
+        time_created:   u64,
+        time_modified:  u64,
+
+        tick_timer:     Timer,
+
+    pub is_paused:      bool,
+    pub paused_steps:   i32,
+    // pub is_manipulating: bool, 
+}
+
+impl Default for WorldInfo {
+    fn default() -> Self {
+        WorldInfo {
+            seed: 0,
+            name: "None Name".into(),
+            daytime: 0.15,
+            daytime_length: 60. * 24.,
+
+            time_inhabited: 0.,
+            time_created: 0,
+            time_modified: 0,
+
+            tick_timer: Timer::new(bevy::utils::Duration::from_secs_f32(1. / 20.), TimerMode::Repeating),
+
+            is_paused: false,
+            paused_steps: 0,
+            // is_manipulating: true,
         }
     }
 }

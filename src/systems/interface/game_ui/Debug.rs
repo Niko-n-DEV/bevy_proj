@@ -58,7 +58,8 @@ impl DebugInfoPanel {
                         if let Ok(player_pos) = player.get_single() {
                             ui.vertical(|ui| {
                                 ui.label(format!("Pos: {}", player_pos.position.0));
-                                ui.label(format!("Pos_T: {}", WorldSystem::get_currect_chunk_tile(player_pos.position.0.as_ivec2())))
+                                ui.label(format!("Pos_T: {}", WorldSystem::get_currect_chunk_tile(player_pos.position.0.as_ivec2())));
+                                ui.label(format!("Pos_C: {}", WorldSystem::get_current_chunk(player_pos.position.0.as_ivec2())));
                             });
                         }
 

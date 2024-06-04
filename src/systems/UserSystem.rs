@@ -74,7 +74,7 @@ impl User {
 
     pub fn control_entity_update(
         mut user:       ResMut<User>,
-            control:    Query<Entity, Added<UserControl>>,
+            control:    Query<Entity, Added<UserControl>>
         // user: &mut User,
         // entity: Entity
     ) {
@@ -122,7 +122,32 @@ impl User {
             }
         }
     }
+
+    pub fn remove_control(
+        mut commands:   Commands,
+        mut user:       ResMut<User>,
+            query:      Query<Entity, With<UserControl>>,
+            query_h:    Query<Entity, With<UserSubControl>>
+    ) {
+        if query.is_empty() {
+            return;
+        }
+
+        if let Ok(entity) = query.get_single() {
+            commands.entity(entity).remove::<UserControl>();
+
+            if !query_h.is_empty() {
+                if let Ok(entity) = query_h.get_single() {
+                    commands.entity(entity).remove::<UserSubControl>();
+                }
+            }
+
+            user.control_entity = None;
+        }
+    }
 }
+
+
 
 // Поместить сюда UserPlugin
 pub struct UserPlugin;
@@ -155,6 +180,7 @@ impl Plugin for UserPlugin {
                     User::to_control
                 ).run_if(in_state(AppState::Game))
             )
+            .add_systems(OnExit(AppState::Game), User::remove_control)
         ;
     }
 }

@@ -2,6 +2,6 @@
   "test1": "default_value",
   "test2": 42,
   "vsync": true,
-  "rendering_distance": 2,
+  "rendering_distance": 4,
   "chunk_size": 16
 }

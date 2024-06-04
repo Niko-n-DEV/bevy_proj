@@ -43,8 +43,8 @@ fn build_context_menu(
         NodeBundle {
             style: Style {
                 display:    Display::Grid,
-                height:     Val::Percent(25.0),
-                width:      Val::Percent(15.0),
+                height:     Val::Percent(10.0),
+                width:      Val::Percent(10.0),
                 border: UiRect {
                     left:   Val::Percent(0.5),
                     right:  Val::Percent(0.5),
@@ -176,6 +176,7 @@ fn def_context_menu(
     mut commands:   Commands,
         query:      Query<Entity, With<Selected>>,
         context:    Query<Entity, With<ContextMenu>>,
+        key_input:  Res<ButtonInput<KeyCode>>
 ) {
     if query.is_empty() && context.is_empty() {
         return;
@@ -188,7 +189,9 @@ fn def_context_menu(
     }
     
     if !query.is_empty() && context.is_empty() {
-        build_context_menu(&mut commands);
+        if key_input.just_pressed(KeyCode::AltLeft) {
+            build_context_menu(&mut commands);
+        }
     }
 }
 

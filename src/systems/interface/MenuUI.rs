@@ -53,12 +53,12 @@ pub struct QuitButton;
 
 impl MainMenu {
     /// Функция для размещения Главного меню.
-    pub fn spawn_main_menu(mut commands: Commands) {
-        Self::build_main_menu(&mut commands);
+    pub fn spawn_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
+        Self::build_main_menu(&mut commands, asset_server);
     }
 
     /// Функция для создания элементов Главного меню.
-    fn build_main_menu(commands: &mut Commands) {
+    fn build_main_menu(commands: &mut Commands, asset_server: Res<AssetServer>) {
         commands
             .spawn((
                 NodeBundle {
@@ -67,6 +67,7 @@ impl MainMenu {
                         width: Val::Percent(100.0),
                         ..default()
                     },
+                    background_color: DARK_GRAY_BACK_COLOR.into(),
                     ..default()
                 },
                 MainMenu {
@@ -78,9 +79,9 @@ impl MainMenu {
                 parent.spawn((
                     NodeBundle {
                         style: Style {
-                            left: Val::Percent(80.0),
+                            left: Val::Percent(84.372),
                             height: Val::Percent(100.0),
-                            width: Val::Percent(20.0),
+                            width: Val::Percent(15.625),
                             justify_self: JustifySelf::End,
                             flex_direction: FlexDirection::Column,
                             justify_content: JustifyContent::Center,
@@ -97,14 +98,44 @@ impl MainMenu {
 
                     // === Title ===
 
+                    parent.spawn(NodeBundle {
+                            style: Style {
+                                position_type:  PositionType::Absolute,
+                                right:          Val::Percent(10.0),
+                                top:            Val::Percent(3.0),
+                                height:         Val::Percent(15.0),
+                                width:          Val::Percent(110.0),
+                                align_items:    AlignItems::Center,
+                                justify_content:JustifyContent::Center,
+                                ..default()
+                            },
+                            background_color: DARK_GRAY_COLOR.into(),
+                            ..default()
+                        }).with_children(|title| {
+                            title.spawn(TextBundle {
+                                text: Text {
+                                    sections: vec![TextSection::new(
+                                        "SINT-ET",
+                                        TextStyle {
+                                            font: asset_server.load("core\\font\\BlockoutOpenbold.ttf"),
+                                            font_size: 38.0,
+                                            ..default()
+                                        },
+                                    )],
+                                    ..default()
+                                },
+                                ..default()
+                            });
+                        });
+
                     // === Play Button ===
                     
                     parent
                         .spawn((
                             ButtonBundle {
                                 style: button_container_style(75.0, 200.0),
-                                border_color: Color::BLACK.into(),
-                                background_color: NORMAL_BUTTON_COLOR.into(),
+                                border_color:       BORDER_BUTTON_COLOR.into(),
+                                background_color:   NORMAL_BUTTON_COLOR.into(),
                                 ..default()
                             },
                             PlayButton {},
@@ -115,6 +146,7 @@ impl MainMenu {
                                     sections: vec![TextSection::new(
                                         "Play",
                                         TextStyle {
+                                            font: asset_server.load("core\\font\\RobotoCondensed-Regular.ttf"),
                                             font_size: 28.0,
                                             ..default()
                                         },
@@ -131,8 +163,8 @@ impl MainMenu {
                     .spawn((
                         ButtonBundle {
                             style: button_container_style(75.0, 200.0),
-                            border_color: Color::BLACK.into(),
-                            background_color: NORMAL_BUTTON_COLOR.into(),
+                            border_color:       BORDER_BUTTON_COLOR.into(),
+                            background_color:   NORMAL_BUTTON_COLOR.into(),
                             ..default()
                         },
                         SettingsButton {},
@@ -143,6 +175,7 @@ impl MainMenu {
                                 sections: vec![TextSection::new(
                                     "Settings",
                                     TextStyle {
+                                        font: asset_server.load("core\\font\\RobotoCondensed-Regular.ttf"),
                                         font_size: 28.0,
                                         ..default()
                                     },
@@ -159,8 +192,8 @@ impl MainMenu {
                         .spawn((
                             ButtonBundle {
                                 style: button_container_style(75.0, 200.0),
-                                border_color: Color::BLACK.into(),
-                                background_color: NORMAL_BUTTON_COLOR.into(),
+                                border_color:       BORDER_BUTTON_COLOR.into(),
+                                background_color:   NORMAL_BUTTON_COLOR.into(),
                                 ..default()
                             },
                             QuitButton {},
@@ -171,6 +204,7 @@ impl MainMenu {
                                     sections: vec![TextSection::new(
                                         "Quit",
                                         TextStyle {
+                                            font: asset_server.load("core\\font\\RobotoCondensed-Regular.ttf"),
                                             font_size: 28.0,
                                             ..default()
                                         },
@@ -196,7 +230,7 @@ impl MainMenu {
     // ==========
     pub fn interact_with_play_button(
         mut button_query: Query<
-            (&Interaction, &mut BackgroundColor),
+            (&Interaction, &mut BackgroundColor, &mut BorderColor),
             (Changed<Interaction>, With<PlayButton>),
         >,
         mut app_state_next_state: ResMut<NextState<AppState>>,
@@ -205,18 +239,21 @@ impl MainMenu {
             return;
         }
 
-        if let Ok((interaction, mut background_color)) = button_query.get_single_mut() {
+        if let Ok((interaction, mut background_color, mut border_color)) = button_query.get_single_mut() {
             match *interaction {
                 Interaction::Pressed => {
                     *background_color = PRESSED_BUTTON_COLOR.into();
+                    *border_color     = BORDER_HOVER_COLOR.into();  
+
                     app_state_next_state.set(AppState::LoadingInGame);
                     info!("State: LoadingInGame")
                 }
                 Interaction::Hovered => {
-                    *background_color = HOVERED_BUTTON_COLOR.into();
+                    *border_color = BORDER_HOVER_COLOR.into();
                 }
                 Interaction::None => {
                     *background_color = NORMAL_BUTTON_COLOR.into();
+                    *border_color     = BORDER_BUTTON_COLOR.into();  
                 }
             }
         }
@@ -227,7 +264,7 @@ impl MainMenu {
     // ==========
     pub fn interact_with_settings_button(
         mut button_query: Query<
-            (&Interaction, &mut BackgroundColor),
+            (&Interaction, &mut BackgroundColor, &mut BorderColor),
             (Changed<Interaction>, With<SettingsButton>),
         >,
         mut menu: Query<&mut MainMenu, With<MainMenu>>
@@ -236,19 +273,22 @@ impl MainMenu {
             return;
         }
 
-        if let Ok((interaction, mut background_color)) = button_query.get_single_mut() {
+        if let Ok((interaction, mut background_color, mut border_color)) = button_query.get_single_mut() {
             match *interaction {
                 Interaction::Pressed => {
                     *background_color = PRESSED_BUTTON_COLOR.into();
+                    *border_color     = BORDER_HOVER_COLOR.into(); 
+
                     if let Ok(mut menu) = menu.get_single_mut() {
                         menu.settings_is_open = !menu.settings_is_open;
                     }
                 }
                 Interaction::Hovered => {
-                    *background_color = HOVERED_BUTTON_COLOR.into();
+                    *border_color = BORDER_HOVER_COLOR.into();
                 }
                 Interaction::None => {
                     *background_color = NORMAL_BUTTON_COLOR.into();
+                    *border_color     = BORDER_BUTTON_COLOR.into();  
                 }
             }
         }
@@ -312,7 +352,7 @@ impl MainMenu {
     // ==========
     pub fn interact_with_quit_button(
         mut button_query: Query<
-            (&Interaction, &mut BackgroundColor),
+            (&Interaction, &mut BackgroundColor, &mut BorderColor),
             (Changed<Interaction>, With<QuitButton>),
         >,
         mut app_exit_event_writer: EventWriter<AppExit>,
@@ -321,17 +361,20 @@ impl MainMenu {
             return;
         }
 
-        if let Ok((interaction, mut background_color)) = button_query.get_single_mut() {
+        if let Ok((interaction, mut background_color, mut border_color)) = button_query.get_single_mut() {
             match *interaction {
                 Interaction::Pressed => {
                     *background_color = PRESSED_BUTTON_COLOR.into();
+                    *border_color     = BORDER_HOVER_COLOR.into();
+
                     app_exit_event_writer.send(AppExit);
                 }
                 Interaction::Hovered => {
-                    *background_color = HOVERED_BUTTON_COLOR.into();
+                    *border_color = BORDER_HOVER_COLOR.into();
                 }
                 Interaction::None => {
                     *background_color = NORMAL_BUTTON_COLOR.into();
+                    *border_color     = BORDER_BUTTON_COLOR.into();  
                 }
             }
         }

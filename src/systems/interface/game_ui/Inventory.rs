@@ -185,6 +185,21 @@ pub(crate) fn toggle_inventory_open<I: ItemTypeEx>(
                                         }
                                     ));
                                 }
+                            }).with_children(|parent| {
+                                parent.spawn(
+                                    NodeBundle {
+                                        style: Style {
+                                            position_type:  PositionType::Absolute,
+                                            left:           Val::Px(-4.0),
+                                            bottom:         Val::Px(100.0),
+                                            width:          Val::Px(136.0),
+                                            height:         Val::Px(20.0),
+                                            ..default()
+                                        },
+                                        background_color:   Color::rgb(0.19, 0.19, 0.19).into(),
+                                        ..default()
+                                    }
+                                );
                             });
                         });
 
@@ -222,12 +237,12 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
             let mut slot = if let Ok(slot) = inv_slots.get_mut(slot_entity) {
                 slot
             } else {
-                bevy::log::error!(
-                    "InventoryDisplayNode's child is not a InventoryDisplaySlot. Should be."
-                );
+                // bevy::log::error!(
+                //     "InventoryDisplayNode's child is not a InventoryDisplaySlot. Should be."
+                // );
                 continue;
             };
-
+            
             let mut slot_cmd = cmd.entity(slot_entity);
 
             if let Some(item_entity) = &inventory[slot.index] {

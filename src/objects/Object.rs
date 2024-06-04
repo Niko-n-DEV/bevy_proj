@@ -37,7 +37,7 @@ impl Default for EntityObject {
     fn default() -> Self {
         Self {
             id_name:    "Object".to_string(),
-            health:     Health(2.),
+            health:     Health(100.),
             position:   Position(Vec2::ZERO),
             direction:  ObjectDirectionState::South,
             movable:    true,
@@ -81,7 +81,6 @@ pub struct ObjectSpawn(pub String, pub IVec2);
 pub fn spawn_object(
     mut commands:   Commands,
         registry:   Res<Registry>,
-    // mut chunk_res:  ResMut<Chunk>,
     mut grid:       ResMut<Grid>,
         atlas:      Res<AtlasRes>,
     mut event:      EventReader<ObjectSpawn>
@@ -98,6 +97,7 @@ pub fn spawn_object(
                 let entity = commands.spawn((
                     EntityObject {
                         id_name: info.id_name.clone(),
+                        health:  Health(info.health.clone() as f32), 
                         ..default()
                     },
                     SpriteSheetBundle {
@@ -117,7 +117,7 @@ pub fn spawn_object(
                 )).id();
 
                 if !grid.add_object_to_chunk(entity, event.1) {
-                    println!("Object {} been deleted, due to an installation error!", &event.0);
+                    // println!("Object {} been deleted, due to an installation error!", &event.0);
                     commands.entity(entity).despawn();
                 }
             } else {

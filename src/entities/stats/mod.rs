@@ -1,6 +1,8 @@
 #![allow(unused)]
 use bevy::prelude::*;
 
+use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
+
 use crate::core::Attributes::AttributeChangeEvent;
 
 #[derive(Component, Debug)]
@@ -59,7 +61,8 @@ pub fn handle_level_up(
 
 // Stats
 
-#[derive(Component, Clone, Debug)]
+#[derive(Component, InspectorOptions, Clone, Debug, Reflect)]
+#[reflect(Component, InspectorOptions)]
 pub struct Stats {
     pub str: i32,   // strength
     pub dex: i32,   // dexterity
@@ -70,10 +73,10 @@ pub struct Stats {
 impl Stats {
     pub fn new() -> Self {
         Stats {
-            str: 0,
-            dex: 0,
-            end: 0,
-            int: 0,
+            str: 1,
+            dex: 1,
+            end: 1,
+            int: 1,
         }
     }
 }

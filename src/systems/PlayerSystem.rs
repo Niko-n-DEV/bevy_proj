@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-//use bevy_rapier2d::prelude::*;
 
 //use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 //use bevy_inspector_egui::InspectorOptions;
@@ -12,6 +11,7 @@ use crate::core::{
         EntityBase,
         EntityHead,
     },
+    stats::Stats,
     UserSystem::CursorPosition,
     world::World::WorldSystem,
     UserSystem::{
@@ -68,7 +68,7 @@ impl PlayerPlugin {
     
     fn player_movement(
         mut entity_query:       Query<(&mut Transform, &mut EntityBase, Entity), With<UserControl>>,
-        mut move_event:         EventWriter<MovementEntity>,
+        mut _move_event:         EventWriter<MovementEntity>,
             keyboard_input:     Res<ButtonInput<KeyCode>>
     ) {
         if entity_query.is_empty() {
@@ -99,7 +99,7 @@ impl PlayerPlugin {
                 }
 
                 if direction != Vec3::ZERO {
-                    move_event.send(MovementEntity(entity, direction, speed_var));
+                    _move_event.send(MovementEntity(entity, direction, speed_var));
                 }
             }
         }
@@ -140,7 +140,7 @@ impl PlayerPlugin {
         // mut chunk_res:      ResMut<Chunk>,
             cursor:         Res<CursorPosition>,
             mouse_input:    Res<ButtonInput<MouseButton>>,
-            user:           Query<(&EntityBase ,&Transform), With<UserControl>>,
+            user:           Query<(&EntityBase ,&Transform, &Stats), With<UserControl>>,
         //    object:         Query<(Entity, &Transform), With<EntityObject>>,
         // entity: Query<(&mut EntityBase, &Transform), With<EntityBase>>,
         mut event:          EventWriter<DamageObject>
@@ -151,9 +151,9 @@ impl PlayerPlugin {
 
         if *cursor_mode == CursorMode::Atack {
             if mouse_input.just_pressed(MouseButton::Left) {
-                if let Ok(player_pos) = user.get_single() {
-                    if player_pos.0.interaction_radius > Vec3::distance(cursor.0.extend(0.5), player_pos.1.translation) {
-                        event.send(DamageObject(WorldSystem::get_currect_chunk_tile(cursor.0.as_ivec2()), 1.0));
+                if let Ok(player) = user.get_single() {
+                    if player.0.atack_radius > Vec3::distance(cursor.0.extend(0.5), player.1.translation) {
+                        event.send(DamageObject(cursor.0.as_ivec2(), player.2.str as f32));
                     }
                 }
             }
@@ -207,54 +207,6 @@ impl PlayerPlugin {
             }
         }
     }
-
-    // pub fn pick_up_items<I: ItemTypeEx>(
-    //     mut cmd:            Commands,
-    //     mut pickup_event:   EventReader<ItemPickUpEvent>,
-    //     mut user:           Query<(&mut Inventory, &EntityBase, &Transform), With<User>>,
-    //         items: Query<
-    //             (Entity, &Transform, &I, &Pickupable, &Children),
-    //             (
-    //                 With<Transform>,
-    //                 With<GlobalTransform>,
-    //                 With<Visibility>,
-    //             ),
-    //         >,
-    // ) {
-    //     for event in pickup_event.read() {
-    //         if let Ok((mut inv, user, transform)) = user.get_mut(event.picker) {
-
-    //             // for (item_entity, _, item_type, pick, children) in
-    //             //     items.iter().filter(|(_, pt, _, _)| **pt == *actor_pt)
-    //             // {
-    //             //     if equipment.add(item_entity, item_type) || inventory.add(item_entity) {
-    //             //         for c in children.iter() {
-    //             //             cmd.entity(*c).despawn_recursive();
-    //             //         }
-    //             //         cmd.entity(item_entity)
-    //             //             .remove::<Transform>()
-    //             //             .remove::<GlobalTransform>()
-    //             //             .remove::<Visibility>();
-    //             //     }
-    //             // }
-
-    //         }
-    //     }
-    // }
-    
-    // pub fn drop_item<I: ItemTypeEx>(
-    //     mut cmd: Commands,
-    //     mut drop_reader: EventReader<ItemDropEvent>,
-    //     mut actors: Query<(&Vector2D, &mut Inventory, &mut Equipment<I>)>,
-    // ) {
-    //     for e in drop_reader.iter() {
-    //         if let Ok((pt, mut inventory, mut equipment)) = actors.get_mut(e.droper) {
-    //             if inventory.take(e.item) || equipment.take(e.item) {
-    //                 cmd.entity(e.item).insert(*pt);
-    //             }
-    //         }
-    //     }
-    // }
 }
 
 #[allow(unused)]

@@ -39,7 +39,7 @@ impl LayerIndex for SpriteLayer {
             Object => 1.1,
             Item => 1.,
             Entity => 1.,
-            EntityPart => 1.0,
+            EntityPart => 1.1,
             //Ui => 995.
         }
     }
@@ -228,6 +228,11 @@ impl ResourcePlugin {
                             if assets_path.exists() {
                                 Self::process_directory_assets(&mut register, &mut load_buff.reg_ui_tex_path, &assets_path)?;
                             }
+
+                            let assets_path = path.join("misc");
+                            if assets_path.exists() {
+                                Self::process_directory_assets(&mut register, &mut load_buff.reg_ui_tex_path, &assets_path)?;
+                            }
                         },
                         "Defs" => {
                             let res_path = path.join("entities");
@@ -297,6 +302,7 @@ impl ResourcePlugin {
             "inv_ui_btn".to_string(),
             "crafting_ui_btn".to_string(),
             "select".to_string(),
+            "debug_chunk".to_string(),
         ];
     
         // Преобразуем фиксированный список в HashSet для эффективного поиска
@@ -408,6 +414,7 @@ impl ResourcePlugin {
                                 id_name:        module.id_name,
                                 id_source:      Some(load_buff.source_id.clone()),
                                 id_texture:     module.id_texture,
+                                health:         module.health,
                                 size:           module.size,
                                 collision:      module.collision,
                                 durability:     module.durability

@@ -60,6 +60,7 @@ pub struct ObjectRegistry {
     pub id_name:        String,
     pub id_source:      Option<String>,
     pub id_texture:     String,
+    pub health:         u32,
     pub size:           IVec2C,
     pub collision:      Vec2C,
     pub durability:     Option<usize>

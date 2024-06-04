@@ -1,6 +1,6 @@
 #![allow(unused)]
 use bevy::prelude::*;
-use bevy_rapier2d::prelude::*;
+use bevy_rapier2d::{prelude::*, rapier::dynamics::RigidBodyBuilder};
 
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
@@ -17,7 +17,8 @@ use crate::core::{
     },
     //UserSystem::User,
     EntityAnimation::EntityDirectionState,
-    EntityType::*
+    EntityType::*,
+    stats::Stats,
 };
 
 /// Компонент отвечающий за [Здоровье]
@@ -57,6 +58,7 @@ pub struct EntityBase {
     pub direction:          EntityDirectionState,
     pub movable:            bool,
     pub interaction_radius: f32,
+    pub atack_radius:       f32,
     pub entity_type:        EntityType
 }
 
@@ -70,6 +72,7 @@ impl Default for EntityBase {
             direction:          EntityDirectionState::South,
             movable:            true,
             interaction_radius: 10.0,
+            atack_radius:       10.0,
             entity_type:        EntityType::None
         }
     }
@@ -107,6 +110,10 @@ pub fn spawn_entity(
                 println!("Entity spawn: {} {}", event.0, event.1);
                 let entity = commands.spawn((
                     RigidBody::Dynamic,
+                    Damping {
+                        linear_damping: 20.0,
+                        ..default()
+                    },
                     Velocity::zero(),
                     Collider::round_cuboid(3., 3., 0.25),
                     LockedAxes::ROTATION_LOCKED,
@@ -132,6 +139,7 @@ pub fn spawn_entity(
                     // Body,
                     info.entity_type.clone(),
                     EntityNeutrality::Neutral,
+                    Stats::new(),
                     Name::new(info.id_name.clone()),
                 )).id();
 

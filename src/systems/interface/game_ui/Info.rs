@@ -145,3 +145,8 @@ pub fn hover_item(
         hover_style.top     = Val::Percent(cursor_p.0.y - 1.0);
     }
 }
+
+//
+// Amount Damage
+//
+

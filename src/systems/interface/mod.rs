@@ -21,6 +21,7 @@ impl Plugin for UIPlugin {
             .add_event::<game_ui::Console::ConsoleInput>()
             // Init Plugins
             // Init Systems ==========
+            .add_systems(Startup, Styles::setup_egui_style)
             // LogoUI
             // MenuUI
             .add_systems(OnEnter(AppState::MainMenu), MenuUI::MainMenu::spawn_main_menu)
