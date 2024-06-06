@@ -318,14 +318,12 @@ impl MainMenu {
                             .text("Loading range"));
 
                         if ui.checkbox(&mut settings_res.vsync, "VSync").changed() {
-                            if let Ok(mut window) = window.get_single_mut() {
-                                if settings_res.vsync {
-                                    window.present_mode = PresentMode::AutoVsync
-                                } else {
-                                    window.present_mode = PresentMode::AutoNoVsync
-                                }
+                            let mut window = window.single_mut();
+                            if settings_res.vsync {
+                                window.present_mode = PresentMode::AutoVsync
+                            } else {
+                                window.present_mode = PresentMode::AutoNoVsync
                             }
-                            
                         }
 
                         ui.horizontal(|ui| {

@@ -15,7 +15,7 @@ use crate::core::{
         ItemStackType,
     },
     EntityType::EntityType,
-    ObjType::ObjectSizeType,
+    // ObjType::ObjectSizeType,
     resource::graphic::Atlas::{
         AtlasType,
         AtlasRes,
@@ -95,6 +95,7 @@ pub struct ItemRegistry {
     pub id_texture: String,
     pub item_type:  ItemType,
     pub item_size:  ItemSizeType,
+    pub range_info: Option<(f32, f32, f32)>, // Скорость стрельбы | Время полёта пули
     pub stackable:  Option<ItemStackType>,
     pub stack_size: Option<usize>,
     pub durability: Option<usize>
@@ -109,6 +110,20 @@ impl ItemRegistry {
     // Получение размера стака
     pub fn get_stack_size(&self) -> Option<usize> {
         self.stack_size
+    }
+
+    pub fn def_stack(&mut self) {
+        match self.item_type {
+            (ItemType::Weapon(_) | ItemType::Tool(_)) => {
+                if self.stackable.is_none() {
+                    self.stackable = Some(ItemStackType::Fixed);
+                }
+                if self.stack_size.is_none() {
+                    self.stack_size = Some(1);
+                }
+            },
+            _ => {}
+        }
     }
 }
 
@@ -200,9 +215,10 @@ impl Registry {
     // ==============================
     // Items
     // ==============================
-    pub fn register_item(&mut self, item_type: ItemRegistry) {
+    pub fn register_item(&mut self, mut item_type: ItemRegistry) {
         if !self.item_registry.contains_key(&item_type.id_name) {
             println!("Register Item: {}", &item_type.id_name);
+            item_type.def_stack();
             self.item_registry.insert(item_type.id_name.clone(), item_type);
         }
     }

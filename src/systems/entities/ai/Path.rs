@@ -8,14 +8,20 @@ use futures_lite::future;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use crate::core::world::Grid::{Grid, GridLocation};
+use crate::core::{
+    world::Grid::{
+        Grid, 
+        GridLocation
+    },
+    AppState
+};
 
 //
 //
 //
 
 pub fn path_finding_plugin(app: &mut App) {
-    // app.add_systems(Update, apply_pathfinding_to_ai);
+    app.add_systems(Update, apply_pathfinding_to_ai.run_if(in_state(AppState::Game)));
 }
 
 //
@@ -24,7 +30,7 @@ pub fn path_finding_plugin(app: &mut App) {
 
 #[derive(Component, Default)]
 pub struct AiPath {
-    pub locations: VecDeque<(IVec2, UVec2)>,
+    pub locations: VecDeque<Vec2>,
 }
 
 pub struct Path {
@@ -127,10 +133,10 @@ pub fn calculate_pos_IV2(target: (IVec2, IVec2)) -> IVec2 {
 #[derive(Component)]
 pub struct PathfindingTask(Task<Result<Path, PathfindingError>>);
 
-pub fn spawn_optimized_pathfinding_task<T: Component>(
+pub fn spawn_optimized_pathfinding_task(
     commands:   &mut Commands,
     target:     Entity,
-    grid:       Grid,
+    grid:       Arc<Grid>,
     start:      GridLocation,
     end:        GridLocation,
 ) {
@@ -143,10 +149,10 @@ pub fn spawn_optimized_pathfinding_task<T: Component>(
 
     // Must clone because the grid can change between frames
     // Must box to prevent stack overflows on very large grids
-    let grid_arc = Arc::new(grid);
+    // let grid_arc = Arc::new(grid.clone());
 
     let task = thread_pool.spawn(async move {
-        let mut path = grid_arc.path_to(&start, &end);
+        let mut path = grid.path_to(&start, &end);
         let _ = path.as_mut().map(|p| p.optimize_corners());
         path
     });
@@ -162,14 +168,13 @@ pub fn apply_pathfinding_to_ai(
     for (task_entity, mut task) in &mut tasks {
         if let Some(result) = future::block_on(future::poll_once(&mut task.0)) {
             commands.entity(task_entity).remove::<PathfindingTask>();
-
             if let Ok(mut ai_path) = paths.get_mut(task_entity) {
                 if let Ok(path) = result {
                     ai_path.locations.clear();
                     for location in path.steps.iter() {
                         ai_path
                             .locations
-                            .push_back(location.get_chunk_and_local());
+                            .push_back(location.0.as_vec2());
                     }
                 }
             }

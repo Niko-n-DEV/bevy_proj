@@ -7,19 +7,32 @@ use crate::core::{
         Registry::Registry
     }, 
     world::chunk::Chunk::Chunk, 
-    Entity::{
-        Health,
-        Position
-    }, 
+    Entity::Position, 
     Object::EntityObject,
-    ItemType::ItemEntity
+    ItemType::{
+        ItemEntity,
+        ItemType,
+        Weapon
+    },
+    Weapon::Gun,
 };
+
+//
+//
+//
+
+#[derive(Component, Default)]
+pub struct Durability(pub f32); 
+
+//
+//
+//
 
 #[derive(Component, Default)]
 pub struct EntityItem {
     pub id_name:    String,
     pub name:       String,
-    pub health:     Health,
+    pub durability: Durability,
     pub position:   Position,
 }
 
@@ -45,28 +58,47 @@ pub fn spawn_item(
             if let Some(info) = registry.get_item_info(&event.0) {
                 if let Some(sprite) = registry.get_item_texture(&info.id_texture, &atlas) {
                     let entity = commands
-                    .spawn((
-                        EntityItem {
-                            id_name: info.id_name.clone(),
-                            name: info.id_name.clone(),
-                            ..default()
-                        },
-                        SpriteSheetBundle {
-                            texture: sprite.texture,
-                            atlas: sprite.atlas,
-                            transform: Transform {
-                                translation: Vec3::new(event.1.x as f32 * 8. + 4., event.1.y as f32 * 8. + 4., 0.3),
-                                scale: Vec3::new(0.5, 0.5, 0.0),
+                        .spawn((
+                            ItemEntity {
+                                name:       info.id_name.clone(),
+                                id_name:    info.id_name.clone(),
+                                id_source:  info.id_source.clone(),
+                                item_type:  info.item_type.clone(),
+                                durability: info.durability.clone(),
+                                stack_size: info.stack_size.clone(),
+                                stackable:  info.stackable.clone(),
+                                count:      event.2,
+                            },
+                            SpriteSheetBundle {
+                                texture: sprite.texture,
+                                atlas: sprite.atlas,
+                                transform: Transform {
+                                    translation: Vec3::new(event.1.x as f32 * 8. + 4., event.1.y as f32 * 8. + 4., 0.3),
+                                    scale: Vec3::new(0.5, 0.5, 0.0),
+                                    ..default()
+                                },
                                 ..default()
                             },
-                            ..default()
-                        },
-                        ItemEntity {
-                            item: info.item_type,
-                            count: event.2
-                        },
-                        Name::new(info.id_name.clone())
-                    )).id();
+                            Name::new(info.id_name.clone())
+                        )).id();
+
+                        match info.item_type {
+                            (ItemType::Item(_) | ItemType::None) => {
+                                // По идеи тут ничего
+                            },
+                            ItemType::Weapon(_) => {
+                                if let Some(var) = info.range_info {
+                                    commands.entity(entity).insert(Gun {
+                                        shoot_cooldown:     var.0,
+                                        bullet_lifetime:    var.1,
+                                        shoot_timer:        var.2
+                                    });
+                                }
+                            },
+                            ItemType::Tool(_) => {
+                                
+                            }
+                        }
     
                     chunk_res.objects_ex.insert(event.1, entity);
                 }

@@ -19,13 +19,8 @@ use crate::core::{
         UserControl,
         UserSubControl,
     },
-    Item::{
-        ItemSpawn,
-        EntityItem,
-    },
-    ItemType::
-        ItemEntity
-    ,
+    Item::ItemSpawn,
+    ItemType::ItemEntity,
     world::chunk::Chunk::Chunk,
     ContainerSystem::{
         CursorContainer,
@@ -165,7 +160,7 @@ impl PlayerPlugin {
         mut chunk_res:          ResMut<Chunk>,
         mut user:               Query<(&mut Inventory, &EntityBase, &Transform), With<UserControl>>,
             keyboard_input:     Res<ButtonInput<KeyCode>>,
-            pickupable_quety:   Query<(Entity, &Transform, &ItemEntity, &EntityItem), Without<UserControl>>
+            pickupable_quety:   Query<(Entity, &Transform, &ItemEntity), Without<UserControl>>
     ) {
         if pickupable_quety.is_empty() || user.is_empty() {
             return;
@@ -174,9 +169,9 @@ impl PlayerPlugin {
         let mut user = user.single_mut();
 
         if keyboard_input.just_pressed(KeyCode::KeyE) {
-            for (entity, transform, pick, name) in pickupable_quety.iter() {
+            for (entity, transform, item) in pickupable_quety.iter() {
                 if user.1.interaction_radius > Vec3::distance(transform.translation, user.2.translation) {
-                    if user.0.add((name.name.clone(), pick.item, pick.count)) {
+                    if user.0.add((item.name.clone(), item.item_type, item.count)) {
                         chunk_res.remove_sub_object_ex(entity);
                         
                         commands.entity(entity).despawn_recursive();

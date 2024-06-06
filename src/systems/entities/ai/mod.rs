@@ -2,24 +2,45 @@
 #![allow(non_snake_case)]
 pub mod Path;
 
+use std::sync::Arc;
+
 use bevy::prelude::*;
 
 use crate::core::{
-    entities::ai::Path::{
-        AiPath,
-        calculate_pos_V2
+    Entity::EntityBase,
+    entities::{
+        EntitySystem::MovementEntity,
+        ai::Path::{
+            path_finding_plugin,
+            AiPath,
+            PathfindingTask,
+            calculate_pos_V2,
+            spawn_optimized_pathfinding_task
+        },
     },
     Needs::{
         Hunger,
         Recreation
-    }
+    },
+    world::Grid::{
+        Grid,
+        GridLocation
+    },
+    UserSystem::UserControl,
+    AppState
 };
 
 pub struct AiPlugin;
 
 impl Plugin for AiPlugin {
     fn build(&self, app: &mut App) {
-        // app.add_systems(Update, apply_pathfinding_to_ai);
+        app.add_plugins(path_finding_plugin);
+        app.add_systems(Update, 
+            (
+                to_player,
+                follow_path.after(to_player)
+            ).run_if(in_state(AppState::Game))
+        );
     }
 }
 
@@ -99,72 +120,74 @@ fn update_brains(mut brains: Query<(&mut Brain, &Hunger, &Recreation)>) {
 //     }
 // }
 
-// fn get_food(
-//     mut commands: Commands,
-//     mut brains: Query<(Entity, &AiPath, &mut Brain, &Transform), Without<PathfindingTask>>,
-//     walls: Res<Grid<Wall>>,
-//     machine_grid: Res<Grid<Machine>>,
-//     components: Res<ConnectedComponents<Wall>>,
-//     food: Query<&Machine, With<FoodMachine>>,
-// ) {
-//     for (target, path, mut brain, transform) in &mut brains {
-//         if !matches!(brain.state, BrainState::GetFood) {
-//             continue;
-//         }
+fn to_player(
+    mut commands:   Commands,
+    mut brains:     Query<(Entity, &AiPath, &Transform), (Without<PathfindingTask>, Without<UserControl>)>,
+        player:     Query<(Entity, &Transform), With<UserControl>>,
+        grid:       Res<Grid>,
+) {
+    if player.is_empty() {
+        return;
+    }
 
-//         let brain_location = match GridLocation::from_world(transform.translation.truncate()) {
-//             Some(val) => val,
-//             None => {
-//                 warn!("AI entity not in grid...");
-//                 continue;
-//             }
-//         };
+    for (target, path, transform) in &mut brains {
 
-//         //FIXME should find closest machine, or better one that can be path found to
-//         let (machine_entity, target_point) = match machine_grid
-//             .iter()
-//             .filter(|(ent, _)| food.get(*ent).is_ok())
-//             .map(|(ent, location)| (ent, food.get(ent).unwrap(), location))
-//             .map(|(ent, machine, location)| {
-//                 (ent, GridLocation::from(location.0 + machine.use_offset))
-//             })
-//             .filter(|(_ent, location)| components.in_same_component(location, &brain_location))
-//             .min_by_key(|(_, location)| {
-//                 FloatOrd(
-//                     transform
-//                         .translation
-//                         .truncate()
-//                         .distance((location.0).as_vec2()),
-//                 )
-//             }) {
-//             Some(val) => val,
-//             None => {
-//                 warn!("No food machines");
-//                 continue;
-//             }
-//         };
+        // let brain_location = match GridLocation::from_world(transform.translation.truncate()) {
+        //     Some(val) => val,
+        //     None => {
+        //         warn!("AI entity not in grid...");
+        //         continue;
+        //     }
+        // };
 
-//         if path.locations.is_empty() {
-//             if transform
-//                 .translation
-//                 .truncate()
-//                 .distance(target_point.as_vec2())
-//                 < 0.5
-//             {
-//                 brain.state = BrainState::OperateMachine(machine_entity);
-//                 continue;
-//             } else {
-//                 spawn_optimized_pathfinding_task(
-//                     &mut commands,
-//                     target,
-//                     &walls,
-//                     brain_location,
-//                     target_point,
-//                 );
-//             }
-//         }
-//     }
-// }
+        // //FIXME should find closest machine, or better one that can be path found to
+        // let (machine_entity, target_point) = match machine_grid
+        //     .iter()
+        //     .filter(|(ent, _)| food.get(*ent).is_ok())
+        //     .map(|(ent, location)| (ent, food.get(ent).unwrap(), location))
+        //     .map(|(ent, machine, location)| {
+        //         (ent, GridLocation::from(location.0 + machine.use_offset))
+        //     })
+        //     .filter(|(_ent, location)| components.in_same_component(location, &brain_location))
+        //     .min_by_key(|(_, location)| {
+        //         FloatOrd(
+        //             transform
+        //                 .translation
+        //                 .truncate()
+        //                 .distance((location.0).as_vec2()),
+        //         )
+        //     }) {
+        //     Some(val) => val,
+        //     None => {
+        //         warn!("No food machines");
+        //         continue;
+        //     }
+        // };
+
+        let player = player.single();
+
+        if path.locations.is_empty() {
+            if transform
+                .translation
+                .truncate()
+                .distance(player.1.translation.truncate())
+                < 0.5
+            {
+                println!("Continue path task");
+                continue;
+            } else {
+                println!("Spawn path task");
+                spawn_optimized_pathfinding_task(
+                    &mut commands,
+                    target,
+                    Arc::new(grid.clone()),
+                    GridLocation::new(transform.translation.x as i32, transform.translation.y as i32),
+                    GridLocation::new(player.1.translation.x as i32, player.1.translation.y as i32),
+                );
+            }
+        }
+    }
+}
 
 // fn clear_path_if_dirty(
 //     mut commands: Commands,
@@ -226,18 +249,21 @@ fn update_brains(mut brains: Query<(&mut Brain, &Hunger, &Recreation)>) {
 // }
 
 fn follow_path(
-    mut paths:  Query<(&mut Transform, &mut AiPath, &mut LastDirection)>,
+    mut paths:  Query<(Entity, &EntityBase, &mut Transform, &mut AiPath, &mut LastDirection)>,
+    mut event:  EventWriter<MovementEntity>,
         time:   Res<Time>,
 ) {
-    for (mut transform, mut path, mut last_direction) in &mut paths {
+    for (entity, entity_base, mut transform, mut path, mut last_direction) in &mut paths {
         if let Some(next_target) = path.locations.front() {
-            let delta = calculate_pos_V2(*next_target) - transform.translation.truncate();
+
+            let delta = *next_target - transform.translation.truncate();
             let travel_amount = time.delta_seconds();
 
             if delta.length() > travel_amount * 1.1 {
                 let direction = delta.normalize().extend(0.0) * travel_amount;
                 last_direction.0 = direction.truncate();
-                transform.translation += direction;
+                // transform.translation += direction;
+                event.send(MovementEntity(entity, direction, entity_base.speed.0));
             } else {
                 path.locations.pop_front();
             }

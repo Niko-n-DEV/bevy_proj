@@ -17,6 +17,7 @@ use crate::core::{
     //     EntityType,
     //     HumonoidType
     // },
+    ItemType::*,
     Settings::Settings,
     AppState,
 };
@@ -72,7 +73,7 @@ impl Plugin for ResourcePlugin {
             // Инициализация загрузки пользовательских ресурсов (Текстуры, аддоны)
             
             // Init Resource
-            .add_systems(OnEnter(AppState::MainMenu), Self::load_settings)
+            .add_systems(OnEnter(AppState::MainMenu), (Self::load_settings, Self::post_load_settings).chain())
         ;
     }
 }
@@ -90,11 +91,15 @@ pub struct LoadingBuffer {
     source_id:                  String,
     textures_path_buf:          Vec<String>,
     reg_item_tex_path:          Vec<String>,
+    reg_tool_tex_path:          Vec<String>,
+    reg_weapon_tex_path:        Vec<String>,
     reg_entity_tex_path:        Vec<String>,
     reg_object_tex_path:        Vec<String>,
     reg_object_ct_tex_path:     Vec<String>,
     reg_ui_tex_path:            Vec<String>,
     verified_item_texture:      Vec<String>,
+    verified_tool_texture:      Vec<String>,
+    verified_weapon_texture:    Vec<String>,
     verified_entity_texture:    Vec<String>,
     verified_object_texture:    Vec<String>,
     verified_object_ct_texture: Vec<String>,
@@ -120,8 +125,18 @@ impl ResourcePlugin {
         info!("State: ResourceCheck");
     }
 
-    fn load_settings(mut commands: Commands) {
+    fn load_settings(
+        mut commands:   Commands
+    ) {
         commands.insert_resource(Settings::load())
+    }
+
+    fn post_load_settings(
+        mut window:     Query<&mut Window>,
+            settings:   Res<Settings>
+    ) {
+        let mut window = window.single_mut();
+        window.present_mode = settings.check_vsync();
     }
 
     #[allow(unused)]
@@ -262,7 +277,11 @@ impl ResourcePlugin {
         }
 
         load_buff.verified_item_texture         = Self::process_assets(&load_buff.reg_item_tex_path, &load_buff.textures_path_buf);
+        load_buff.verified_tool_texture         = Self::process_assets(&load_buff.reg_tool_tex_path, &load_buff.textures_path_buf);
+        load_buff.verified_weapon_texture       = Self::process_assets(&load_buff.reg_weapon_tex_path, &load_buff.textures_path_buf);
+
         load_buff.verified_entity_texture       = Self::process_assets(&load_buff.reg_entity_tex_path, &load_buff.textures_path_buf);
+
         load_buff.verified_object_texture       = Self::process_assets(&load_buff.reg_object_tex_path, &load_buff.textures_path_buf);
         load_buff.verified_object_ct_texture    = Self::process_assets(&load_buff.reg_object_ct_tex_path, &load_buff.textures_path_buf);
 
@@ -386,13 +405,27 @@ impl ResourcePlugin {
                     if let Ok(contents) = fs::read_to_string(&path) {
                         if let Ok(module) = serde_json::from_str::<Registry::ItemRegistry>(&contents) {
 
-                            load_buff.reg_item_tex_path.push(module.id_texture.clone());
+                            match module.item_type {
+                                ItemType::Item(_) => {
+                                    load_buff.reg_item_tex_path.push(module.id_texture.clone());
+                                },
+                                ItemType::Weapon(_) => {
+                                    load_buff.reg_weapon_tex_path.push(module.id_texture.clone());
+                                },
+                                ItemType::Tool(_) => {
+                                    load_buff.reg_tool_tex_path.push(module.id_texture.clone());
+                                },
+                                ItemType::None => {
+                                    load_buff.reg_item_tex_path.push(module.id_texture.clone());
+                                },
+                            }
 
                             register.register_item(Registry::ItemRegistry {
                                 id_name:    module.id_name,
                                 id_source:  Some(load_buff.source_id.clone()),
                                 id_texture: module.id_texture,
                                 item_type:  module.item_type,
+                                range_info: module.range_info,
                                 item_size:  module.item_size,
                                 stackable:  module.stackable,
                                 stack_size: module.stack_size,

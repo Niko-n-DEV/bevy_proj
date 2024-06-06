@@ -7,7 +7,10 @@ use std::{collections::HashMap, marker::PhantomData};
 // use bevy_entitiles::EntiTilesPlugin;
 
 use crate::core::{
-    entities::EntitySystem::EntitySystem,
+    entities::{
+        ai::AiPlugin,
+        EntitySystem::EntitySystem,
+    },
     resource::graphic::Atlas::AtlasRes,
     world::{
         chunk::Chunk::Chunk, 
@@ -59,6 +62,7 @@ impl Plugin for WorldSystem {
             .add_plugins(
                 (
                     EntitySystem,   // Инициализация плагина, отвечающего за работу всех entity
+                    AiPlugin,
                     PlayerPlugin,   // Инициализация плагина, отвечающего за работу управления entity-player
                     DamageSystem,
                     ContainerPlugin::<ItemType> {

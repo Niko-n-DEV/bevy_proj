@@ -35,11 +35,10 @@ pub enum ItemStackType {
 }
 
 impl ItemStackType {
-    /// 
     pub fn is_stackable(&self) -> bool {
         match self {
             ItemStackType::Scalable => true,
-            ItemStackType::Fixed   => false
+            ItemStackType::Fixed    => false
         }
     }
 }
@@ -109,8 +108,14 @@ pub enum Ammo {
 #[allow(unused)]
 #[derive(Component, InspectorOptions)]
 pub struct ItemEntity {
-    pub(crate) item: ItemType,
-    pub count: usize
+    pub name:       String,
+    pub id_name:    String,
+    pub id_source:  Option<String>,
+    pub item_type:  ItemType,
+    pub durability: Option<usize>,
+    pub stack_size: Option<usize>,
+    pub stackable:  Option<ItemStackType>,
+    pub count:      usize
 }
 
 #[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect)]

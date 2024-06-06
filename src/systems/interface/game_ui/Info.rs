@@ -6,13 +6,8 @@ use bevy_egui::{
 };
 
 use crate::core::{
-    UserSystem::{
-        // CursorPosition,
-        CursorProcentPos
-    },
-    Item::EntityItem,
+    UserSystem::CursorProcentPos,
     ItemType::ItemEntity,
-    // Object::EntityObject,
     resource::{
         graphic::Atlas::{
             AtlasType,
@@ -25,7 +20,7 @@ use crate::core::{
 };
 
 pub fn info_item_panel(
-        info_query: Query<(&EntityItem, &ItemEntity), With<Selected>>,
+        info_query: Query<&ItemEntity, With<Selected>>,
     mut contexts:   EguiContexts,
 ) {
     if info_query.is_empty() {
@@ -38,15 +33,14 @@ pub fn info_item_panel(
             .show(contexts.ctx_mut(), |ui| {
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {
-                        ui.label(format!("ID: {}", info.0.id_name));
-                        ui.label(format!("Name: {}", info.0.name));
-                        ui.label(format!("Health: {:?}", info.0.health));
-                        ui.label(format!("Pos: {:?}", info.0.position));
+                        ui.label(format!("ID: {}", info.id_name));
+                        ui.label(format!("Name: {}", info.name));
+                        ui.label(format!("Health: {:?}", info.durability));
                     });
 
                     ui.vertical(|ui| {
-                        ui.label(format!("item: {:?}", info.1.item));
-                        ui.label(format!("count: {}", info.1.count));
+                        ui.label(format!("item: {:?}", info.item_type));
+                        ui.label(format!("count: {}", info.count));
                     })
                 })
             });

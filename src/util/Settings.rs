@@ -1,4 +1,8 @@
-use bevy::{ecs::system::Resource, math::Vec2};
+use bevy::{
+    ecs::system::Resource, 
+    math::Vec2, 
+    window::PresentMode
+};
 
 use serde::{
     Deserialize,
@@ -45,6 +49,14 @@ impl Settings {
     pub fn save(&self) {
         if let Ok(json) = serde_json::to_string_pretty(self) {
             fs::write("settings.json", json).ok();
+        }
+    }
+
+    pub fn check_vsync(&self) -> PresentMode {
+        if self.vsync {
+            PresentMode::AutoVsync
+        } else {
+            PresentMode::AutoNoVsync
         }
     }
 }

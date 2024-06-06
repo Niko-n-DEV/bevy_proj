@@ -205,10 +205,14 @@ pub struct ItemStack {
 // Equipment
 // ==============================
 
-// #[derive(Debug, Default, Clone, Component)]
-// pub struct Equipment<I: ItemTypeEx> {
-//     pub items: HashMap<(I, u8), Option<Entity>>,
-// }
+#[allow(unused)]
+#[derive(Debug, Default, Clone, Component)]
+pub struct Equipment {
+    pub head:   [Option<Entity>; 3], // Шлем | Очки | Маска
+    pub body:   [Option<Entity>; 3], // Нагрудник | Майка | Штаны | Пояс | Рюкзак | Наплечная сумка    
+    pub hands:  [Option<Entity>; 4], // Hands | ArmBand | Weapon left | Weapon right (Если оружие двуручное, то оно технически занимает два слота)
+    pub legs:    Option<Entity>       // Ботинки   
+}
 
 // // (З/А) - Заметка автора кода (не я автор)
 // impl<I: ItemTypeEx> Equipment<I> {

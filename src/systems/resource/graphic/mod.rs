@@ -61,12 +61,15 @@ pub fn setup_ex(
     // ==============================
     // Entity
     // ==============================
+    println!("Create atlas for Entities...");
     let loaded_folder = loaded_folders.get(&resource_module.0).unwrap();
 
     let (texture_atlas_nearest, entity_texture, entity_hash) = load_and_index_atlas_ex(
         &load_buff.verified_entity_texture,
         &loaded_folder,
-        None, //Some(UVec2::splat(1)),
+        16.0,
+        4,
+        None,
         Some(ImageSampler::nearest()),
         &mut textures,
     );
@@ -79,6 +82,7 @@ pub fn setup_ex(
     // ==============================
     // Items
     // ==============================
+    println!("Create atlas for Items...");
     let loaded_folder = loaded_folders.get(&resource_module.0).unwrap();
 
     let (texture_atlas_nearest, items_texture, items_hash) = create_texture_atlas_ex(
@@ -95,8 +99,50 @@ pub fn setup_ex(
     atlas.items.ids =       Some(items_hash);
 
     // ==============================
+    // Tools
+    // ==============================
+    // let loaded_folder = loaded_folders.get(&resource_module.0).unwrap();
+
+    // let (texture_atlas_nearest, tools_texture, tools_hash) = load_and_index_atlas_ex(
+    //     &load_buff.verified_tool_texture,
+    //     &loaded_folder,
+    //     16.0,
+    //     4,
+    //     None,
+    //     Some(ImageSampler::nearest()),
+    //     &mut textures,
+    // );
+    // let tools_layout = texture_atlases.add(texture_atlas_nearest);
+
+    // atlas.tools.layout =    Some(tools_layout);
+    // atlas.tools.image =     Some(tools_texture);
+    // atlas.tools.ids =       Some(tools_hash);
+
+    // ==============================
+    // Weapon
+    // ==============================
+    println!("Create atlas for Weapons...");
+    let loaded_folder = loaded_folders.get(&resource_module.0).unwrap();
+
+    let (texture_atlas_nearest, weapon_texture, weapon_hash) = load_and_index_atlas_ex(
+        &load_buff.verified_weapon_texture,
+        &loaded_folder,
+        32.0,
+        4,
+        None,
+        Some(ImageSampler::nearest()),
+        &mut textures,
+    );
+    let weapon_layout = texture_atlases.add(texture_atlas_nearest);
+
+    atlas.weapon.layout =    Some(weapon_layout);
+    atlas.weapon.image =     Some(weapon_texture);
+    atlas.weapon.ids =       Some(weapon_hash);
+
+    // ==============================
     // Objects
     // ==============================
+    println!("Create atlas for Objects...");
     let loaded_folder = loaded_folders.get(&resource_module.0).unwrap();
 
     let (texture_atlas_nearest, objects_texture, objects_hash) = create_texture_atlas_ex(
@@ -115,6 +161,7 @@ pub fn setup_ex(
     // ==============================
     // Connected Texture
     // ==============================
+    println!("Create atlas for Connected Objects...");
     let loaded_folder = loaded_folders.get(&resource_module.0).unwrap();
 
     if let Some((texture_atlas_nearest, con_objects_texture, con_objects_hash)) = create_connected_atlas(
@@ -138,6 +185,7 @@ pub fn setup_ex(
     // ==============================
     // gui
     // ==============================
+    println!("Create atlas for UI...");
     let loaded_folder = loaded_folders.get(&resource_module.0).unwrap();
 
     let (texture_atlas_nearest, ui_texture, ui_hash) = create_texture_atlas_ex(
@@ -175,6 +223,8 @@ fn calculate_min_square_size(num_textures: usize) -> usize {
 // ==============================
 // 
 // ==============================
+
+/// Создание атласа по динамической сетке
 fn create_texture_atlas_ex(
     load_buff:  &Vec<String>,
     folder:     &LoadedFolder,
@@ -249,15 +299,36 @@ fn create_texture_atlas_ex(
     (texture_atlas_layout, texture, textures_ids)
 }
 
+fn calculate_square_size(num_textures: usize, pack_size: usize) -> usize {
+    let size = ((num_textures * pack_size) as f32).sqrt().ceil() as usize;
+
+    if size < 4 {
+        4
+    } else {
+        size
+    }
+}
+
+/// Создание атласа по фиксированной сетке
 fn load_and_index_atlas_ex(
     load_buff:  &Vec<String>,
     folder:     &LoadedFolder,
+    tile_size:  f32,
+    pack_size:  usize,
     padding:    Option<UVec2>,
     sampling:   Option<ImageSampler>,
     textures:   &mut ResMut<Assets<Image>>,
 ) -> (TextureAtlasLayout, Handle<Image>, HashMap<String, usize>) {
-    let mut texture_atlas_builder =
-        TextureAtlasBuilder::default().padding(padding.unwrap_or_default());
+    let atlas_size = calculate_square_size(load_buff.len(), pack_size);
+    let max_size = atlas_size as f32 * tile_size;
+
+    println!("{} | {} | {}", load_buff.len(), atlas_size, max_size);
+
+    let mut texture_atlas_builder = 
+        TextureAtlasBuilder::default()
+            .initial_size(Vec2::splat(max_size))
+            .max_size(Vec2::splat(max_size))
+            .padding(padding.unwrap_or_default());
 
     let mut textures_ids: HashMap<String, usize> = HashMap::new();
     let mut num: usize = 0;
@@ -317,16 +388,21 @@ fn load_and_index_atlas_ex(
         image.sampler = sampling.unwrap_or_default();
 
     let layout = TextureAtlasLayout::from_grid(
-        Vec2::new(16. as f32, 16. as f32),
-        SPRITE_SHEET_W,
-        SPRITE_SHEET_H,
+        Vec2::splat(tile_size),
+        // pack_size as usize * atlas_size,
+        // atlas_size,
+        atlas_size,
+        atlas_size,
         None,
         None,
     );
 
+    println!("col {} | row {}", pack_size as usize * atlas_size, atlas_size);
+
     (layout, texture, textures_ids)
 }
 
+/// Создание атласа для объектов с соединяющиеся текстурами
 fn create_connected_atlas(
     load_buff:  &Vec<String>,
     folder:     &LoadedFolder,

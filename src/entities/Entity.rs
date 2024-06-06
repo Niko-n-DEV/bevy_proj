@@ -18,6 +18,10 @@ use crate::core::{
     //UserSystem::User,
     EntityAnimation::EntityDirectionState,
     EntityType::*,
+    entities::ai::{
+        LastDirection,
+        Path::AiPath,
+    },
     stats::Stats,
 };
 
@@ -139,6 +143,8 @@ pub fn spawn_entity(
                     // Body,
                     info.entity_type.clone(),
                     EntityNeutrality::Neutral,
+                    AiPath::default(),
+                    LastDirection(Vec2::ZERO),
                     Stats::new(),
                     Name::new(info.id_name.clone()),
                 )).id();
@@ -185,17 +191,6 @@ pub fn spawn_entity(
     //     ..default()
     // })
     // .insert(Inventory::with_capacity(12));
-}
-
-#[allow(unused)]
-// Добавил чисто для теста
-#[derive(Bundle)]
-pub struct EntityFounder {
-    pub health: Health,
-    pub speed: Speed,
-    pub position: Position,
-    pub direction: EntityDirectionState,
-    pub entity_type: EntityType
 }
 
 /// Определяет состояние сущности [статичен, стоит или двигается]

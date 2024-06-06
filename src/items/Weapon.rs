@@ -7,6 +7,7 @@ use crate::core::{
         Registry::Registry,
         graphic::Atlas::AtlasRes
     },
+    EntityAnimation::EntityDirectionState,
     UserSystem::{
         CursorPosition,
         UserControl,
@@ -25,15 +26,16 @@ use crate::core::{
 };
 
 #[derive(Component)]
-pub struct GunController {
-    pub shoot_cooldown: f32,
-    pub shoot_timer: f32,
+pub struct Gun {
+    pub shoot_cooldown: f32, // Общее время между выстрелами
+    pub bullet_lifetime:f32, // Время до удаления снаряда
+    pub shoot_timer:    f32, // время до возможности выстрела
 }
 
 pub fn gun_controls(
     mut commands: Commands,
     mut gun_query: Query<(
-        &mut GunController,
+        &mut Gun,
         &mut Transform,
         &mut Sprite,
         &mut PlayerAttach,
@@ -147,5 +149,28 @@ impl Plugin for CombatPlugin {
         //         .in_set(OnUpdate(GameState::Main)),
         // )
         // .add_system(apply_system_buffers.in_set(CustomFlush));
+    }
+}
+
+//
+// Taken
+//
+
+#[derive(Component, Clone, Copy, Default)]
+pub enum TakenDiraction {
+    #[default]
+    South = 0,
+    North = 1,
+    East  = 2,
+    West  = 3,
+}
+
+impl TakenDiraction {
+    pub fn new_take(&self, entity_facing: EntityDirectionState) -> TakenDiraction {
+        if *self as i32 == entity_facing as i32 {
+            *self
+        } else {
+            *self
+        }
     }
 }

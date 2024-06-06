@@ -29,7 +29,7 @@ pub const CHUNK_SIZE: i32 = 256;
 //
 //
 
-#[derive(Resource)]
+#[derive(Resource, Clone)]
 pub struct Grid {
     pub chunks:             HashMap<IVec2, Chunk>,
     pub render_distance:    i32,

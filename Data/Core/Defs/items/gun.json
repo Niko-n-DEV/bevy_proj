@@ -1,0 +1,10 @@
+{
+	"id_name": "gun",
+	"id_texture": "gun",
+	"item_type": {
+        "Weapon": "Gun"
+    },
+	"range_info": [1.0, 2.0, 3.0],
+	"item_size": "Small",
+	"durability": 100
+}

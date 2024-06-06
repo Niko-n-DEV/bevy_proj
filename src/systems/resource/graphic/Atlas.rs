@@ -5,6 +5,8 @@ use std::collections::HashMap;
 #[derive(Resource)]
 pub struct AtlasRes {
     pub items:      AtlasData,
+    pub tools:      AtlasData,
+    pub weapon:     AtlasData,
     pub material:   AtlasData,
     pub terrain:    AtlasData,
     pub objects:    AtlasData,
@@ -25,6 +27,8 @@ pub struct AtlasData {
 #[derive(Debug, Clone)]
 pub enum AtlasType {
     Items,
+    Tools,
+    Weapon,
     Material,
     Terrain,
     Objects,
@@ -39,6 +43,8 @@ impl AtlasRes {
     pub fn init() -> Self {
         Self {
             items:      AtlasData::default(),
+            tools:      AtlasData::default(),
+            weapon:     AtlasData::default(),
             material:   AtlasData::default(),
             terrain:    AtlasData::default(),
             objects:    AtlasData::default(),
@@ -50,18 +56,24 @@ impl AtlasRes {
         }
     }
 
-    pub fn get_spritesheet(&self, atlas_type: AtlasType, name: &str) -> Option<SpriteSheetBundle> {
-        let atlas_data = match atlas_type {
-            AtlasType::Items        => &self.items,
-            AtlasType::Material     => &self.material,
-            AtlasType::Terrain      => &self.terrain,
-            AtlasType::Objects      => &self.objects,
-            AtlasType::ConnectObj   => &self.con_obj,
-            AtlasType::Particle     => &self.particle,
-            AtlasType::Entity       => &self.entity,
-            AtlasType::Test         => &self.test,
-            AtlasType::Ui           => &self.ui,
+    fn def_atlastype(&self, atlas_type: AtlasType) -> &AtlasData {
+        match atlas_type {
+            AtlasType::Items        => return &self.items,
+            AtlasType::Tools        => return &self.tools,
+            AtlasType::Weapon       => return &self.weapon,
+            AtlasType::Material     => return &self.material,
+            AtlasType::Terrain      => return &self.terrain,
+            AtlasType::Objects      => return &self.objects,
+            AtlasType::ConnectObj   => return &self.con_obj,
+            AtlasType::Particle     => return &self.particle,
+            AtlasType::Entity       => return &self.entity,
+            AtlasType::Test         => return &self.test,
+            AtlasType::Ui           => return &self.ui,
         };
+    }
+
+    pub fn get_spritesheet(&self, atlas_type: AtlasType, name: &str) -> Option<SpriteSheetBundle> {
+        let atlas_data = Self::def_atlastype(&self, atlas_type);
 
         if let Some(index) = &atlas_data.ids {
             if let Some(index) = index.get(name) {
@@ -80,17 +92,7 @@ impl AtlasRes {
     }
 
     pub fn get_texture(&self, atlas_type: AtlasType, name: &str) -> Option<(TextureAtlas, Handle<Image>)> {
-        let atlas_data = match atlas_type {
-            AtlasType::Items        => &self.items,
-            AtlasType::Material     => &self.material,
-            AtlasType::Terrain      => &self.terrain,
-            AtlasType::Objects      => &self.objects,
-            AtlasType::ConnectObj   => &self.con_obj,
-            AtlasType::Particle     => &self.particle,
-            AtlasType::Entity       => &self.entity,
-            AtlasType::Test         => &self.test,
-            AtlasType::Ui           => &self.ui,
-        };
+        let atlas_data = Self::def_atlastype(&self, atlas_type);
 
         if let Some(index) = &atlas_data.ids {
             if let Some(index) = index.get(name) {
