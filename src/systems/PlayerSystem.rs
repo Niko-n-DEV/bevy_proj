@@ -1,69 +1,57 @@
 use bevy::prelude::*;
-//use bevy_rapier2d::prelude::*;
 
 //use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 //use bevy_inspector_egui::InspectorOptions;
 
-#[allow(unused_imports)]
 use crate::core::{
-    entities::EntitySystem::{
-        update_enemies, 
-        update_spawning, 
-        DirectionChangeEvent, 
-        EnemySpawner,
-        MovementEntity
-    },
-    Weapon::*,
-    resource::graphic::Atlas::{DirectionAtlas, TestTextureAtlas},
+    entities::EntitySystem::MovementEntity,
+    // Weapon::*,
     AppState,
     Entity::{
         EntityBase,
-        EntityHead, 
-        Position,
+        EntityHead,
     },
-    Object::EntityObject,
+    stats::Stats,
     UserSystem::CursorPosition,
-    Missile::*,
-    Movement::DirectionState,
     world::World::WorldSystem,
     UserSystem::{
+        CursorMode,
         UserControl,
         UserSubControl,
-        User,
     },
-    Item::EntityItem,
-    ItemType::{
-        ItemEntity,
-        ItemType
-    },
+    Item::ItemSpawn,
+    ItemType::ItemEntity,
     world::chunk::Chunk::Chunk,
     ContainerSystem::{
-        ItemPickUpEvent,
-        ItemDropEvent,
-        Container,
-        Inventory,
-        ItemTypeEx
+        CursorContainer,
+        Inventory
     },
     interact::Damage::DamageObject
 };
-
-#[derive(Default, Reflect, GizmoConfigGroup)]
-struct MyRoundGizmos {}
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
-            .init_gizmo_group::<MyRoundGizmos>()
             // Передвижение игрока
             .add_systems(Update, Self::player_movement.run_if(in_state(AppState::Game)))
             // Подбирание игроком предметов поддающиеся к подниманию
-            .add_systems(Update, Self::player_pickup.run_if(in_state(AppState::Game)))
+            .add_systems(Update, 
+                (
+                    Self::player_pickup,
+                    Self::item_drop
+                ).run_if(in_state(AppState::Game))
+            )
             // Удар игроков по объекту
-            .add_systems(Update, Self::player_atack.run_if(in_state(AppState::Game)))
+            .add_systems(Update, 
+                (
+                    Self::combat_toggle,
+                    Self::player_atack
+                ).run_if(in_state(AppState::Game))
+            )
             // [Test] Обновление системы управления оружием
-            .add_systems(Update, gun_controls.run_if(in_state(AppState::Game)))
+            // .add_systems(Update, gun_controls.run_if(in_state(AppState::Game)))
             // [Test] Соединение оружия и игрока
             .add_systems(PostUpdate, attach_objects.run_if(in_state(AppState::Game)))
             .add_systems(Update, Self::head_movement.run_if(in_state(AppState::Game)))
@@ -75,7 +63,7 @@ impl PlayerPlugin {
     
     fn player_movement(
         mut entity_query:       Query<(&mut Transform, &mut EntityBase, Entity), With<UserControl>>,
-        mut move_event:         EventWriter<MovementEntity>,
+        mut _move_event:         EventWriter<MovementEntity>,
             keyboard_input:     Res<ButtonInput<KeyCode>>
     ) {
         if entity_query.is_empty() {
@@ -106,7 +94,7 @@ impl PlayerPlugin {
                 }
 
                 if direction != Vec3::ZERO {
-                    move_event.send(MovementEntity(entity, direction, speed_var));
+                    _move_event.send(MovementEntity(entity, direction, speed_var));
                 }
             }
         }
@@ -127,13 +115,28 @@ impl PlayerPlugin {
         }
     }
 
-    #[allow(unused)]
+    fn combat_toggle(
+        mut cursor_mode:    ResMut<CursorMode>,
+            keyboard_input: Res<ButtonInput<KeyCode>>,
+    ) {
+        if keyboard_input.just_pressed(KeyCode::KeyR) {
+            if *cursor_mode != CursorMode::Atack {
+                info!("Combat mode - enabled");
+                *cursor_mode = CursorMode::Atack
+            } else {
+                info!("Combat mode - disable");
+                *cursor_mode = CursorMode::None
+            }
+        }
+    }
+
     fn player_atack(
-        mut chunk_res:      ResMut<Chunk>,
+            cursor_mode:    Res<CursorMode>,
+        // mut chunk_res:      ResMut<Chunk>,
             cursor:         Res<CursorPosition>,
             mouse_input:    Res<ButtonInput<MouseButton>>,
-            user:           Query<(&EntityBase ,&Transform), With<UserControl>>,
-            object:         Query<(Entity, &Transform), With<EntityObject>>,
+            user:           Query<(&EntityBase ,&Transform, &Stats), With<UserControl>>,
+        //    object:         Query<(Entity, &Transform), With<EntityObject>>,
         // entity: Query<(&mut EntityBase, &Transform), With<EntityBase>>,
         mut event:          EventWriter<DamageObject>
     ) {
@@ -141,13 +144,15 @@ impl PlayerPlugin {
             return;
         }
 
-        if mouse_input.just_pressed(MouseButton::Left) {
-            if let Ok(player_pos) = user.get_single() {
-                if player_pos.0.interaction_radius > Vec3::distance(cursor.0.extend(0.5), player_pos.1.translation) {
-                    event.send(DamageObject(WorldSystem::get_currect_chunk_tile(cursor.0.as_ivec2()), 1.0));
+        if *cursor_mode == CursorMode::Atack {
+            if mouse_input.just_pressed(MouseButton::Left) {
+                if let Ok(player) = user.get_single() {
+                    if player.0.atack_radius > Vec3::distance(cursor.0.extend(0.5), player.1.translation) {
+                        event.send(DamageObject(cursor.0.as_ivec2(), player.2.str as f32));
+                    }
                 }
             }
-        }   
+        }
     }
 
     fn player_pickup(
@@ -155,7 +160,7 @@ impl PlayerPlugin {
         mut chunk_res:          ResMut<Chunk>,
         mut user:               Query<(&mut Inventory, &EntityBase, &Transform), With<UserControl>>,
             keyboard_input:     Res<ButtonInput<KeyCode>>,
-            pickupable_quety:   Query<(Entity, &Transform, &ItemEntity, &EntityItem), Without<UserControl>>
+            pickupable_quety:   Query<(Entity, &Transform, &ItemEntity), Without<UserControl>>
     ) {
         if pickupable_quety.is_empty() || user.is_empty() {
             return;
@@ -164,9 +169,9 @@ impl PlayerPlugin {
         let mut user = user.single_mut();
 
         if keyboard_input.just_pressed(KeyCode::KeyE) {
-            for (entity, transform, pick, name) in pickupable_quety.iter() {
+            for (entity, transform, item) in pickupable_quety.iter() {
                 if user.1.interaction_radius > Vec3::distance(transform.translation, user.2.translation) {
-                    if user.0.add((name.name.clone(), pick.item, pick.count)) {
+                    if user.0.add((item.name.clone(), item.item_type, item.count)) {
                         chunk_res.remove_sub_object_ex(entity);
                         
                         commands.entity(entity).despawn_recursive();
@@ -176,53 +181,27 @@ impl PlayerPlugin {
         }
     }
 
-    // pub fn pick_up_items<I: ItemTypeEx>(
-    //     mut cmd:            Commands,
-    //     mut pickup_event:   EventReader<ItemPickUpEvent>,
-    //     mut user:           Query<(&mut Inventory, &EntityBase, &Transform), With<User>>,
-    //         items: Query<
-    //             (Entity, &Transform, &I, &Pickupable, &Children),
-    //             (
-    //                 With<Transform>,
-    //                 With<GlobalTransform>,
-    //                 With<Visibility>,
-    //             ),
-    //         >,
-    // ) {
-    //     for event in pickup_event.read() {
-    //         if let Ok((mut inv, user, transform)) = user.get_mut(event.picker) {
+    fn item_drop(
+        mut cursor_c:       ResMut<CursorContainer>,
+        mut spawn_i:        EventWriter<ItemSpawn>,
+            user:           Query<(&EntityBase, &Transform), With<UserControl>>,
+            cursor:         Res<CursorPosition>,
+            keyboard_input: Res<ButtonInput<KeyCode>>,
+        //    mouse_input:    Res<ButtonInput<MouseButton>>,
+    ) {
+        if cursor_c.slot.is_none() && user.is_empty() {
+            return;
+        }
 
-    //             // for (item_entity, _, item_type, pick, children) in
-    //             //     items.iter().filter(|(_, pt, _, _)| **pt == *actor_pt)
-    //             // {
-    //             //     if equipment.add(item_entity, item_type) || inventory.add(item_entity) {
-    //             //         for c in children.iter() {
-    //             //             cmd.entity(*c).despawn_recursive();
-    //             //         }
-    //             //         cmd.entity(item_entity)
-    //             //             .remove::<Transform>()
-    //             //             .remove::<GlobalTransform>()
-    //             //             .remove::<Visibility>();
-    //             //     }
-    //             // }
-
-    //         }
-    //     }
-    // }
-    
-    // pub fn drop_item<I: ItemTypeEx>(
-    //     mut cmd: Commands,
-    //     mut drop_reader: EventReader<ItemDropEvent>,
-    //     mut actors: Query<(&Vector2D, &mut Inventory, &mut Equipment<I>)>,
-    // ) {
-    //     for e in drop_reader.iter() {
-    //         if let Ok((pt, mut inventory, mut equipment)) = actors.get_mut(e.droper) {
-    //             if inventory.take(e.item) || equipment.take(e.item) {
-    //                 cmd.entity(e.item).insert(*pt);
-    //             }
-    //         }
-    //     }
-    // }
+        if keyboard_input.just_pressed(KeyCode::KeyQ) {
+            let player = user.single();
+            if player.0.interaction_radius > Vec3::distance(cursor.0.extend(0.5), player.1.translation) {
+                if let Some(slot) = cursor_c.slot.take() {
+                    spawn_i.send(ItemSpawn(slot.id_name, WorldSystem::get_currect_chunk_subtile(cursor.0.as_ivec2()), slot.count));
+                }
+            }
+        }
+    }
 }
 
 #[allow(unused)]

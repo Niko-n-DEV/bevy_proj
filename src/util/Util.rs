@@ -37,6 +37,10 @@ pub fn attach_objects(
     }
 }
 
+fn create_boundary(start: Vec2, end: Vec2) -> Vec2 {
+    Vec2::new((start.x - end.x).abs(), (start.y - end.y).abs())
+}
+
 // #[derive(Component)]
 // pub struct Follow {
 //     pub target: Entity

@@ -7,6 +7,7 @@ use crate::core::{
         Registry::Registry,
         graphic::Atlas::AtlasRes
     },
+    EntityAnimation::EntityDirectionState,
     UserSystem::{
         CursorPosition,
         UserControl,
@@ -17,7 +18,7 @@ use crate::core::{
         BULLET_LIFETIME, 
         BULLET_SPEED
     },
-    ContainerSystem::Container,
+    ContainerSystem::Inventory,
     ItemType::{
         ItemType,
         Item
@@ -25,20 +26,21 @@ use crate::core::{
 };
 
 #[derive(Component)]
-pub struct GunController {
-    pub shoot_cooldown: f32,
-    pub shoot_timer: f32,
+pub struct Gun {
+    pub shoot_cooldown: f32, // Общее время между выстрелами
+    pub bullet_lifetime:f32, // Время до удаления снаряда
+    pub shoot_timer:    f32, // время до возможности выстрела
 }
 
 pub fn gun_controls(
     mut commands: Commands,
     mut gun_query: Query<(
-        &mut GunController,
+        &mut Gun,
         &mut Transform,
         &mut Sprite,
         &mut PlayerAttach,
     )>,
-    mut user_container: Query<&mut Container, With<UserControl>>,
+    mut user_container: Query<&mut Inventory, With<UserControl>>,
     cursor:             Res<CursorPosition>,
     time:               Res<Time>,
     _buttons:           Res<ButtonInput<MouseButton>>,
@@ -76,17 +78,11 @@ pub fn gun_controls(
                 if _buttons.pressed(MouseButton::Left) {
                     
                     let mut ammo_found = false;
-                    for slot in container.slots.iter_mut() {
-                        if slot.item_stack.item_type == ItemType::Item(Item::Ammo) {
-                            if slot.item_stack.count != 0 {
-                                ammo_found = true;
-                                slot.item_stack.count -= 1;
-                            } else {
-                                slot.item_stack.item_type = ItemType::None;
-                                return;
-                            }
-                        }
+
+                    if container.take(("bullet".to_string(), 1)) {
+                        ammo_found = true;
                     }
+
                     if !ammo_found {
                         return;
                     }
@@ -153,5 +149,28 @@ impl Plugin for CombatPlugin {
         //         .in_set(OnUpdate(GameState::Main)),
         // )
         // .add_system(apply_system_buffers.in_set(CustomFlush));
+    }
+}
+
+//
+// Taken
+//
+
+#[derive(Component, Clone, Copy, Default)]
+pub enum TakenDiraction {
+    #[default]
+    South = 0,
+    North = 1,
+    East  = 2,
+    West  = 3,
+}
+
+impl TakenDiraction {
+    pub fn new_take(&self, entity_facing: EntityDirectionState) -> TakenDiraction {
+        if *self as i32 == entity_facing as i32 {
+            *self
+        } else {
+            *self
+        }
     }
 }

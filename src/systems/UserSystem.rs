@@ -4,25 +4,26 @@ use bevy::{
     window::PrimaryWindow
 };
 
-use bevy_rapier2d::prelude::*;
+// use bevy_rapier2d::prelude::*;
 
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
     resource::{
-        SpriteLayer,
+        // SpriteLayer,
         Registry::Registry,
         graphic::Atlas::{
-            TestTextureAtlas,
-            AtlasRes
+            AtlasType,
+            AtlasRes,
         }
     },
     AppState,
-    world::World::WorldSystem,
-    world::chunk::Chunk::Chunk,
+    world::{
+        World::WorldSystem,
+        chunk::Chunk::Chunk
+    },
     Camera::UserCamera,
-    //Object::EntityObject,
     Entity::{
         EntityBase,
         EntityHead,
@@ -31,11 +32,6 @@ use crate::core::{
     Item::ItemSpawn,
     Object::ObjectSpawn,
     ContainerSystem::Inventory,
-    // ItemType::{
-    //     Pickupable,
-    //     ItemType,
-    //     Item
-    // }
 };
 
 #[derive(Component, InspectorOptions, Reflect, Resource)]
@@ -78,7 +74,7 @@ impl User {
 
     pub fn control_entity_update(
         mut user:       ResMut<User>,
-            control:    Query<Entity, Added<UserControl>>,
+            control:    Query<Entity, Added<UserControl>>
         // user: &mut User,
         // entity: Entity
     ) {
@@ -88,7 +84,6 @@ impl User {
         
         if let Ok(entity) = control.get_single() {
             user.control_entity = Some(entity);
-            println!("place control entity")
         }
     }
 
@@ -100,7 +95,7 @@ impl User {
             entity_h:       Query<(Entity, &EntityHead, &Transform), With<EntityHead>>,
             keyboard_input: Res<ButtonInput<KeyCode>>,
     ) {
-        if keyboard_input.just_pressed(KeyCode::F5) {
+        if keyboard_input.pressed(KeyCode::ControlLeft) && keyboard_input.just_pressed(KeyCode::F5) {
             if user.control_entity.is_none() {
                 for (entity_b, transform) in &entity_b {
                     if 8.0 > Vec3::distance(transform.translation, cursor.0.extend(0.5)) {
@@ -109,7 +104,7 @@ impl User {
                                 uid: user.uid,
                                 user_name: user.user_name.clone()
                             })
-                            .insert(Inventory::with_capacity(6));
+                            .insert(Inventory::with_capacity(12));
 
                         for (entity_h, head, transform) in &entity_h {
                             if head.parent == entity_b {
@@ -127,7 +122,32 @@ impl User {
             }
         }
     }
+
+    pub fn remove_control(
+        mut commands:   Commands,
+        mut user:       ResMut<User>,
+            query:      Query<Entity, With<UserControl>>,
+            query_h:    Query<Entity, With<UserSubControl>>
+    ) {
+        if query.is_empty() {
+            return;
+        }
+
+        if let Ok(entity) = query.get_single() {
+            commands.entity(entity).remove::<UserControl>();
+
+            if !query_h.is_empty() {
+                if let Ok(entity) = query_h.get_single() {
+                    commands.entity(entity).remove::<UserSubControl>();
+                }
+            }
+
+            user.control_entity = None;
+        }
+    }
 }
+
+
 
 // Поместить сюда UserPlugin
 pub struct UserPlugin;
@@ -140,18 +160,15 @@ impl Plugin for UserPlugin {
             .insert_resource(User { ..default() })
             // Использование данных о позиции курсора из CursorPosition
             .init_resource::<CursorPosition>()
+            .init_resource::<CursorProcentPos>()
             .init_resource::<CursorPlacer>()
-            .insert_resource(Selector { selector_entity: None, select_entity: None })
+            .init_resource::<CursorMode>()
             // Обновление информации о позиции курсора
             .add_systems(PreUpdate, cursor_track.run_if(in_state(AppState::Game)))
             .add_systems(Update, 
                 (
                     placer,
                     delete_object,
-                    select_object,
-                    selector_update,
-                    selector_remove,
-                    attach_to_select,
                     attach_to_cursor,
                     create_text_placer,
                     attach_to_cursor
@@ -163,6 +180,7 @@ impl Plugin for UserPlugin {
                     User::to_control
                 ).run_if(in_state(AppState::Game))
             )
+            .add_systems(OnExit(AppState::Game), User::remove_control)
         ;
     }
 }
@@ -171,13 +189,17 @@ impl Plugin for UserPlugin {
 // Cursor Position
 // ==============================
 
-/// Позиция курсора на глобальной координатной сетке
+/// Позиция курсора на на окне
 #[derive(Resource, Default)]
 pub struct CursorPosition(pub Vec2);
 
-/// Получение координат чанка по глобальной координатной системе
+/// Процентная позиция курсора с учётом размера окна
+#[derive(Resource, Default)]
+pub struct CursorProcentPos(pub Vec2);
+
 pub fn cursor_track(
     mut cursor_pos:     ResMut<CursorPosition>,
+    mut cursor_procent: ResMut<CursorProcentPos>,
         window:         Query<&Window, With<PrimaryWindow>>,
         camera:         Query<(&Camera, &GlobalTransform), With<UserCamera>>,
 ) {
@@ -191,14 +213,23 @@ pub fn cursor_track(
     {
         cursor_pos.0 = world_position;
     }
+    
+    if let Some(position) = window.cursor_position() {
+        cursor_procent.0 = Vec2::new(
+            (position.x / window.resolution.physical_width() as f32) * 100.0, 
+            (position.y / window.resolution.physical_height() as f32) * 100.0
+        );
+    }
 }
+
+
 
 // ==============================
 // CursorMode
 // ==============================
 
-#[derive(Default, Resource)]
-enum ClickMode {
+#[derive(Default, Resource, PartialEq)]
+pub enum CursorMode {
     #[default]
     None,
     Placer,
@@ -218,41 +249,45 @@ pub struct CursorPlacer {
 }
 
 fn placer(
+    mut cursor_mode:    ResMut<CursorMode>,
+    mut placer:         ResMut<CursorPlacer>,
+    mut obj_event:      EventWriter<ObjectSpawn>,
+    mut item_event:     EventWriter<ItemSpawn>,
+    mut entity_event:   EventWriter<EntitySpawn>,
         cursor:         Res<CursorPosition>,
         mouse_input:    Res<ButtonInput<MouseButton>>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
         registry:       Res<Registry>,
-    mut placer:         ResMut<CursorPlacer>,
-    mut obj_event:      EventWriter<ObjectSpawn>,
-    mut item_event:     EventWriter<ItemSpawn>,
-    mut entity_event:   EventWriter<EntitySpawn>
 ) {
-    if mouse_input.just_pressed(MouseButton::Left) {
-        if let Some(match_type) = placer.placer.clone() {
-
-            match match_type.0.as_str() {
-                "item" => {
-                    item_event.send(ItemSpawn(match_type.1, WorldSystem::get_currect_chunk_subtile(cursor.0.as_ivec2()), 1));
-                },
-                "object" => {
-                    obj_event.send(ObjectSpawn(match_type.1, WorldSystem::get_currect_chunk_tile(cursor.0.as_ivec2())));
-                },
-                "entity" => {
-                    entity_event.send(EntitySpawn(match_type.1, cursor.0));
-                },
-                _ => warn!("Неверный указанный тип!")
+    if *cursor_mode == CursorMode::Placer {
+        if mouse_input.just_pressed(MouseButton::Left) {
+            if let Some(match_type) = placer.placer.clone() {
+                match match_type.0.as_str() {
+                    "item" => {
+                        item_event.send(ItemSpawn(match_type.1, WorldSystem::get_currect_chunk_subtile(cursor.0.as_ivec2()), 1));
+                    },
+                    "object" => {
+                        obj_event.send(ObjectSpawn(match_type.1, cursor.0.as_ivec2()));
+                    },
+                    "entity" => {
+                        entity_event.send(EntitySpawn(match_type.1, cursor.0));
+                    },
+                    _ => warn!("Неверный указанный тип!")
+                }
             }
         }
-    }
 
-    if keyboard_input.just_pressed(KeyCode::Escape) {
-        placer.placer = None;
+        if keyboard_input.just_pressed(KeyCode::Escape) {
+            placer.placer = None;
+            *cursor_mode = CursorMode::None;
+        }
     }
 }
 
 fn create_text_placer(
     mut commands:   Commands,
-    mut placer:     ResMut<CursorPlacer>
+    mut placer:     ResMut<CursorPlacer>,
+        cursor_p:   Res<CursorProcentPos>,
 ) {
     if placer.is_changed() {
         if let Some(entity) = placer.entity {
@@ -263,19 +298,23 @@ fn create_text_placer(
         if !placer.placer.is_none() {
             if let Some(text) = placer.placer.clone() {
                 placer.entity = Some(commands.spawn((
-                    Text2dBundle {
+                    TextBundle {
+                        style: Style {
+                            position_type:  PositionType::Absolute,
+                            left:           Val::Percent(cursor_p.0.x + 1.0),
+                            top:            Val::Percent(cursor_p.0.y - 1.0),
+                            height:         Val::Percent(5.0),
+                            width:          Val::Percent(3.0),
+                            ..default()
+                        },
                         text: Text {
                             sections: vec![TextSection::new(
                                 format!("{}", text.1),
                                 TextStyle {
-                                    font_size: 12.0,
+                                    font_size: 11.0,
                                     ..default()
                                 },
                             )],
-                            ..default()
-                        },
-                        transform: Transform {
-                            scale: Vec3::splat(0.5),
                             ..default()
                         },
                         ..default()
@@ -291,9 +330,9 @@ fn create_text_placer(
 pub struct InfoTextPlace;
 
 fn attach_to_cursor(
-        cursor: Res<CursorPosition>,
+        cursor: Res<CursorProcentPos>,
         placer: ResMut<CursorPlacer>,
-    mut text:   Query<&mut Transform, With<InfoTextPlace>>
+    mut text:   Query<&mut Style, With<InfoTextPlace>>
 ) {
     if text.is_empty() {
         return;
@@ -301,7 +340,9 @@ fn attach_to_cursor(
 
     if !placer.placer.is_none() {
         if let Ok(mut text) = text.get_single_mut() {
-            text.translation = Vec3::new(cursor.0.x + 16.0, cursor.0.y + 16.0, 0.0);
+            // text.translation = Vec3::new(cursor.0.x + 8.0, cursor.0.y + 8.0, 0.0);
+            text.left    = Val::Percent(cursor.0.x + 1.0);
+            text.top     = Val::Percent(cursor.0.y - 1.0);
         }
     }
 }
@@ -310,151 +351,10 @@ fn attach_to_cursor(
 // ?
 // ==============================
 
+// Скорее всего определение может ли объект быть выделенным
 #[derive(Component)]
 pub struct Selectable {
     pub is_selected: bool
-}
-
-// ==============================
-// Selector
-// ==============================
-
-/// Ресурс, отвечающий за хранение данных о выделении
-#[derive(Resource)]
-pub struct Selector {
-    pub selector_entity: Option<Entity>,
-    pub select_entity: Option<Entity>
-}
-
-// Компонент, отвечающийза определения самого выделения
-#[derive(Component)]
-pub struct Select;
-
-/// Компонент-якорь, отвечающий за определение выделенного объекта
-#[derive(Component)]
-pub struct Selected;
-
-fn select_object(
-    mut commands:           Commands,
-        cursor:             Res<CursorPosition>,
-        keyboard_input:     Res<ButtonInput<KeyCode>>,
-        mouse_buttons:      Res<ButtonInput<MouseButton>>,
-    mut select:             ResMut<Selector>,
-    mut chunk_res:          ResMut<Chunk>
-) {
-    if keyboard_input.pressed(KeyCode::ControlLeft) {
-        if mouse_buttons.just_pressed(MouseButton::Left) {
-
-            if let Some(selected_entity) = chunk_res.objects_ex.get(&&WorldSystem::get_currect_chunk_subtile(cursor.0.as_ivec2())) {
-                if select.select_entity != Some(*selected_entity) {
-                    // Удаление старого выделения
-                    if let Some(entity) = select.select_entity {
-                        commands.entity(entity).remove::<Selected>();
-                    }
-                    // Новое выделение
-                    select.select_entity = Some(*selected_entity);
-                    commands.entity(*selected_entity).insert(Selected);
-                } else {
-                    // Снятие выделение у выделенной сущности
-                    if let Some(entity) = select.select_entity {
-                        commands.entity(entity).remove::<Selected>();
-                        select.select_entity = None;
-                    }
-                    return;
-                }
-            } else {
-                // Если нажатие было за пределами объектов, снимаем выделение
-                if let Some(entity) = select.select_entity {
-                    commands.entity(entity).remove::<Selected>();
-                    select.select_entity = None;
-                    return;
-                }
-            }
-        }
-    }
-}
-
-fn selector_update(
-    mut commands:   Commands,
-        selected:   Query<(Entity, &Transform), Added<Selected>>,
-        handle:     Res<TestTextureAtlas>,
-    mut select:     ResMut<Selector>
-
-) {
-    if selected.is_empty() {
-        return;
-    }
-
-    // println!("selector");
-
-    if select.selector_entity.is_none() {
-        if let Ok((_, transform)) = selected.get_single() {
-            let entity = commands.spawn((
-                SpriteSheetBundle {
-                    texture: handle.image.clone().unwrap(),
-                    atlas: TextureAtlas {
-                        layout: handle.layout.clone().unwrap(),
-                        index: TestTextureAtlas::get_index("select", &handle),
-                    },
-                    transform: Transform {
-                        translation: transform.translation,
-                        scale: transform.scale,
-                        ..default()
-                    },
-                    ..default()
-                },
-                Select,
-                Name::new("Selector")
-            )).id();
-            // println!("selector created");
-            select.selector_entity = Some(entity);
-        }
-    }
-}
-
-fn selector_remove(
-    mut commands:   Commands,
-    mut removed:    RemovedComponents<Selected>,
-    mut select:     ResMut<Selector>
-) {
-    if removed.is_empty() {
-        return;
-    }
-
-    // println!("selected remove");
-
-    for entity in removed.read() {
-        if let Some(selected_entity) = select.selector_entity {
-            if entity == selected_entity {  // Возможная проблема мульти компонента
-                commands.entity(selected_entity).despawn_recursive();
-                select.selector_entity = None;
-                select.select_entity = None;
-
-                // println!("selected removed");
-            } else if select.select_entity.is_none() {
-                commands.entity(selected_entity).despawn_recursive();
-                select.selector_entity = None;
-                // println!("selector removed");
-            }
-        }
-    }
-}
-
-fn attach_to_select(
-    mut commands:   Commands,
-    mut selector:   Query<&mut Transform, (With<Select>, Without<Selected>)>,
-        selected:   Query<&Transform, (With<Selected>, Without<Select>)>
-) {
-    if selector.is_empty() && selected.is_empty() {
-        return;
-    }
-
-    if let Ok(selected) = selected.get_single() {
-        if let Ok(mut selector) = selector.get_single_mut() {
-            selector.translation = selected.translation;
-            selector.scale = selected.scale;
-        }
-    }
 }
 
 // ==============================
@@ -463,53 +363,82 @@ fn attach_to_select(
 
 #[derive(Resource)]
 pub struct SelectBox {
-    pub is_active: bool,
-    pub start_position: Vec2,
-    pub current_position: Vec2
+    pub is_active:          bool,
+    pub start_position:     Vec2,
+    pub current_position:   Vec2,
+}
+
+// pub fn _update_select_box(
+//     mut query: Query<(
+//         &Camera2d,
+//         &Camera,
+//         &GlobalTransform
+//     ), With<UserCamera>>,
+//     mut select_box:     ResMut<SelectBox>,
+//         mouse_input:    Res<ButtonInput<MouseButton>>,
+//         windows:        Query<&Window, With<PrimaryWindow>>
+// ) {
+//     let (_, camera, global_transform) = query.single_mut();
+
+//     // let window = if let RenderTarget::Window(id) = camera.target {
+//     //     windows.get(id).unwrap()
+//     // } else {
+//     //     windows.get_primary().unwrap()
+//     // };
+
+//     let window = windows.single();
+
+//     if let Some(win_pos) = window.cursor_position() {
+
+//         let window_size     = Vec2::new(window.width() as f32, window.height() as f32);
+//         let ndc             = (win_pos / window_size) * 2.0 - Vec2::ONE;
+//         let ndc_to_world    = global_transform.compute_matrix() * camera.projection_matrix().inverse();
+//         let world_pos       = ndc_to_world.project_point3(ndc.extend(-1.0));
+//         let world_pos: Vec2       = world_pos.truncate();
+
+//         if mouse_input.just_pressed(MouseButton::Left) {
+//             select_box.is_active = true;
+//             select_box.start_position = world_pos;
+//             select_box.current_position = world_pos;
+//         }
+
+//         if mouse_input.pressed(MouseButton::Left) {
+//             select_box.is_active = true;
+//             select_box.current_position = world_pos;
+//         }
+
+//         if mouse_input.just_released(MouseButton::Left) {
+//             select_box.is_active = false;
+//         }
+//     }
+// }
+
+pub fn def_select_box(
+    mut select_box:     ResMut<SelectBox>,
+        cursor:         Res<CursorPosition>,
+        mouse_input:    Res<ButtonInput<MouseButton>>,
+) {
+    if mouse_input.just_pressed(MouseButton::Left) {
+        select_box.is_active        = true;
+        select_box.start_position   = cursor.0;
+        select_box.current_position = cursor.0;
+    }
+
+    if mouse_input.pressed(MouseButton::Left) {
+        select_box.is_active        = true;
+        select_box.current_position = cursor.0;
+    }
+
+    if mouse_input.just_released(MouseButton::Left) {
+        select_box.is_active = false;
+    }
 }
 
 pub fn update_select_box(
-    mut query: Query<(
-        &Camera2d,
-        &Camera,
-        &GlobalTransform
-    )>,
     mut select_box:     ResMut<SelectBox>,
-        mouse_input:    Res<ButtonInput<MouseButton>>,
-        windows:        Query<&Window, With<PrimaryWindow>>
 ) {
-    let (_, camera, global_transform) = query.single_mut();
+    if select_box.is_active {
 
-    // let window = if let RenderTarget::Window(id) = camera.target {
-    //     windows.get(id).unwrap()
-    // } else {
-    //     windows.get_primary().unwrap()
-    // };
-
-    let window = windows.single();
-
-    if let Some(win_pos) = window.cursor_position() {
-
-        let window_size     = Vec2::new(window.width() as f32, window.height() as f32);
-        let ndc             = (win_pos / window_size) * 2.0 - Vec2::ONE;
-        let ndc_to_world    = global_transform.compute_matrix() * camera.projection_matrix().inverse();
-        let world_pos       = ndc_to_world.project_point3(ndc.extend(-1.0));
-        let world_pos: Vec2       = world_pos.truncate();
-
-        if mouse_input.just_pressed(MouseButton::Left) {
-            select_box.is_active = true;
-            select_box.start_position = world_pos;
-            select_box.current_position = world_pos;
-        }
-
-        if mouse_input.pressed(MouseButton::Left) {
-            select_box.is_active = true;
-            select_box.current_position = world_pos;
-        }
-
-        if mouse_input.just_released(MouseButton::Left) {
-            select_box.is_active = false;
-        }
     }
 }
 
@@ -521,7 +450,6 @@ fn delete_object(
     mut commands:       Commands,
         cursor:         Res<CursorPosition>,
         keyboard_input: Res<ButtonInput<KeyCode>>,
-        handle:         Res<TestTextureAtlas>,
     mut chunk_res:      ResMut<Chunk>
 ) {
     if keyboard_input.just_pressed(KeyCode::KeyT) {

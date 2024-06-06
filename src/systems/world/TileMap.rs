@@ -1,52 +1,64 @@
+#![allow(unused)]
 use bevy::{
-    app::{PluginGroup, Update},
     ecs::{query::With, system::Query},
     input::{keyboard::KeyCode, ButtonInput},
     math::IVec2,
     prelude::*,
-    render::{color::Color, render_resource::FilterMode, view::Visibility},
+    render::{render_resource::FilterMode, view::Visibility},
 };
-use bevy_entitiles::{
-    math::TileArea,
-    tilemap::{
+
+use bevy_entitiles::tilemap::{
         bundles::StandardTilemapBundle,
         map::{
-            TileRenderSize, TilemapName, TilemapRotation, TilemapSlotSize, TilemapStorage,
-            TilemapTexture, TilemapTextureDescriptor, TilemapTransform, TilemapType,
+            TileRenderSize, TilemapName, TilemapSlotSize, TilemapStorage,
+            TilemapTexture, TilemapTextureDescriptor, TilemapTransform, TilemapType, TilemapTextures
         },
-        tile::{LayerUpdater, TileBuilder, TileLayer, TileLayerPosition, TileUpdater},
-    }
-};
+        tile::{TileBuilder, TileLayer},
+    };
 
 #[derive(Component)]
 pub struct TileM; 
 
-#[derive(Component)]
-pub struct TileMCollider;
+// #[derive(Component)]
+// pub struct TileMCollider;
 
-#[derive(Component)]
-pub struct TileMSemiCollider; 
+// #[derive(Component)]
+// pub struct TileMSemiCollider; 
 
 
-pub fn setup(mut commands: Commands, assets_server: Res<AssetServer>) {
+pub fn setup(
+    mut commands:       Commands, 
+        assets_server:  Res<AssetServer>,
+    mut textures:       ResMut<Assets<TilemapTextures>>,
+) {
 
     let entity = commands.spawn_empty().id();
 
-    let mut tilemap = StandardTilemapBundle {
+    let tilemap = StandardTilemapBundle {
         name: TilemapName("test_map".to_string()),
         tile_render_size: TileRenderSize(Vec2 { x: 16., y: 16. }),
         slot_size: TilemapSlotSize(Vec2 { x: 16., y: 16. }),
         ty: TilemapType::Square,
         storage: TilemapStorage::new(16, entity),
-        texture: TilemapTexture::new(
-            assets_server.load("core/textures/terrain/tiles_test.png"),
-            TilemapTextureDescriptor::new(
-                UVec2 { x: 128, y: 128 },         // Это размер атласа
-                UVec2 { x: 32, y: 32 },    // Это размер клетки
-                FilterMode::Nearest,
+        // textures: TilemapTexture::new(
+        //     assets_server.load("core/textures/terrain/tiles_test.png"),
+        //     TilemapTextureDescriptor::new(
+        //         UVec2 { x: 128, y: 128 },    // Это размер атласа
+        //         UVec2 { x: 32, y: 32 }  // Это размер клетки
+        //     ),
+        //     //FilterMode::Nearest,
+        //     //TilemapRotation::None
+        // ),
+        textures: textures.add(TilemapTextures::single(
+            TilemapTexture::new(
+                assets_server.load("core/textures/terrain/tiles_test.png"),
+                TilemapTextureDescriptor::new(
+                    UVec2 { x: 128, y: 128 }, 
+                    UVec2 { x: 32, y: 32 }
+                ),
             ),
-            TilemapRotation::None,
-        ),
+            FilterMode::Nearest,
+        )),
         transform: TilemapTransform {
             z_index: -1.0,
             ..default()
@@ -69,7 +81,7 @@ pub fn fill_chunk(
         return;
     }
 
-    let (tilemap, mut storage) = tilem.single_mut();
+    let (_, mut storage) = tilem.single_mut();
 
     for tilem_pos in tilem_pos.read() {
         for x in tilem_pos.0.x*16..tilem_pos.0.x*16+16 {
@@ -105,7 +117,7 @@ pub fn clear_chunk(
         return;
     }
 
-    let (tilemap, mut storage) = tilem.single_mut();
+    let (_, mut storage) = tilem.single_mut();
 
     for tilem_pos in tilem_pos.read() {
         for x in tilem_pos.0.x*16..tilem_pos.0.x*16+16 {

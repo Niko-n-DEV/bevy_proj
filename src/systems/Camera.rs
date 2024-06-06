@@ -28,6 +28,8 @@ use crate::core::{
 
 //use bevy_entitiles::tilemap::chunking::camera::CameraChunkUpdater;
 
+const LERP_COEFFICIENT: f32 = 0.05;
+
 // Основной компонент камеры
 // Определить параметр зацепа к объекту (option)
 #[derive(Resource)]
@@ -47,7 +49,7 @@ impl Plugin for CameraController {
         app
             // Register Types
             // Init Resource
-            .insert_resource(UserCameraRes { player_fixed: false, coef: 0.066 })
+            .insert_resource(UserCameraRes { player_fixed: false, coef: LERP_COEFFICIENT })
             // Init Plugins
             .add_plugins(PanCamPlugin::default())
             .add_plugins(PixelCameraPlugin)
@@ -73,6 +75,8 @@ impl CameraController {
                 enabled: false,
                 grab_buttons: vec![],
                 zoom_to_cursor: false,
+                min_scale: 0.05,
+                max_scale: Some(1.0),
                 ..default()
             });
     }
@@ -84,7 +88,6 @@ impl CameraController {
             user:   Res<User>
     ) {
         if let Ok(mut cam) = cam.get_single_mut() {
-            //(cam.enabled, u_cam.player_fixed) = (!cam.enabled, !u_cam.player_fixed);
             cam.enabled = !cam.enabled;
             if user.control_entity.is_none() {
                 u_cam.player_fixed = false
@@ -123,9 +126,13 @@ impl CameraController {
                 if user_camera.player_fixed {
                     cam.grab_buttons = vec![MouseButton::Middle];
                     cam.zoom_to_cursor = true;
+                    cam.min_scale = 0.05;
+                    cam.max_scale = Some(1.0);
                 } else {
                     cam.grab_buttons = vec![];
                     cam.zoom_to_cursor = false;
+                    cam.min_scale = 0.1;
+                    cam.max_scale = Some(0.5);
                 }
                 user_camera.player_fixed = !user_camera.player_fixed;
             }

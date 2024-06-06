@@ -3,8 +3,14 @@ use bevy::prelude::*;
 
 use crate::core::{
     AppState,
+    UserSystem::UserControl,
     Object::EntityObject,
-    world::chunk::Chunk::Chunk
+    Entity::EntityBase,
+    // world::chunk::Chunk::Chunk,
+    world::Grid::{
+        Grid,
+        get_format_current_chunk
+    },
 };
 
 pub struct DamageSystem;
@@ -27,8 +33,9 @@ pub struct DamageObject(pub IVec2, pub f32);
 impl DamageSystem {
     fn damage_recorder(
         mut commands:   Commands,
-        mut objects:    Query<(Entity, &mut EntityObject)>,
-        mut chunk:      ResMut<Chunk>,
+        mut objects:    Query<(Entity,&mut EntityObject)>,
+        mut entities:   Query<(Entity, &Transform, &mut EntityBase), Without<UserControl>>,
+        mut grid:       ResMut<Grid>,
         mut event:      EventReader<DamageObject>
     ) {
         if event.is_empty() {
@@ -36,17 +43,26 @@ impl DamageSystem {
         }
 
         for damage_event in event.read() {
-            if let Some(object) = chunk.objects.get(&damage_event.0) {
-                if let Ok(mut entity) = objects.get_mut(*object) {
-                    if entity.1.health.0 > damage_event.1 {
-                        entity.1.health.0 -= damage_event.1;
-                    } else {
-                        println!("Entity: {} is destoyed!", entity.1.id_name);
-                        commands.entity(entity.0).despawn_recursive();
-                        chunk.objects.remove(&damage_event.0);
+            if let Some(chunk) = grid.chunks.get_mut(&get_format_current_chunk(damage_event.0)) {
+                if let Some(object) = chunk.get_object(damage_event.0) {
+                    if let Ok(mut entity) = objects.get_mut(object) {
+                        if entity.1.health.0 > damage_event.1 {
+                            entity.1.health.0 -= damage_event.1;
+                        } else {
+                            chunk.remove_object(entity.0);
+                            commands.entity(entity.0).despawn_recursive();
+                        }
                     }
-                } else {
-                    warn!("Damage: Failed to get the entity!")
+                }
+            }
+
+            for mut entity in &mut entities {
+                if 8.0 > Vec3::distance(damage_event.0.as_vec2().extend(0.5), entity.1.translation) {
+                    if entity.2.health.0 > damage_event.1 {
+                        entity.2.health.0 -= damage_event.1;
+                    } else {
+                        commands.entity(entity.0).despawn_recursive();
+                    }
                 }
             }
         }

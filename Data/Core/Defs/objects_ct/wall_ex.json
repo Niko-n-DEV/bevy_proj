@@ -1,0 +1,6 @@
+{
+    "id_name": "wall_ex",
+	"id_texture": "wall_ex",
+    "size": { "x": 16, "y": 16 },
+	"collision": { "x": 8, "y": 8 }
+}

@@ -28,7 +28,8 @@ use crate::
             HumonoidType,
             EntityNeutrality
         },
-        Movement::DirectionState,
+        EntityAnimation::EntityDirectionState,
+        stats::Stats,
         Missile::{update_bullet_hits, update_bullets},
         AppState
     };
@@ -88,7 +89,7 @@ pub fn update_spawning(
                     .insert(EntityBase {
                         id_name: "human".to_string(),
                         health: Health(50.0),
-                        direction: DirectionState::South,
+                        direction: EntityDirectionState::South,
                         //velocity: Velocity(Vec3::ZERO),
                         movable: true,
                         ..default()
@@ -113,6 +114,7 @@ pub fn update_spawning(
 // Обновление врагов
 // В данном случае движение их в сторону позиции игрока
 // ==================================================
+
 pub fn update_enemies(
     mut commands:       Commands,
     mut enemy_query:    Query<(&mut Transform, &EntityBase, Entity), With<Enemy>>,
@@ -150,6 +152,7 @@ impl Plugin for EntitySystem {
             // Init Register
             .register_type::<EntityBase>()
             .register_type::<EntityHead>()
+            .register_type::<Stats>()
             // Init Events
             .add_event::<DirectionChangeEvent>()
             .add_event::<MovementEntity>()
@@ -159,13 +162,13 @@ impl Plugin for EntitySystem {
             .add_systems(
                 Update,
                 (
-                    handle_move, // .before(PhysicsSet::SyncBackend),
+                    handle_move.before(PhysicsSet::SyncBackend),
                     // handle_direction_changed_events.after(handle_move),
                     change_dir_velocity,
                     change_dir_head
                 ).run_if(in_state(AppState::Game))
             )
-            .add_systems(PostUpdate, inertia_attenuation.run_if(in_state(AppState::Game)))
+            // .add_systems(PostUpdate, inertia_attenuation.run_if(in_state(AppState::Game)))
             // [Test] Обновление системы просчёта пуль и попадений
             .add_systems(
                 Update,
@@ -192,8 +195,8 @@ impl Plugin for EntitySystem {
 // Перенести в world, т.к. эdSAтот компонет спавнера
 /// Удаление спавнера врагов при выходе из сцены игры
 fn delete_enemy_spawner(
-    mut commands: Commands,
-    spawner: Query<Entity, With<EnemySpawner>>,
+    mut commands:   Commands,
+        spawner:    Query<Entity, With<EnemySpawner>>,
 ) {
     if spawner.is_empty() { // && enemy.is_empty() {
         return;
@@ -208,6 +211,7 @@ fn delete_enemy_spawner(
 // Movement
 // ==============================
 
+/// Ивент для управления движением сущности
 #[derive(Event)]
 pub struct MovementEntity(pub Entity, pub Vec3, pub f32); // 0 - Entity, 1 - Diraction, 2 - Speed
 
@@ -218,8 +222,6 @@ fn handle_move(
         &mut Velocity
     )>,
     mut event:      EventReader<MovementEntity>,
-    // mut dir_event:  EventWriter<DirectionChangeEvent>,
-    // time: Res<Time>
 ) {
     if event.is_empty() {
         return;
@@ -228,23 +230,21 @@ fn handle_move(
     for event in event.read() {
         if let Ok((mut entity_base, mut transform, mut velocity)) = query.get_mut(event.0) {
             if event.1 != Vec3::ZERO {
-                //dir_event.send(DirectionChangeEvent(event.0, determine_direction_vec3(event.1)));
-                //transform.translation = transform.translation + time.delta_seconds() * event.2 * event.1;
-                
                 let move_var = event.1 / event.1.length();
                 velocity.linvel = move_var.truncate() * event.2;
 
                 entity_base.position = Position(transform.translation.truncate());
-            } else {
-                transform.translation = entity_base.position.0.extend(0.5)
             }
+            // else {
+            //     transform.translation = entity_base.position.0.extend(0.5)
+            // }
         }
     }
 }
 
 // Гаситель инерции всех движиющийся Entity
 fn inertia_attenuation(
-    mut query: Query<&mut Velocity, With<EntityBase>>,
+    mut query: Query<(&mut Velocity, &mut EntityBase, &Transform), With<EntityBase>>,
 ) {
     if query.is_empty() {
         return;
@@ -254,39 +254,19 @@ fn inertia_attenuation(
     let min_threshold = 0.01;
 
     for mut vel in query.iter_mut() {
-        if vel.linvel != Vec2::ZERO {
-            vel.linvel *= damping_coefficient;
+        if vel.0.linvel != Vec2::ZERO {
+            vel.0.linvel *= damping_coefficient;
             
-            if vel.linvel.abs().max_element() < min_threshold {
-                vel.linvel = Vec2::ZERO;
+            if vel.0.linvel.abs().max_element() < min_threshold {
+                vel.0.linvel = Vec2::ZERO;
+                vel.1.position.0 = vel.2.translation.truncate()
             }
         }
     }
 }
 
-
-// /// Функция для определения направления на основе нормализованного Vec3 вектора
-// fn determine_direction_vec3(vector: Vec3) -> DirectionState {
-//     if vector == Vec3::ZERO {
-//         return DirectionState::None;
-//     }
-
-//     let angle = vector.y.atan2(vector.x).to_degrees().rem_euclid(360.0);
-
-//     if angle > 45.0 && angle <= 135.0 {
-//         return DirectionState::North;
-//     }
-//     if angle > 135.0 && angle <= 225.0 {
-//         return DirectionState::West;
-//     }
-//     if angle > 225.0 && angle <= 315.0 {
-//         return DirectionState::South;
-//     }
-//     DirectionState::East
-// }
-
 /// Функция для определения направления на основе нормализованного Vec2 вектора
-fn determine_direction_vec2(vector: Vec2) -> Option<DirectionState> {
+fn determine_direction_vec2(vector: Vec2) -> Option<EntityDirectionState> {
     if vector == Vec2::ZERO {
         return None;
     }
@@ -294,16 +274,16 @@ fn determine_direction_vec2(vector: Vec2) -> Option<DirectionState> {
     let angle = vector.y.atan2(vector.x).to_degrees().rem_euclid(360.0);
 
     if angle > 45.0 && angle <= 135.0 {
-        return Some(DirectionState::North);
+        return Some(EntityDirectionState::North);
     }
     if angle > 135.0 && angle <= 225.0 {
-        return Some(DirectionState::West);
+        return Some(EntityDirectionState::West);
     }
     if angle > 225.0 && angle <= 315.0 {
-        return Some(DirectionState::South);
+        return Some(EntityDirectionState::South);
     } 
     if (angle > 315.0 && angle <= 360.0) || (angle >= 0.0 && angle <= 45.0) {
-        return Some(DirectionState::East);
+        return Some(EntityDirectionState::East);
     }
 
     None
@@ -311,56 +291,13 @@ fn determine_direction_vec2(vector: Vec2) -> Option<DirectionState> {
 
 // Direction texture updater
 #[derive(Event)]
-pub struct DirectionChangeEvent(pub Entity, pub DirectionState);
+pub struct DirectionChangeEvent(pub Entity, pub EntityDirectionState);
 
 // Важно создать систему, которая будет контролировать все сущности
 /*
     Сущность перемещается, при изменение направления движения изменяется атрибут направления, когда атрибут направления изменён происходит event,
     который получает ссылку на entity и изменённое направление. Когда ивент создан, наверно, происходит выполнения функции, в котором ивент считывается
 */
-
-// скорее будет работать по ивенту, по типу if direction_entity_is_change -> изменение текстуры на другое направление
-/// Обновляет текстуру моба в зависимости от его направления
-// fn handle_direction_changed_events(
-//     mut _query: Query<(
-//         &mut EntityBase, 
-//         &mut TextureAtlas,
-//         &EntityType
-//     )>,
-//     _handle_dir:    Res<DirectionAtlas>,
-//     mut event:      EventReader<DirectionChangeEvent>,
-// ) {
-//     if event.is_empty() {
-//         return;
-//     }
-
-//     let index_atlas = DirectionAtlas::get_index("human", &_handle_dir);
-//     for event in event.read() {
-//         if let Ok((mut _entity_base, mut atlas, _entity_type)) = _query.get_mut(event.0) {
-//             match event.1 {
-//                 DirectionState::North => {
-//                     _entity_base.direction = DirectionState::North;
-//                     atlas.index = index_atlas + 1;
-//                 }
-//                 DirectionState::South => {
-//                     _entity_base.direction = DirectionState::South;
-//                     atlas.index = index_atlas;
-//                 }
-//                 DirectionState::West => {
-//                     _entity_base.direction = DirectionState::West;
-//                     atlas.index = index_atlas + 3;
-//                 }
-//                 DirectionState::East => {
-//                     _entity_base.direction = DirectionState::East;
-//                     atlas.index = index_atlas + 2;
-//                 }
-//                 DirectionState::None => {
-//                     _entity_base.direction = DirectionState::None;
-//                 }
-//             }
-//         }
-//     }
-// }
 
 pub fn change_dir_velocity(
     mut query: Query<(
@@ -382,21 +319,21 @@ pub fn change_dir_velocity(
             if let Some(info) = register.get_entity_info(&entity.0.id_name) {
                 if let Some(index) = hash.get(&info.id_texture_b) {
                     match determine_direction_vec2(entity.3.linvel) {
-                        Some(DirectionState::South) => {
-                            entity.0.direction = DirectionState::South;
-                            entity.1.index = *index;
+                        Some(EntityDirectionState::South) => {
+                            entity.0.direction = EntityDirectionState::South;
+                            entity.1.index = EntityDirectionState::calculate_index(*index,  entity.0.direction.dir_index())
                         }
-                        Some(DirectionState::North) => {
-                            entity.0.direction = DirectionState::North;
-                            entity.1.index = index + 1
+                        Some(EntityDirectionState::North) => {
+                            entity.0.direction = EntityDirectionState::North;
+                            entity.1.index = EntityDirectionState::calculate_index(*index,  entity.0.direction.dir_index())
                         }
-                        Some(DirectionState::East) => {
-                            entity.0.direction = DirectionState::East;
-                            entity.1.index = index + 2;
+                        Some(EntityDirectionState::East) => {
+                            entity.0.direction = EntityDirectionState::East;
+                            entity.1.index = EntityDirectionState::calculate_index(*index,  entity.0.direction.dir_index())
                         }
-                        Some(DirectionState::West) => {
-                            entity.0.direction = DirectionState::West;
-                            entity.1.index = index + 3;
+                        Some(EntityDirectionState::West) => {
+                            entity.0.direction = EntityDirectionState::West;
+                            entity.1.index = EntityDirectionState::calculate_index(*index,  entity.0.direction.dir_index())
                         }
                         _ => {
                             return;
@@ -433,29 +370,29 @@ pub fn change_dir_head(
                         if let Some(texture_h) = &info.id_texture_h {
                             if let Some(index) = hash.get(texture_h) {
                                 match determine_direction_vec2(entity_h.0.look_at - entity_b.2.translation.truncate()) {
-                                    Some(DirectionState::South) => {
-                                        if entity_b.1.direction != DirectionState::North {
-                                            entity_h.0.direction = DirectionState::South;
-                                            entity_h.1.index = index + 3;
+                                    Some(EntityDirectionState::South) => {
+                                        if entity_b.1.direction != EntityDirectionState::North {
+                                            entity_h.0.direction = EntityDirectionState::South;
+                                            entity_h.1.index = EntityDirectionState::calculate_index(*index,  entity_h.0.direction.dir_index())
                                         }
                                     }
-                                    Some(DirectionState::North) => {
-                                        if entity_b.1.direction != DirectionState::South {
-                                            entity_h.0.direction = DirectionState::North;
-                                            entity_h.1.index = index + 4
+                                    Some(EntityDirectionState::North) => {
+                                        if entity_b.1.direction != EntityDirectionState::South {
+                                            entity_h.0.direction = EntityDirectionState::North;
+                                            entity_h.1.index = EntityDirectionState::calculate_index(*index,  entity_h.0.direction.dir_index())
                                         }
                                     }
-                                    Some(DirectionState::East) => {
-                                        if entity_b.1.direction != DirectionState::West {
-                                            entity_h.0.direction = DirectionState::East;
-                                            entity_h.1.index = index + 5;
+                                    Some(EntityDirectionState::East) => {
+                                        if entity_b.1.direction != EntityDirectionState::West {
+                                            entity_h.0.direction = EntityDirectionState::East;
+                                            entity_h.1.index = EntityDirectionState::calculate_index(*index,  entity_h.0.direction.dir_index())
                                         }
                                         
                                     }
-                                    Some(DirectionState::West) => {
-                                        if entity_b.1.direction != DirectionState::East {
-                                            entity_h.0.direction = DirectionState::West;
-                                            entity_h.1.index = index + 6;
+                                    Some(EntityDirectionState::West) => {
+                                        if entity_b.1.direction != EntityDirectionState::East {
+                                            entity_h.0.direction = EntityDirectionState::West;
+                                            entity_h.1.index = EntityDirectionState::calculate_index(*index,  entity_h.0.direction.dir_index())
                                         }
                                         
                                     }

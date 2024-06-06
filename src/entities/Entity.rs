@@ -1,6 +1,6 @@
 #![allow(unused)]
 use bevy::prelude::*;
-use bevy_rapier2d::prelude::*;
+use bevy_rapier2d::{prelude::*, rapier::dynamics::RigidBodyBuilder};
 
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
@@ -16,8 +16,13 @@ use crate::core::{
         SpriteLayer
     },
     //UserSystem::User,
-    Movement::DirectionState,
-    EntityType::*
+    EntityAnimation::EntityDirectionState,
+    EntityType::*,
+    entities::ai::{
+        LastDirection,
+        Path::AiPath,
+    },
+    stats::Stats,
 };
 
 /// Компонент отвечающий за [Здоровье]
@@ -34,9 +39,11 @@ pub struct Speed(pub f32, pub f32, pub f32);
 #[derive(Component, Reflect, Default, Debug)]
 pub struct Position(pub Vec2);
 
-/// Компонент отвечающий за [Направление движения]
-// #[derive(Component, Reflect)]
-// pub struct Velocity(pub Vec3);
+/// Компонент отвечающий за [Взаимодействие]
+/// 
+/// 1 - Радиус взаимодействия / 2 - Радиус атаки
+#[derive(Component, Reflect, Default, Debug)]
+pub struct InteractionType(pub f32, pub f32);
 
 /// Компонент отвечающий за возможность атаки на сущность.
 /// 
@@ -52,9 +59,10 @@ pub struct EntityBase {
     pub speed:              Speed,
     pub health:             Health,
     pub position:           Position,
-    pub direction:          DirectionState,
+    pub direction:          EntityDirectionState,
     pub movable:            bool,
     pub interaction_radius: f32,
+    pub atack_radius:       f32,
     pub entity_type:        EntityType
 }
 
@@ -65,9 +73,10 @@ impl Default for EntityBase {
             speed:              Speed(50., 75., 25.),
             health:             Health(1.),
             position:           Position(Vec2::ZERO),
-            direction:          DirectionState::South,
+            direction:          EntityDirectionState::South,
             movable:            true,
             interaction_radius: 10.0,
+            atack_radius:       10.0,
             entity_type:        EntityType::None
         }
     }
@@ -80,13 +89,8 @@ pub struct EntityHead {
     pub parent:     Entity,
     pub health:     Health,
     pub look_at:    Vec2,
-    pub direction:  DirectionState,
+    pub direction:  EntityDirectionState,
     pub movable:    bool,
-}
-
-#[derive(Component)]
-pub struct EntityOne {
-    pub body: Entity
 }
 
 /// Событие спавна сущности
@@ -110,15 +114,19 @@ pub fn spawn_entity(
                 println!("Entity spawn: {} {}", event.0, event.1);
                 let entity = commands.spawn((
                     RigidBody::Dynamic,
+                    Damping {
+                        linear_damping: 20.0,
+                        ..default()
+                    },
                     Velocity::zero(),
-                    Collider::round_cuboid(2., 2., 0.25),
+                    Collider::round_cuboid(3., 3., 0.25),
                     LockedAxes::ROTATION_LOCKED,
                     EntityBase {
                         id_name:    info.id_name.clone(),
                         speed:      Speed(50., 75., 25.),
                         health:     Health(info.health),
                         position:   Position(Vec2::new(64., 64.)),
-                        direction:  DirectionState::South,
+                        direction:  EntityDirectionState::South,
                         movable:    true,
                         ..default()
                     },
@@ -135,6 +143,9 @@ pub fn spawn_entity(
                     // Body,
                     info.entity_type.clone(),
                     EntityNeutrality::Neutral,
+                    AiPath::default(),
+                    LastDirection(Vec2::ZERO),
+                    Stats::new(),
                     Name::new(info.id_name.clone()),
                 )).id();
 
@@ -148,7 +159,7 @@ pub fn spawn_entity(
                                         parent:     entity,
                                         health:     Health(info.health),
                                         look_at:    Vec2::ZERO,
-                                        direction:  DirectionState::South,
+                                        direction:  EntityDirectionState::South,
                                         movable:    true,
                                     },
                                     SpriteSheetBundle {
@@ -180,17 +191,6 @@ pub fn spawn_entity(
     //     ..default()
     // })
     // .insert(Inventory::with_capacity(12));
-}
-
-#[allow(unused)]
-// Добавил чисто для теста
-#[derive(Bundle)]
-pub struct EntityFounder {
-    pub health: Health,
-    pub speed: Speed,
-    pub position: Position,
-    pub direction: DirectionState,
-    pub entity_type: EntityType
 }
 
 /// Определяет состояние сущности [статичен, стоит или двигается]

@@ -1,88 +1,48 @@
 use bevy::prelude::*;
-use bevy_rapier2d::{
-    prelude::{
-        Collider, 
-        Velocity, 
-        *
-    }, 
-    rapier::dynamics::RigidBodyDamping
-};
+
+use bevy_rapier2d::prelude::*;
 
 use std::{collections::HashMap, marker::PhantomData};
 
-use bevy_entitiles::EntiTilesPlugin;
+// use bevy_entitiles::EntiTilesPlugin;
 
 use crate::core::{
-    entities::EntitySystem::{
-        EntitySystem,
-        EnemySpawner,
+    entities::{
+        ai::AiPlugin,
+        EntitySystem::EntitySystem,
     },
-    resource::{
-        graphic::Atlas::{
-            AtlasRes,
-            DirectionAtlas, 
-            TestTextureAtlas
-        },
-        Registry::Registry,
-        SpriteLayer
-    },
+    resource::graphic::Atlas::AtlasRes,
     world::{
         chunk::Chunk::Chunk, 
-        TileMap::{
-            self, 
-            DischargeChunkPos, 
-            LoadChunkPos
-        }, WorldTaskManager
+        // TileMap::{
+        //     self, 
+        //     DischargeChunkPos, 
+        //     LoadChunkPos
+        // }, 
+        WorldTaskManager
     }, 
     AppState, 
-    ContainerSystem::{
-        ContainerPlugin,
-        ItemTypeEx,
-        Container,
-        Inventory,
-    }, 
+    ContainerSystem::ContainerPlugin, 
     Entity::{
-        EntityBase,
-        Health,
-        Speed,
-        Position,
         EntitySpawn,
         spawn_entity
-    },
-    EntityType::{
-        EntityType,
-        HumonoidType,
-        EntityNeutrality
     },
     Item::{
         ItemSpawn,
         spawn_item
     },
-    ItemType::{
-        Ammo, 
-        Item, 
-        ItemType, 
-        ItemEntity,
-        Material
-    }, 
+    ItemType::ItemType, 
     Object::{
-        EntityObject,
         ObjectSpawn,
         spawn_object
     },
-    Movement::DirectionState,
     Settings::Settings, 
-    UserSystem::{
-        UserControl,
-        User,
-    },
-    PlayerSystem::{
-        PlayerPlugin,
-        PlayerAttach,
-    }, 
-    Weapon::GunController,
+    UserSystem::UserControl,
+    PlayerSystem::PlayerPlugin,
     interact::Damage::DamageSystem
 };
+
+use super::Grid::Grid;
 
 pub struct WorldSystem;
 
@@ -90,7 +50,7 @@ impl Plugin for WorldSystem {
     fn build(&self, app: &mut App) {
         app
             // Init Plugins
-            .add_plugins(EntiTilesPlugin)
+            // .add_plugins(EntiTilesPlugin)
             .add_plugins((
                 // Физика
                 RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(32.0),
@@ -99,17 +59,20 @@ impl Plugin for WorldSystem {
                     ..default()
                 }
             ))
-            .add_plugins((
-                EntitySystem,   // Инициализация плагина, отвечающего за работу всех entity
-                PlayerPlugin,   // Инициализация плагина, отвечающего за работу управления entity-player
-                DamageSystem,
-                ContainerPlugin::<ItemType> {
-                    phantom: PhantomData {}
-                },
-            ))
+            .add_plugins(
+                (
+                    EntitySystem,   // Инициализация плагина, отвечающего за работу всех entity
+                    AiPlugin,
+                    PlayerPlugin,   // Инициализация плагина, отвечающего за работу управления entity-player
+                    DamageSystem,
+                    ContainerPlugin::<ItemType> {
+                        phantom: PhantomData {}
+                    },
+                )
+            )
             // Init Event
-            .add_event::<LoadChunkPos>()
-            .add_event::<DischargeChunkPos>()
+            // .add_event::<LoadChunkPos>()
+            // .add_event::<DischargeChunkPos>()
             .add_event::<ItemSpawn>()
             .add_event::<ObjectSpawn>()
             .add_event::<EntitySpawn>()
@@ -121,7 +84,7 @@ impl Plugin for WorldSystem {
                 OnEnter(AppState::LoadingInGame),
                 (
                     WorldTaskManager::load_data,
-                    TileMap::setup
+                    // TileMap::setup
                 )
             )
             .add_systems(OnEnter(AppState::Game), 
@@ -140,14 +103,16 @@ impl Plugin for WorldSystem {
                 Update,
                 (
                     Self::load_chunk_around,
-                    TileMap::toggle,
-                    TileMap::fill_chunk,
-                    TileMap::clear_chunk
+                    Self::update_grid,
+                    // TileMap::toggle,
+                    // TileMap::fill_chunk,
+                    // TileMap::clear_chunk
                 ).run_if(in_state(AppState::Game))
             )
             .add_systems(OnExit(AppState::Game), (
                 WorldTaskManager::despawn_entities,
-                WorldTaskManager::despawn_object,
+                // WorldTaskManager::despawn_object,
+                Self::upload_data,
                 WorldTaskManager::despawn_items,
                 WorldTaskManager::despawn_terrain
             ))
@@ -160,12 +125,14 @@ impl WorldSystem {
 
     fn setup(
         mut commands:       Commands, 
-            asset_server:   Res<AssetServer>,
+        //     asset_server:   Res<AssetServer>,
             settings:       Res<Settings>,
         mut world:          ResMut<WorldRes>,
-        mut physics:        ResMut<RapierConfiguration>
+        mut physics:        ResMut<RapierConfiguration>,
     ) {
         world.player_render_distance = settings.rendering_distance;
+
+        commands.insert_resource(Grid::new(settings.rendering_distance));
 
         physics.gravity = Vec2::ZERO;
     }
@@ -174,124 +141,59 @@ impl WorldSystem {
     /// 
     /// Установка как задачи процессы загрузки ресурсов и прогрузки отдельных комплексных компонентов.
     fn init_world(
-        mut commands:       Commands,
-            atlas:          Res<AtlasRes>,
-            handle:         Res<TestTextureAtlas>,
-            handle_dir:     Res<DirectionAtlas>,
-        mut register:       ResMut<Registry>
+        // mut commands:       Commands,
+        //     atlas:          Res<AtlasRes>,
+        //     handle:         Res<TestTextureAtlas>,
+        //     handle_dir:     Res<DirectionAtlas>,
+        // mut register:       ResMut<Registry>,
+        // mut obj_event:      EventWriter<ObjectSpawn>,
+        // mut item_event:     EventWriter<ItemSpawn>,
+        mut entity_event:   EventWriter<EntitySpawn>,
     ) {
         /*
             Тут будет непосредственно инициализация мира, где будет размещение игровой сетки, основных его компонентов и сущностей.
             Установка синхронно с процессом загрузки ресурсов из файла.
         */
 
-        // Test ==============================
+        entity_event.send(EntitySpawn("human".to_string(), Vec2::splat(16.0)));
+    }
 
-        // Спавн спрайта, являющийся игроком
-        // let texture = DirectionAtlas::set_sprite("human", &handle_dir);
-        // let entity = commands.spawn((
-        //     RigidBody::Dynamic,
-        //     EntityBase {
-        //         id_name:    "human".to_string(),
-        //         speed:      Speed(50., 75., 25.),
-        //         health:     Health(100.),
-        //         position:   Position(Vec2::new(64., 64.)),
-        //         direction:  DirectionState::South,
-        //         movable:    true,
-        //         ..default()
-        //     },
-        //     //sprite,
-        //     SpriteSheetBundle {
-        //         texture: texture.0,
-        //         atlas: texture.1,
-        //         ..default()
-        //     },
-        //     SpriteLayer::Entity,
-        //     EntityType::Humonoid(HumonoidType::Human),
-        //     EntityNeutrality::Neutral,
-        //     Name::new("Player"),
-        // ))
-        // .insert(Velocity::zero())
-        // .insert(Collider::round_cuboid(2., 2., 0.25))
-        // .insert(LockedAxes::ROTATION_LOCKED)
-        // .id();
+    fn update_grid(
+        mut commands:       Commands,
+        mut grid:           ResMut<Grid>,
+            atlas:          Res<AtlasRes>,
+            player_query:   Query<&Transform, With<UserControl>>,
+    ) {
+        if player_query.is_empty() {
+            return;
+        }
+        
+        if let Ok(player_transform) = player_query.get_single() {
+            let player_pos = player_transform.translation.truncate().as_ivec2();
+            grid.update_chunks(&mut commands, &atlas, player_pos);
+        }
+    }
 
-        // commands.entity(entity)
-        // .insert(User {
-        //     control_entity: Some(entity),
-        //     ..default()
-        // })
-        // .insert(Inventory::with_capacity(12));
-        // .insert(Container::default());
-
-        // Спавн оружия и соединение с игроком
-        // if let Some(sprite) = register.get_test("gun", &atlas) {
-        //     commands
-        //     .spawn(SpriteSheetBundle {
-        //         texture: handle.image.clone().unwrap(),
-        //         atlas: TextureAtlas {
-        //             layout: handle.layout.clone().unwrap(),
-        //             index: TestTextureAtlas::get_index("gun", &handle),
-        //         },
-        //         transform: Transform {
-        //             translation: Vec3::new(0., 0., 0.5),
-        //             ..default()
-        //         },
-        //         ..default()
-        //     })
-        //     .insert(EntityObject::default())
-        //     .insert(SpriteLayer::Item)
-        //     .insert(PlayerAttach {
-        //         offset: Vec2::new(0., -3.),
-        //     })
-        //     .insert(GunController {
-        //         shoot_cooldown: 0.5,
-        //         shoot_timer: 0.,
-        //     });
-        // } else {
-        //     println!("ERROR - Spawn Gun!")
-        // }
-
-        // if let Some(sprite) = handle_dir.g("human", &atlas) {
-            
-        // } else {
-        //     println!("ERROR - Spawn Player!")
-        // }
-
-        // Точка спавна для спавна "болванчиков", которые двигаются к игроку
-        commands
-            .spawn((
-                SpriteSheetBundle {
-                    texture: handle.image.clone().unwrap(),
-                    atlas: TextureAtlas {
-                        layout: handle.layout.clone().unwrap(),
-                        index: TestTextureAtlas::get_index("test_square", &handle),
-                    },
-                    transform: Transform {
-                        translation: Vec3::new(256.0, 256.0, 0.2),
-                        ..default()
-                    },
-                    ..default()
-                }
-            ))
-            .insert(EnemySpawner {
-                is_active: false,
-                cooldown: 5.,
-                timer: 1.,
-            });
-
+    fn upload_data(
+        mut commands:   Commands,
+        mut grid:       ResMut<Grid>
+    ) {
+        grid.upload_all(&mut commands);
     }
 
     /// Функция для инициализации загрузки чанков вокруг игрока в пределах установленной прогрузки.
     fn load_chunk_around(
-        mut commands:       Commands,
-            asset_server:   Res<AssetServer>,
+        // mut commands:       Commands,
+        //    asset_server:   Res<AssetServer>,
         mut worldres:       ResMut<WorldRes>,
-            handle:         Res<TestTextureAtlas>,
+        //    handle:         Res<TestTextureAtlas>,
             player_query:   Query<(&mut Transform, &mut UserControl)>,
-        mut chunk_load:     EventWriter<LoadChunkPos>,
-        mut chunk_upload:   EventWriter<DischargeChunkPos>
+        // mut chunk_load:     EventWriter<LoadChunkPos>,
+        // mut chunk_upload:   EventWriter<DischargeChunkPos>
     ) {
+        if player_query.is_empty() || true {
+            return;
+        }
         /*
             По сути потоковая функция, которая будет прогружать территорию
             Небольшой черновик работы функции.
@@ -339,7 +241,7 @@ impl WorldSystem {
             let mut chunks_to_discharge: Vec<IVec2> = Vec::new();
             let mut chunks_to_discharge_test: Vec<IVec2> = Vec::new();
             // Проверяет в chunk, есть ли чанки, которые не входят в радиус прогрузки, чтобы их выгрузить
-            for (pos) in &worldres.chunk {
+            for pos in &worldres.chunk {
                 if !loaded_chunks_new.contains(pos) {
                     chunks_to_discharge.push(*pos);
                 }
@@ -367,7 +269,7 @@ impl WorldSystem {
             }
 
             for chunk in chunks_to_discharge {
-                chunk_upload.send(DischargeChunkPos(chunk));
+                // chunk_upload.send(DischargeChunkPos(chunk));
                 let chunk_list_len = worldres.chunk.len();
                 for index in 0..chunk_list_len-1 {
                     if &chunk == worldres.chunk.get(index).unwrap() {
@@ -377,65 +279,70 @@ impl WorldSystem {
             }
 
             for chunk in chunks_to_upload {
-                chunk_load.send(LoadChunkPos(chunk));
+                // chunk_load.send(LoadChunkPos(chunk));
                 worldres.chunk.push(chunk);
             }
 
-            // test
-            for chunk in chunks_to_upload_test {
-                Self::create_chunk(&mut commands, &asset_server, &mut worldres, &handle, chunk);
-            }
-            for chunk in chunks_to_discharge_test {
-                Self::despawn_chunk(&mut commands, &mut worldres, chunk);
-            }
+            // // test
+            // for chunk in chunks_to_upload_test {
+            // //    Self::create_chunk(&mut commands, &asset_server, &mut worldres, &handle, chunk);
+            // }
+            // for chunk in chunks_to_discharge_test {
+            // //    Self::despawn_chunk(&mut commands, &mut worldres, chunk);
+            // }
         }
     }
 
     // ==============================
     // TEST
     // ==============================
-    fn create_chunk(
-        commands:       &mut Commands,
-        asset_server:   &Res<AssetServer>,
-        world_res:      &mut ResMut<WorldRes>,
-        handle:         &Res<TestTextureAtlas>,
-        pos:            IVec2
-    ) -> Entity {
-        let chunk = commands
-            .spawn(SpriteSheetBundle {
-                sprite: Sprite {
-                    anchor: bevy::sprite::Anchor::BottomLeft,
-                    ..default()
-                },
-                texture: handle.image.clone().unwrap(),
-                atlas: TextureAtlas {
-                    layout: handle.layout.clone().unwrap(),
-                    index: TestTextureAtlas::get_index("dirt", &handle),
-                },
-                transform: Transform {
-                    translation: Vec3::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0, -1.0),
-                    scale: Vec3::new(16.0, 16.0, 0.0),
-                    ..default()
-                },
-                ..default()
-            })
-            .insert(Name::new(format!("{pos}_chunk")))
-            .id();
-        world_res.chunks.insert(pos, chunk);
-        chunk
-    }
-    fn despawn_chunk(
-        commands: &mut Commands,
-        world: &mut ResMut<WorldRes>,
-        //chunk: &Chunk,
-        pos: IVec2,
-    ) {
-        if let Some(entity) = world.chunks.remove(&pos) {
-            commands.entity(entity).despawn();
-        } else {
-            println!("despawn failed")
-        }
-    }
+    // #[allow(unused)]
+    // fn create_chunk(
+    // //    gizmos:         &mut Gizmos,
+    //     commands:       &mut Commands,
+    //     asset_server:   &Res<AssetServer>,
+    //     world_res:      &mut ResMut<WorldRes>,
+    //     handle:         &Res<TestTextureAtlas>,
+    //     pos:            IVec2
+    // ) { // -> Entity {
+    // //    gizmos.rect_2d(Vec2::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0), 0.0, Vec2::splat(16.0), Color::YELLOW_GREEN);
+    //     // let chunk = commands
+    //     //     .spawn(SpriteSheetBundle {
+    //     //         sprite: Sprite {
+    //     //             anchor: bevy::sprite::Anchor::BottomLeft,
+    //     //             ..default()
+    //     //         },
+    //     //         texture: handle.image.clone().unwrap(),
+    //     //         atlas: TextureAtlas {
+    //     //             layout: handle.layout.clone().unwrap(),
+    //     //             index: TestTextureAtlas::get_index("dirt", &handle),
+    //     //         },
+    //     //         transform: Transform {
+    //     //             translation: Vec3::new(pos.x as f32 * 256.0, pos.y as f32 * 256.0, -1.0),
+    //     //             scale: Vec3::new(16.0, 16.0, 0.0),
+    //     //             ..default()
+    //     //         },
+    //     //         ..default()
+    //     //     })
+    //     //     .insert(Name::new(format!("{pos}_chunk")))
+    //     //     .id();
+    //     // world_res.chunks.insert(pos, chunk);
+    //     // chunk
+    // }
+
+    // #[allow(unused)]
+    // fn despawn_chunk(
+    //     commands: &mut Commands,
+    //     world: &mut ResMut<WorldRes>,
+    //     //chunk: &Chunk,
+    //     pos: IVec2,
+    // ) {
+    //     if let Some(entity) = world.chunks.remove(&pos) {
+    //         commands.entity(entity).despawn();
+    //     } else {
+    //         println!("despawn failed")
+    //     }
+    // }
 
     /// Функция для определения точных координат чанка
     ///
@@ -462,17 +369,17 @@ impl WorldSystem {
     ///
     /// Определяется по данной позиции и позиции чанка, делением на общий размер одного тайла
     pub fn get_currect_chunk_tile(input_var: IVec2) -> IVec2 {
-        let cell_size = 16;
+        let tile_size = 16;
         let result: IVec2 = IVec2::new(
             if input_var.x >= 0 {
-                input_var.x / cell_size
+                input_var.x / tile_size
             } else {
-                (input_var.x - cell_size + 1) / cell_size
+                (input_var.x - tile_size + 1) / tile_size
             },
             if input_var.y >= 0 {
-                input_var.y / cell_size
+                input_var.y / tile_size
             } else {
-                (input_var.y - cell_size + 1) / cell_size
+                (input_var.y - tile_size + 1) / tile_size
             }
         );
         result
@@ -499,6 +406,7 @@ impl WorldSystem {
     /// Функция для определения координат тайла в пределах чанка
     ///
     /// Определяется по данной позиции и определением координат в пределах одного чанка, где отсчёт координат начинается с верхнего левого угла чанка.
+    #[allow(unused)]
     pub fn get_local_tile_chunk(input_var: IVec2) {}
 }
 
@@ -508,7 +416,7 @@ pub struct WorldRes {
     player_chunk_position: IVec2,
     player_chunk_last_position: IVec2,
     first_launch: bool,
-    chunk_size_t: i32,
+    // chunk_size_t: i32,
 
     chunks: HashMap<IVec2, Entity>,
     chunk: Vec<IVec2>
@@ -521,7 +429,7 @@ impl Default for WorldRes {
             player_chunk_position: IVec2 { x: 0, y: 0 },
             player_chunk_last_position: IVec2 { x: 0, y: 0 },
             first_launch: true,
-            chunk_size_t: 256,
+            // chunk_size_t: 256,
 
             chunks: HashMap::new(),
             chunk: Vec::new()
@@ -529,8 +437,52 @@ impl Default for WorldRes {
     }
 }
 
-impl WorldRes {
-    pub fn new() -> Self {
-        WorldRes { ..default() }
+//
+//
+//
+
+#[allow(unused)]
+#[derive(Resource)]
+pub struct WorldInfo {
+    pub seed:           u64,
+
+    pub name:           String,
+
+    pub daytime:        f32,
+
+    // seconds a day time long
+    pub daytime_length: f32,
+
+    // seconds
+    pub time_inhabited: f32,
+
+        time_created:   u64,
+        time_modified:  u64,
+
+        tick_timer:     Timer,
+
+    pub is_paused:      bool,
+    pub paused_steps:   i32,
+    // pub is_manipulating: bool, 
+}
+
+impl Default for WorldInfo {
+    fn default() -> Self {
+        WorldInfo {
+            seed: 0,
+            name: "None Name".into(),
+            daytime: 0.15,
+            daytime_length: 60. * 24.,
+
+            time_inhabited: 0.,
+            time_created: 0,
+            time_modified: 0,
+
+            tick_timer: Timer::new(bevy::utils::Duration::from_secs_f32(1. / 20.), TimerMode::Repeating),
+
+            is_paused: false,
+            paused_steps: 0,
+            // is_manipulating: true,
+        }
     }
 }
