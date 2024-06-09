@@ -10,8 +10,8 @@ use bevy::prelude::*;
 
 use crate::core::{
     Entity::EntityBase,
+    Item::ItemEntity,
     Object::EntityObject,
-    Item::EntityItem,
     world::TileMap::TileM,
     AppState
 };
@@ -73,7 +73,7 @@ impl WorldTaskManager {
     /// функция выгрузки предметов
     fn despawn_items(
         mut commands: Commands,
-        mut items: Query<Entity, With<EntityItem>>,
+        mut items: Query<Entity, With<ItemEntity>>,
     ) {
         if items.is_empty()  {
             return;

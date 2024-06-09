@@ -104,20 +104,6 @@ pub enum Ammo {
     Rocket,
 }
 
-/// Структура для того, что может быть поднято
-#[allow(unused)]
-#[derive(Component, InspectorOptions)]
-pub struct ItemEntity {
-    pub name:       String,
-    pub id_name:    String,
-    pub id_source:  Option<String>,
-    pub item_type:  ItemType,
-    pub durability: Option<usize>,
-    pub stack_size: Option<usize>,
-    pub stackable:  Option<ItemStackType>,
-    pub count:      usize
-}
-
 #[derive(InspectorOptions, Debug, PartialEq, Eq, Clone, Copy, Hash, Deserialize, Component, Reflect)]
 pub struct ItemAndCount {
     pub item: ItemType,

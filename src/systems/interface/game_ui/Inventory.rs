@@ -4,6 +4,7 @@ use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
 
 use crate::core::{
+    ItemType::ItemType,
     ContainerSystem::{
         Slot,
         Inventory,
@@ -39,14 +40,14 @@ pub struct InventoryGui {
 impl InventoryGui {
     pub fn get_slot(&self, slot_id: usize) -> Option<InventorySlot> {
         if slot_id < self.slots.len() {
-            Some(self.slots[slot_id])
+            Some(self.slots[slot_id].clone())
         } else {
             None
         }
     }
 }
 
-#[derive(Component, Clone, Copy, InspectorOptions, Reflect)]
+#[derive(Component, Clone, InspectorOptions, Reflect)]
 #[reflect(Component, InspectorOptions)]
 pub struct InventorySlot {
     pub id:         Option<usize>,
@@ -263,39 +264,86 @@ pub(crate) fn inventory_update<I: ItemTypeEx>(
 
                 if render {
                     if let Some(info) = register.get_item_info(&item_entity.id_name) {
-                        if let Some(img) = atlas.get_texture(AtlasType::Items, &info.id_texture) {
-                            slot_cmd.with_children(|cb| {
-                                cb.spawn((
-                                    ImageBundle {
-                                        image: UiImage::new(img.1),
-                                        ..default()
-                                    },
-                                    img.0
-                                ));
-                                cb.spawn(TextBundle {
-                                    style: Style {
-                                        position_type:  PositionType::Absolute,
-                                        top:            Val::Percent(55.0),
-                                        left:            Val::Percent(70.0),
-                                        ..default()
-                                    },
-                                    text: Text {
-                                        sections: vec![TextSection::new(
-                                            format!("{}", item_entity.count),
-                                            TextStyle {
-                                                font_size: 11.0,
+
+                        match info.item_type {
+                            
+                            ItemType::Item(_) | ItemType::None => {
+                                if let Some(img) = atlas.get_texture(AtlasType::Items, &info.id_texture) {
+                                    slot_cmd.with_children(|cb| {
+                                        cb.spawn((
+                                            ImageBundle {
+                                                image: UiImage::new(img.1),
                                                 ..default()
                                             },
-                                        )],
-                                        ..default()
-                                    },
-                                    ..default()
-                                });
-                            });
-                        } else {
-                            bevy::log::error!(
-                                "item in inventory but not in the world. Or missing UiRenderInfo."
-                            );
+                                            img.0
+                                        ));
+                                        cb.spawn(TextBundle {
+                                            style: Style {
+                                                position_type:  PositionType::Absolute,
+                                                top:            Val::Percent(55.0),
+                                                left:            Val::Percent(70.0),
+                                                ..default()
+                                            },
+                                            text: Text {
+                                                sections: vec![TextSection::new(
+                                                    format!("{}", item_entity.count),
+                                                    TextStyle {
+                                                        font_size: 11.0,
+                                                        ..default()
+                                                    },
+                                                )],
+                                                ..default()
+                                            },
+                                            ..default()
+                                        });
+                                    });
+                                } else {
+                                    bevy::log::error!(
+                                        "item in inventory but not in the world. Or missing UiRenderInfo."
+                                    );
+                                }
+                            },
+        
+                            ItemType::Weapon(_) => {
+                                if let Some(img) = atlas.get_texture(AtlasType::Weapon, &info.id_texture) {
+                                    slot_cmd.with_children(|cb| {
+                                        cb.spawn((
+                                            ImageBundle {
+                                                image: UiImage::new(img.1),
+                                                ..default()
+                                            },
+                                            img.0
+                                        ));
+                                        cb.spawn(TextBundle {
+                                            style: Style {
+                                                position_type:  PositionType::Absolute,
+                                                top:            Val::Percent(55.0),
+                                                left:            Val::Percent(70.0),
+                                                ..default()
+                                            },
+                                            text: Text {
+                                                sections: vec![TextSection::new(
+                                                    format!("{}", item_entity.count),
+                                                    TextStyle {
+                                                        font_size: 11.0,
+                                                        ..default()
+                                                    },
+                                                )],
+                                                ..default()
+                                            },
+                                            ..default()
+                                        });
+                                    });
+                                } else {
+                                    bevy::log::error!(
+                                        "Weapon item in inventory but not in the world. Or missing UiRenderInfo."
+                                    );
+                                }
+                            },
+        
+                            ItemType::Tool(_) => {
+                                
+                            }
                         }
                     }
                 }

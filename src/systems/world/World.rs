@@ -27,10 +27,7 @@ use crate::core::{
         EntitySpawn,
         spawn_entity
     },
-    Item::{
-        ItemSpawn,
-        spawn_item
-    },
+    Item::item_plugin,
     ItemType::ItemType, 
     Object::{
         ObjectSpawn,
@@ -70,10 +67,8 @@ impl Plugin for WorldSystem {
                     },
                 )
             )
+            .add_plugins(item_plugin)
             // Init Event
-            // .add_event::<LoadChunkPos>()
-            // .add_event::<DischargeChunkPos>()
-            .add_event::<ItemSpawn>()
             .add_event::<ObjectSpawn>()
             .add_event::<EntitySpawn>()
             // Init Resource
@@ -94,7 +89,6 @@ impl Plugin for WorldSystem {
             ))
             .add_systems(FixedUpdate, 
                 (
-                    spawn_item,
                     spawn_object,
                     spawn_entity
                 ).run_if(in_state(AppState::Game))

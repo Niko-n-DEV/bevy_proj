@@ -122,6 +122,14 @@ impl ItemRegistry {
                     self.stack_size = Some(1);
                 }
             },
+            ItemType::Item(_) => {
+                if self.stackable.is_none() {
+                    self.stackable = Some(ItemStackType::Scalable);
+                }
+                if self.stack_size.is_none() {
+                    self.stack_size = Some(16);
+                }
+            },
             _ => {}
         }
     }
@@ -223,8 +231,8 @@ impl Registry {
         }
     }
 
-    pub fn get_item_texture(&self, name: &str, atlas: &AtlasRes) -> Option<SpriteSheetBundle> {
-        atlas.get_spritesheet(AtlasType::Items, name) // -> graphic/Atlas
+    pub fn get_item_texture(&self, name: &str, atlas: &AtlasRes, item_type: AtlasType) -> Option<SpriteSheetBundle> {
+        atlas.get_spritesheet(item_type, name) // -> graphic/Atlas
     }
 
     pub fn get_item_info(&self, name: &str) -> Option<&ItemRegistry> {

@@ -1,9 +1,14 @@
 use bevy::{
-    audio::{AudioPlugin, SpatialScale},
+    audio::{
+        AudioPlugin, 
+        SpatialScale
+    },
     asset::io::{
         file::FileAssetReader, 
         AssetSource
     }, 
+    input::common_conditions::input_toggle_active,
+    window::WindowResolution,
     prelude::*
 };
 
@@ -38,7 +43,6 @@ use crate::core::{
     UserSystem::UserPlugin
 };
 
-use bevy::{input::common_conditions::input_toggle_active, window::WindowResolution};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use iyes_perf_ui::prelude::*;
