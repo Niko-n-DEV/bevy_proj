@@ -131,18 +131,16 @@ impl Slot {
     fn add_to_exist(&mut self, count: usize) -> usize {
         if self.check_stackable() {
             if let Some(stack_size) = self.stack_size {
-                if (self.count + count) > stack_size {
-                    self.count = stack_size;
-
-                    return (self.count + count) - stack_size;
-                } else {
-                    self.count += count;
-
-                    return 0;
-                }
+                let remaining = (self.count + count).saturating_sub(stack_size);
+                self.count = stack_size;
+                remaining
+            } else {
+                self.count += count;
+                0
             }
+        } else {
+            0
         }
-        0
     }
 
     pub fn check_stackable(&self) -> bool {
@@ -175,64 +173,48 @@ impl Inventory {
 
     /// Добавление в первый попавшийся свободный слот
     pub fn add(&mut self, item: &mut ItemEntity) -> bool {
-        // Проверяем, есть ли слот с таким же именем
         if let Some(slot) = self.items.iter_mut().find(|slot| {
             if let Some(slot) = slot {
-                slot.id_name == item.id_name 
-                && slot.item_type == item.item_type 
-                && slot.check_stackable()
-                && !slot.is_full()
+                slot.id_name == item.id_name
+                    && slot.item_type == item.item_type
+                    && slot.check_stackable()
+                    && !slot.is_full()
             } else {
                 false
             }
         }) {
             if let Some(slot) = slot {
-                // Если слот не забит, проверяем сколько можно туда вложить
-                let remaining = slot.add_to_exist(item.count);
-                // item.count = remaining;
+                let remaining: usize = slot.add_to_exist(item.count);
                 
-                // Если есть остаток, попытка найти ещё место
+                item.count = remaining;
+
                 if remaining > 0 {
                     if let Some(slot) = self.items.iter_mut().find(|slot| {
                         if let Some(slot) = slot {
                             slot.id_name == item.id_name 
-                            && slot.item_type == item.item_type 
-                            && slot.check_stackable()
-                            && !slot.is_full()
+                                && slot.item_type == item.item_type
+                                && slot.check_stackable()
+                                && !slot.is_full()
                         } else {
                             false
                         }
                     }) {
                         if let Some(slot) = slot {
-                            let remaining = slot.add_to_exist(remaining);
+                            let remaining: usize = slot.add_to_exist(remaining);
+                            
                             item.count = remaining;
                         }
                     }
                 }
-                
-                // Если остаток больше 0, ищем свободный слот
-                if item.count > 0 {
-                    self.add_to_empty_slot(item);
-                }
-                
-                // Если остаток больше 0, выводим его в мир
-                if item.count > 0 {
-                    // Выводим остаток в мир
-                    return false;
-                }
-                
+            }
+        } else {
+            if self.add_to_empty_slot(item) {
+                item.count = 0;
+
                 return true;
             }
         }
-
-        // Если слот с таким именем не найден, ищем свободный слот
-        if self.add_to_empty_slot(item) {
-            item.count = 0;
-
-            return true;
-        }
-
-        false
+        item.count == 0
     }
 
     pub fn add_ex(&mut self, item: ItemEntity) -> bool {
