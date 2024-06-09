@@ -4,7 +4,9 @@ use bevy::{
 };
 
 use crate::core::{
+    Item::TakeItem,
     interface::game_ui::Select::Selected, 
+    UserSystem::UserControl,
     Camera::UserCamera,
     ContainerSystem::Slot,
     AppState,
@@ -229,12 +231,15 @@ fn interact_with_about_context_button(
 
     if let Ok((interaction, mut background_color)) = button_query.get_single_mut() {
         match *interaction {
+            
             Interaction::Pressed => {
                 *background_color = Color::rgb(0.20, 0.20, 0.20).into();
             }
+
             Interaction::Hovered => {
                 *background_color = Color::rgb(0.25, 0.25, 0.25).into();
             }
+            
             Interaction::None => {
                 *background_color = Color::rgb(0.22, 0.22, 0.22).into();
             }
@@ -250,6 +255,9 @@ fn interact_with_take_context_button(
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<TakeButton>),
     >,
+    mut event: EventWriter<TakeItem>,
+        select:Query<Entity, With<Selected>>,
+        user:  Query<Entity, With<UserControl>>,
 ) {
     if button_query.is_empty() {
         return;
@@ -257,14 +265,28 @@ fn interact_with_take_context_button(
 
     if let Ok((interaction, mut background_color)) = button_query.get_single_mut() {
         match *interaction {
+
             Interaction::Pressed => {
-                *background_color = Color::rgb(0.19, 0.19, 0.19).into();
+                if !user.is_empty() {
+                    *background_color = Color::rgb(0.19, 0.19, 0.19).into();
+
+                    let entity = user.single();
+                    let selected = select.single();
+                    
+                    event.send(TakeItem(entity, Some(selected)));
+                }
             }
+
             Interaction::Hovered => {
                 *background_color = Color::rgb(0.24, 0.24, 0.24).into();
             }
+
             Interaction::None => {
-                *background_color = Color::rgb(0.21, 0.21, 0.21).into();
+                if user.is_empty() {
+                    *background_color = Color::rgb(0.17, 0.17, 0.17).into();
+                } else {
+                    *background_color = Color::rgb(0.21, 0.21, 0.21).into();
+                }
             }
         }
     }

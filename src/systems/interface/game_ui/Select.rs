@@ -21,6 +21,7 @@ pub fn select_plugin(app: &mut App) {
     app.add_systems(Update, 
         (
             select_object,
+            check_selector,
             selector_add,
             selector_remove,
             attach_to_select
@@ -37,6 +38,17 @@ pub fn select_plugin(app: &mut App) {
 pub struct SelectorRes {
     pub selector_entity:    Option<Entity>,
     pub select_entity:      Option<Entity>
+} 
+
+impl SelectorRes {
+    pub fn clear(&mut self, cmd: &mut Commands) {
+        if let Some(selector) = self.selector_entity {
+            self.selector_entity = None;
+            cmd.entity(selector).despawn()
+        }
+
+        self.select_entity = None;
+    }
 }
 
 /// Компонент, отвечающийза определения самого выделения
@@ -113,13 +125,29 @@ fn select_object(
     }
 }
 
+// Проверка наличия сущности и выделения
+fn check_selector(
+    mut commands:   Commands,
+    mut select:     ResMut<SelectorRes>,
+        entities:   Query<Entity>
+) {
+    if let Some(_) = &select.selector_entity {
+        if let Some(entity) = &select.select_entity {
+            if !entities.contains(*entity) {
+                select.clear(&mut commands);
+            }
+        } else {
+            select.clear(&mut commands);
+        }
+    }
+}
+
 // Создание выделения при установке якоря
 fn selector_add(
     mut commands:   Commands,
         selected:   Query<(Entity, &Transform), Added<Selected>>,
         atlas:      Res<AtlasRes>,
     mut select:     ResMut<SelectorRes>
-
 ) {
     if selected.is_empty() {
         return;

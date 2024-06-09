@@ -19,12 +19,15 @@ use crate::core::{
         UserControl,
         UserSubControl,
     },
-    Item::ItemSpawn,
-    ItemType::ItemEntity,
-    world::chunk::Chunk::Chunk,
+    Item::{
+        TakeItem,
+        ItemSpawn,
+    },
+    // ItemType::ItemEntity,
+    // world::chunk::Chunk::Chunk,
     ContainerSystem::{
         CursorContainer,
-        Inventory
+        // Inventory
     },
     interact::Damage::DamageObject
 };
@@ -156,28 +159,30 @@ impl PlayerPlugin {
     }
 
     fn player_pickup(
-        mut commands:           Commands,
-        mut chunk_res:          ResMut<Chunk>,
-        mut user:               Query<(&mut Inventory, &EntityBase, &Transform), With<UserControl>>,
+        // mut commands:           Commands,
+        // mut chunk_res:          ResMut<Chunk>,
+        user:                   Query<Entity, With<UserControl>>,
+        mut event:              EventWriter<TakeItem>,
             keyboard_input:     Res<ButtonInput<KeyCode>>,
-            pickupable_quety:   Query<(Entity, &Transform, &ItemEntity), Without<UserControl>>
+            // pickupable_quety:   Query<(Entity, &Transform, &ItemEntity), Without<UserControl>>
     ) {
-        if pickupable_quety.is_empty() || user.is_empty() {
+        if user.is_empty() {
             return;
         }
 
-        let mut user = user.single_mut();
+        let user = user.single();
 
         if keyboard_input.just_pressed(KeyCode::KeyE) {
-            for (entity, transform, item) in pickupable_quety.iter() {
-                if user.1.interaction_radius > Vec3::distance(transform.translation, user.2.translation) {
-                    if user.0.add((item.name.clone(), item.item_type, item.count)) {
-                        chunk_res.remove_sub_object_ex(entity);
+            // for (entity, transform, item) in pickupable_quety.iter() {
+            //     if user.1.interaction_radius > Vec3::distance(transform.translation, user.2.translation) {
+            //         if user.0.add(item.clone()) {
+            //             chunk_res.remove_sub_object_ex(entity);
                         
-                        commands.entity(entity).despawn_recursive();
-                    }
-                }
-            }
+            //             commands.entity(entity).despawn_recursive();
+            //         }
+            //     }
+            // }
+            event.send(TakeItem(user, None));
         }
     }
 

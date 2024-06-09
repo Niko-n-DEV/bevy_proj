@@ -7,7 +7,8 @@ use bevy_egui::{
 
 use crate::core::{
     UserSystem::CursorProcentPos,
-    ItemType::ItemEntity,
+    Item::ItemEntity,
+    ItemType::ItemType,
     resource::{
         graphic::Atlas::{
             AtlasType,
@@ -77,45 +78,98 @@ pub fn cursor_grab(
         if !cursor_inv.slot.is_none() && preview.is_empty() {
             if let Some(slot) = &cursor_inv.slot {
                 if let Some(info) = register.get_item_info(&slot.name) {
-                    if let Some(img) = atlas.get_texture(AtlasType::Items, &info.id_texture) {
-                        commands.spawn((
-                            ImageBundle {
-                                style: Style {
-                                    position_type:  PositionType::Absolute,
-                                    left:           Val::Percent(cursor_p.0.x + 10.0),
-                                    top:            Val::Percent(cursor_p.0.y - 1.0),
-                                    height:         Val::Percent(5.0),
-                                    width:          Val::Percent(3.0),
-                                    ..default()
-                                },
-                                image: UiImage::new(img.1.clone()),
-                                ..default()
-                            },
-                            img.0,
-                            CursorPreview
-                        )).with_children(|parent| {
-                            parent.spawn(
-                                TextBundle {
-                                    style: Style {
-                                        position_type:  PositionType::Absolute,
-                                        left:           Val::Percent(1.0),
-                                        top:            Val::Percent(-1.0),
+
+                    match info.item_type {
+
+                        ItemType::Item(_) | ItemType::None => {
+                            if let Some(img) = atlas.get_texture(AtlasType::Items, &info.id_texture) {
+                                commands.spawn((
+                                    ImageBundle {
+                                        style: Style {
+                                            position_type:  PositionType::Absolute,
+                                            left:           Val::Percent(cursor_p.0.x + 10.0),
+                                            top:            Val::Percent(cursor_p.0.y - 1.0),
+                                            height:         Val::Percent(5.0),
+                                            width:          Val::Percent(3.0),
+                                            ..default()
+                                        },
+                                        image: UiImage::new(img.1.clone()),
                                         ..default()
                                     },
-                                    text: Text {
-                                        sections: vec![TextSection::new(
-                                            format!("{}", slot.count),
-                                            TextStyle {
-                                                font_size: 11.0,
+                                    img.0,
+                                    CursorPreview
+                                )).with_children(|parent| {
+                                    parent.spawn(
+                                        TextBundle {
+                                            style: Style {
+                                                position_type:  PositionType::Absolute,
+                                                left:           Val::Percent(1.0),
+                                                top:            Val::Percent(-1.0),
                                                 ..default()
                                             },
-                                        )],
+                                            text: Text {
+                                                sections: vec![TextSection::new(
+                                                    format!("{}", slot.count),
+                                                    TextStyle {
+                                                        font_size: 11.0,
+                                                        ..default()
+                                                    },
+                                                )],
+                                                ..default()
+                                            },
+                                            ..default()
+                                        }
+                                    );
+                                });
+                            }
+                        },
+    
+                        ItemType::Weapon(_) => {
+                            if let Some(img) = atlas.get_texture(AtlasType::Weapon, &info.id_texture) {
+                                commands.spawn((
+                                    ImageBundle {
+                                        style: Style {
+                                            position_type:  PositionType::Absolute,
+                                            left:           Val::Percent(cursor_p.0.x + 10.0),
+                                            top:            Val::Percent(cursor_p.0.y - 1.0),
+                                            height:         Val::Percent(5.0),
+                                            width:          Val::Percent(3.0),
+                                            ..default()
+                                        },
+                                        image: UiImage::new(img.1.clone()),
                                         ..default()
                                     },
-                                    ..default()
-                                }
-                            );
-                        });
+                                    img.0,
+                                    CursorPreview
+                                )).with_children(|parent| {
+                                    parent.spawn(
+                                        TextBundle {
+                                            style: Style {
+                                                position_type:  PositionType::Absolute,
+                                                left:           Val::Percent(1.0),
+                                                top:            Val::Percent(-1.0),
+                                                ..default()
+                                            },
+                                            text: Text {
+                                                sections: vec![TextSection::new(
+                                                    format!("{}", slot.count),
+                                                    TextStyle {
+                                                        font_size: 11.0,
+                                                        ..default()
+                                                    },
+                                                )],
+                                                ..default()
+                                            },
+                                            ..default()
+                                        }
+                                    );
+                                });
+                            }
+                        },
+    
+                        ItemType::Tool(_) => {
+                            
+                        }
                     }
                 }
             }

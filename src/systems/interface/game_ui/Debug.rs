@@ -20,6 +20,10 @@ use crate::core::{
 
 use super::GameUI;
 
+//
+//
+//
+
 pub fn debug_ui_plugin(app: &mut App) {
     app.add_systems(Update, DebugInfoPanel::toggle_debug_window.run_if(in_state(AppState::Game)));
 }
